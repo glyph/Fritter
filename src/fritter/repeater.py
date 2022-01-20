@@ -6,7 +6,7 @@ from typing import Callable, Optional
 from twisted.internet.defer import Deferred
 from twisted.logger import Logger
 
-from . import CallHandle, Scheduler
+from .scheduler import CallHandle, Scheduler
 
 
 log = Logger()
