@@ -25,6 +25,7 @@ jobs:
       matrix:
         tox-env: ['py310']
         coverage: ['yes']
+        python-version: ['3.10']
 
     steps:
     - uses: actions/checkout@v2
