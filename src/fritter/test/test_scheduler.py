@@ -9,16 +9,18 @@ class SchedulerTests(TestCase):
     Tests for L{Scheduler}.
     """
 
-    def test_scheduling_simple(self) -> None:
+    def test_schedulingSimple(self) -> None:
         """
         Scheduling a call
         """
         driver = MemoryDriver()
         scheduler = Scheduler(HeapPriorityQueue(), driver)
         called = 0
+
         def callme():
             nonlocal called
             called += 1
+
         scheduler.callAtTimestamp(1.0, callme)
         scheduler.callAtTimestamp(3.0, callme)
         self.assertEqual(0, called)
