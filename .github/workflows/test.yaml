@@ -58,7 +58,7 @@ jobs:
 
     - name: Test
       run: |
-        TOX_ENV=${{tox-env}} tox
+        TOX_ENV=${{ matrix.tox-env }} tox
 
     - name: Prepare coverage
       if: ${{ !cancelled() && contains(matrix['coverage'], 'yes') }}
