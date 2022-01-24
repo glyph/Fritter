@@ -33,14 +33,14 @@ class CallHandle(Generic[T]):
             # nope
             return
         self.call.canceled = True
-        old = self.scheduler._q.peek()
-        self.scheduler._q.remove(self.call)
-        new = self.scheduler._q.peek()
+        old = self._scheduler._q.peek()
+        self._scheduler._q.remove(self.call)
+        new = self._scheduler._q.peek()
 
         if new is None:
-            self.scheduler._q.unschedule()
+            self._scheduler._driver.unschedule()
         elif old is None or new is not old:
-            self.scheduler._q.reschedule(new.when, self.scheduler._advanceToNow)
+            self._scheduler._driver.reschedule(new.when, self._scheduler._advanceToNow)
 
 
 @dataclass
