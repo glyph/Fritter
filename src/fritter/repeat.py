@@ -52,11 +52,15 @@ class Repeating(object):
                     self._running = None
                     running.errback()
                 else:
-                    log.failure("while running doing work {work}", work=self.work)
+                    log.failure(
+                        "while running doing work {work}", work=self.work
+                    )
             else:
                 last = count
                 if self._running:
-                    self.s.callAtTimestamp((interval * (count + 1)) + startTime, one)
+                    self.s.callAtTimestamp(
+                        (interval * (count + 1)) + startTime, one
+                    )
 
         if now:
             one()

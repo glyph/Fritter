@@ -12,7 +12,9 @@ class RecursiveDriver(object):
     # this driver's relative timestamp - in parent's
     # (unscaled) time-scale
     _running: bool = False
-    _pauseTime: float = 0.0  # *local* (not parent's) timestamp at which we were paused
+    _pauseTime: float = (
+        0.0  # *local* (not parent's) timestamp at which we were paused
+    )
     _toRunWhenStarted: Optional[Tuple[float, Callable[[], None]]] = None
     _scaleFactor: float = 1.0  # how much faster the local time coordinate
     # system is within this scheduler.
@@ -43,7 +45,9 @@ class RecursiveDriver(object):
 
     def currentTimestamp(self) -> float:
         if self._running:
-            return (self._parent.currentTimestamp() - self._offset) * self._scaleFactor
+            return (
+                self._parent.currentTimestamp() - self._offset
+            ) * self._scaleFactor
         else:
             return self._pauseTime
 

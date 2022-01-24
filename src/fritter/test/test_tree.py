@@ -8,7 +8,9 @@ from ..scheduler import Scheduler
 
 
 class RecursiveTest(TestCase):
-    def _oneRecursiveCall(self, scaleFactor: float) -> List[Tuple[float, float]]:
+    def _oneRecursiveCall(
+        self, scaleFactor: float
+    ) -> List[Tuple[float, float]]:
         scheduler1 = Scheduler(HeapPriorityQueue(), driver := MemoryDriver())
         scheduler2 = Scheduler(
             HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)

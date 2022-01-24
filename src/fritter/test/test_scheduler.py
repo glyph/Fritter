@@ -39,6 +39,7 @@ class SchedulerTests(TestCase):
         def record(event: str) -> Callable[[], None]:
             def result() -> None:
                 callTimes.append((scheduler.currentTimestamp(), event))
+
             return result
 
         scheduler.callAtTimestamp(1.0, record("a"))
