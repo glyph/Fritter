@@ -4,21 +4,42 @@
 #
 #    pip-compile --no-emit-index-url dev-requirements.in
 #
+attrs==21.4.0
+    # via
+    #   automat
+    #   twisted
+automat==20.2.0
+    # via twisted
+constantly==15.1.0
+    # via twisted
+hyperlink==21.0.0
+    # via twisted
+idna==3.3
+    # via hyperlink
+incremental==21.3.0
+    # via twisted
 mypy==0.931
     # via mypy-zope
 mypy-extensions==0.4.3
     # via mypy
 mypy-zope==0.3.5
     # via -r dev-requirements.in
+six==1.16.0
+    # via automat
 tomli==2.0.0
     # via mypy
+twisted==21.7.0
+    # via -r dev-requirements.in
 typing-extensions==4.0.1
-    # via mypy
+    # via
+    #   mypy
+    #   twisted
 zope.event==4.5.0
     # via zope.schema
 zope.interface==5.4.0
     # via
     #   mypy-zope
+    #   twisted
     #   zope.schema
 zope.schema==6.2.0
     # via mypy-zope
