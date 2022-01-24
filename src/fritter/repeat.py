@@ -46,7 +46,7 @@ class Repeating(object):
             count = int(elapsed // interval)
             try:
                 self.work(count - last)
-            except:
+            except BaseException:
                 running = self._running
                 if running is not None:
                     self._running = None
