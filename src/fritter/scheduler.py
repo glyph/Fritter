@@ -61,7 +61,7 @@ class Scheduler:
         # We just added a thing it can't be None even though peek has that
         # signature
         assert currently is not None
-        if previously is None or previously.when <= currently.when:
+        if previously is None or previously.when != currently.when:
             self._driver.reschedule(currently.when, self._advanceToNow)
         return CallHandle(call, self)
 
