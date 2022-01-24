@@ -30,7 +30,9 @@ class SchedulerTests(TestCase):
         self.assertEqual(1, called)
 
     def test_canceling(self):
-        """ """
+        """
+        CallHandle.cancel() cancels an outstanding call.
+        """
         scheduler = Scheduler(HeapPriorityQueue(), driver := MemoryDriver())
         callTimes = []
 
