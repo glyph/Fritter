@@ -17,8 +17,8 @@ class RecursiveDriver(object):
     _scaleFactor: float = 1.0  # how much faster the local time coordinate
     # system is within this scheduler.
 
-    def reschedule(self, desiredTime: float, work: Callable[[], None]):
-        def _():
+    def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
+        def _() -> None:
             self._toRunWhenStarted = None
             self._call = None
             work()
@@ -35,7 +35,7 @@ class RecursiveDriver(object):
                 self._call is None
             ), f"we weren't running, call should be None not {self._call}"
 
-    def unschedule(self):
+    def unschedule(self) -> None:
         self._toRunWhenStarted = None
         if self._call is not None:
             self._call.cancel()
@@ -70,7 +70,7 @@ class RecursiveDriver(object):
             self._call = None
 
     @property
-    def scaleFactor(self):
+    def scaleFactor(self) -> float:
         """
         The scale factor is how much faster than its parent time passes in this driver.
         """

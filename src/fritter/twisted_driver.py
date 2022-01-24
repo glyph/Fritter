@@ -9,8 +9,8 @@ class TwistedDriver(object):
     _reactor: IReactorTime
     _call: Optional[IDelayedCall] = None
 
-    def reschedule(self, desiredTime: float, work: Callable[[], None]):
-        def _():
+    def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
+        def _() -> None:
             self._call = None
             work()
 
@@ -20,7 +20,7 @@ class TwistedDriver(object):
             max(0, desiredTime - self.currentTimestamp()), _
         )
 
-    def unschedule(self):
+    def unschedule(self) -> None:
         if self._call is not None:
             self._call.cancel()
             self._call = None

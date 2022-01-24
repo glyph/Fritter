@@ -7,6 +7,7 @@ class PriorityComparable(Protocol):
 
 
 T = TypeVar("T", bound=PriorityComparable)
+T1 = TypeVar("T1", bound=PriorityComparable, contravariant=True)
 
 
 class PriorityQueue(Protocol[T]):
@@ -35,11 +36,11 @@ class PriorityQueue(Protocol[T]):
         """
 
 
-class Driver(Protocol):
-    def reschedule(self, newTime: float, work: Callable[[], None]) -> None:
+class Driver(Protocol[T1]):
+    def reschedule(self, newTime: T1, work: Callable[[], None]) -> None:
         ...
 
-    def unschedule(self):
+    def unschedule(self) -> None:
         ...
 
     def currentTimestamp(self) -> float:

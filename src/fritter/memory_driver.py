@@ -7,7 +7,7 @@ class MemoryDriver(object):
     _currentTime: float = 0.0
     _scheduledWork: Optional[Tuple[float, Callable[[], None]]] = None
 
-    def reschedule(self, desiredTime: float, work: Callable[[], None]):
+    def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
         self._scheduledWork = desiredTime, work
 
     def unschedule(self) -> None:

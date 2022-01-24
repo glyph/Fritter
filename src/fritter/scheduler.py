@@ -23,9 +23,9 @@ class FutureCall(Generic[T]):
 @dataclass
 class CallHandle(Generic[T]):
     call: FutureCall[T]
-    _scheduler: Scheduler
+    _canceller: Callable[[FutureCall[T]], None]
 
-    def cancel(self):
+    def cancel(self) -> None:
         if self.call.called:
             # nope
             return
@@ -33,20 +33,13 @@ class CallHandle(Generic[T]):
             # nope
             return
         self.call.canceled = True
-        old = self._scheduler._q.peek()
-        self._scheduler._q.remove(self.call)
-        new = self._scheduler._q.peek()
-
-        if new is None:
-            self._scheduler._driver.unschedule()
-        elif old is None or new is not old:
-            self._scheduler._driver.reschedule(new.when, self._scheduler._advanceToNow)
+        self._canceller(self.call)
 
 
 @dataclass
 class Scheduler:
     _q: PriorityQueue[FutureCall[float]]
-    _driver: Driver
+    _driver: Driver[float]
 
     def currentTimestamp(self) -> float:
         return self._driver.currentTimestamp()
@@ -55,6 +48,16 @@ class Scheduler:
         self, when: float, what: Callable[[], None]
     ) -> CallHandle[float]:
         call = FutureCall(when, what)
+
+        def _cancelCall(toRemove: FutureCall[float]) -> None:
+            old = self._q.peek()
+            self._q.remove(toRemove)
+            new = self._q.peek()
+            if new is None:
+                self._driver.unschedule()
+            elif old is None or new is not old:
+                self._driver.reschedule(new.when, self._advanceToNow)
+
         previously = self._q.peek()
         self._q.add(call)
         currently = self._q.peek()
@@ -63,7 +66,7 @@ class Scheduler:
         assert currently is not None
         if previously is None or previously.when != currently.when:
             self._driver.reschedule(currently.when, self._advanceToNow)
-        return CallHandle(call, self)
+        return CallHandle(call, _cancelCall)
 
     def _advanceToNow(self) -> None:
         timestamp = self._driver.currentTimestamp()

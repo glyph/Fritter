@@ -19,7 +19,7 @@ class SchedulerTests(TestCase):
         scheduler = Scheduler(HeapPriorityQueue(), driver)
         called = 0
 
-        def callme():
+        def callme() -> None:
             nonlocal called
             called += 1
 
@@ -29,7 +29,7 @@ class SchedulerTests(TestCase):
         driver.advance(2.0)
         self.assertEqual(1, called)
 
-    def test_canceling(self):
+    def test_canceling(self) -> None:
         """
         CallHandle.cancel() cancels an outstanding call.
         """
@@ -37,7 +37,7 @@ class SchedulerTests(TestCase):
         callTimes = []
 
         def record(event: str) -> Callable[[], None]:
-            def result():
+            def result() -> None:
                 callTimes.append((scheduler.currentTimestamp(), event))
             return result
 
