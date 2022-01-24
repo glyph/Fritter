@@ -26,7 +26,7 @@ jobs:
         tox-env: ['py310']
         coverage: ['yes', 'no']
 
-      include:
+        include:
         - tox-env: py310
           coverage: yes
 
