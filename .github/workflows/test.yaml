@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TOXENV: "${{ matrix.tox-env }}"
-    name: ${{ matrix.python-version }}-${{ matrix.tox-env }}
+    name: ${{ matrix.tox-env }}-${{ matrix.coverage }}
     strategy:
       fail-fast: false
       matrix:
