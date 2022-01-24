@@ -4,7 +4,7 @@ from typing import Callable, Optional, Tuple
 
 @dataclass
 class MemoryDriver(object):
-    _currentTime: float = 0
+    _currentTime: float = 0.0
     _scheduledWork: Optional[Tuple[float, Callable[[], None]]] = None
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]):
