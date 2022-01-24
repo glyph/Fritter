@@ -24,11 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         tox-env: ['py310']
-        coverage: ['yes', 'no']
-
-        include:
-        - tox-env: py310
-          coverage: yes
+        coverage: ['yes']
 
     steps:
     - uses: actions/checkout@v2
@@ -58,7 +54,7 @@ jobs:
 
     - name: Test
       run: |
-        TOX_ENV=${{ matrix.tox-env }} tox
+        tox
 
     - name: Prepare coverage
       if: ${{ !cancelled() && contains(matrix['coverage'], 'yes') }}
