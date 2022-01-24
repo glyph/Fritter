@@ -53,7 +53,7 @@ class RecursiveDriver(object):
     def start(self) -> None:
         if self._running:
             return
-        self._offset = self._scheduler.currentTimestamp() + (
+        self._offset = self._parent.currentTimestamp() + (
             self._pauseTime / self._scaleFactor
         )
         self._pauseTime = 0
@@ -77,7 +77,7 @@ class RecursiveDriver(object):
         return self._scaleFactor
 
     @scaleFactor.setter
-    def _setScaleFactor(self, newScaleFactor: float) -> None:
+    def scaleFactor(self, newScaleFactor: float) -> None:
         """
         Change this recursive driver to be running at `newScaleFactor` times
         its parent scheduler's rate.  i.e. driver.changeScaleFactor(3.0) will
