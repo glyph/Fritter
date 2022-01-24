@@ -76,7 +76,8 @@ class RecursiveDriver(object):
     @property
     def scaleFactor(self) -> float:
         """
-        The scale factor is how much faster than its parent time passes in this driver.
+        The scale factor is how much faster than its parent time passes in this
+        driver.
         """
         return self._scaleFactor
 
