@@ -1,0 +1,100 @@
+# Try to get a short workflow name and a job name that start with Python
+# version to make it easier to check the status inside GitHub UI.
+name: CI
+
+on:
+  push:
+    branches: [ trunk ]
+    # tags:
+    #   - release-*
+  pull_request:
+    branches: [ trunk ]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  testing:
+    runs-on: ubuntu-latest
+    env:
+      TOXENV: "${{ matrix.tox-env }}"
+    name: ${{ matrix.python-version }}-${{ matrix.tox-env }}
+    strategy:
+      fail-fast: false
+      matrix:
+        tox-env: ['py310']
+        coverage: ['yes', 'no']
+
+      include:
+        - tox-env: py310
+          coverage: yes
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: pip cache
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key:
+          ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml', 'tox.ini') }}
+        restore-keys: |
+            ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox coverage coveralls
+
+    - name: Test
+      run: |
+        TOX_ENV=${{tox-env}} tox
+
+    - name: Prepare coverage
+      if: ${{ !cancelled() && contains(matrix['coverage'], 'yes') }}
+      run: |
+        # sub-process coverage are generated in separate files so we combine them
+        # to get an unified coverage for the local run.
+        # The XML is generate to be used with 3rd party tools like diff-cover.
+        python -m coverage combine
+        python -m coverage xml -o coverage.xml -i
+        python -m coverage report --skip-covered
+
+    - uses: codecov/codecov-action@v1
+      if: ${{ !cancelled() && contains(matrix['coverage'], 'yes') }}
+      with:
+        files: coverage.xml
+        fail_ci_if_error: true
+        functionalities: gcov,search
+
+  static-checks:
+    runs-on: ubuntu-20.04
+    env:
+      TOX_PARALLEL_NO_SPINNER: 1
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip tox
+
+    - name: Run the checks
+      run: |
+        python --version
+        tox --parallel -e mypy,flake8,black
