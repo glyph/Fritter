@@ -19,6 +19,10 @@ class Repeating(Generic[AsyncType]):
     def running(self) -> bool:
         return self._running is not None
 
+    def _noLongerRunning(self) -> Optional[AsyncType]:
+        running, self._running = self._running, None
+        return running
+
     def start(self, interval: float, now: bool = True) -> AsyncType:
         self._running = self._driver.newWithCancel(self.stop)
         startTime = self._scheduler.currentTimestamp()
@@ -31,12 +35,10 @@ class Repeating(Generic[AsyncType]):
             try:
                 self.work(count - last)
             except BaseException:
-                running = self._running
-                self._running = None
-                self._driver.unhandledError(self.work, running)
+                self._driver.unhandledError(self.work, self._noLongerRunning())
             else:
                 last = count
-                if self._running:
+                if self._running is not None:
                     self._scheduler.callAtTimestamp(
                         (interval * (count + 1)) + startTime, one
                     )
@@ -48,7 +50,5 @@ class Repeating(Generic[AsyncType]):
         return self._running
 
     def stop(self) -> None:
-        running = self._running
-        self._running = None
-        if running is not None:
+        if (running := self._noLongerRunning()) is not None:
             self._driver.complete(running)
