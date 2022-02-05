@@ -6,11 +6,20 @@ from .scheduler import CallHandle, Scheduler
 
 @dataclass
 class RecursiveDriver(object):
-    _parent: Scheduler
+    _parent: Scheduler[float]
+
+    # TODO: support for generic types would be nice here, but things have to be
+    # multiplied and divided by the scaling factor, which means it needs to be
+    # a float. Even using a TypeVar bound to `float` here creates a ton of
+    # awkward casts below.
+
     _call: Optional[CallHandle[float]] = None
-    _offset: float = 0  # amount to subtract from parent's timestamp to get to
-    # this driver's relative timestamp - in parent's
-    # (unscaled) time-scale
+    _offset: float = 0
+    """
+    amount to subtract from parent's timestamp to get to this driver's
+    relative timestamp - in parent's (unscaled) time-scale
+    """
+
     _running: bool = False
     _pauseTime: float = (
         0.0  # *local* (not parent's) timestamp at which we were paused

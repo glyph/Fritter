@@ -1,75 +1,54 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Protocol
-
-from twisted.internet.defer import Deferred
-from twisted.logger import Logger
+from typing import Generic, Optional
 
 from .scheduler import CallHandle, Scheduler
-
-
-log = Logger()
-
-
-class RepeatingWork(Protocol):
-    """
-    The signature of work that is repeated in a loop.
-    """
-
-    def __call__(self, steps: int) -> object:
-        """
-        @param framesPassed: The number of steps which have passed since the
-            previous invocation.
-        """
+from .boundaries import AsyncType, AsyncDriver, RepeatingWork
 
 
 @dataclass
-class Repeating(object):
+class Repeating(Generic[AsyncType]):
     work: RepeatingWork
-    s: Scheduler
-    _running: Optional[Deferred[None]] = None
+    _scheduler: Scheduler[float]
+    _driver: AsyncDriver[AsyncType]
+    _running: Optional[AsyncType] = None
     _pending: Optional[CallHandle[float]] = None
 
     @property
     def running(self) -> bool:
         return self._running is not None
 
-    def start(self, interval: float, now: bool = True) -> Deferred[None]:
-        self._running = Deferred(lambda it: self.stop())
-        startTime = self.s.currentTimestamp()
+    def start(self, interval: float, now: bool = True) -> AsyncType:
+        self._running = self._driver.newWithCancel(self.stop)
+        startTime = self._scheduler.currentTimestamp()
         last = 0
 
         def one() -> None:
             nonlocal last
-            elapsed = self.s.currentTimestamp() - startTime
+            elapsed = self._scheduler.currentTimestamp() - startTime
             count = int(elapsed // interval)
             try:
                 self.work(count - last)
             except BaseException:
                 running = self._running
-                if running is not None:
-                    self._running = None
-                    running.errback()
-                else:
-                    log.failure(
-                        "while running doing work {work}", work=self.work
-                    )
+                self._running = None
+                self._driver.unhandledError(self.work, running)
             else:
                 last = count
                 if self._running:
-                    self.s.callAtTimestamp(
+                    self._scheduler.callAtTimestamp(
                         (interval * (count + 1)) + startTime, one
                     )
 
         if now:
             one()
         else:
-            self.s.callAtTimestamp((interval) + startTime, one)
+            self._scheduler.callAtTimestamp((interval) + startTime, one)
         return self._running
 
     def stop(self) -> None:
         running = self._running
         self._running = None
-        if running:
-            running.callback(None)
+        if running is not None:
+            self._driver.complete(running)

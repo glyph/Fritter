@@ -24,7 +24,7 @@ few key differences:
 1. it doesn't have the burden of being thread-safe, which may slightly improve
    its performance on some platforms in single-threaded contexts
 2. it is optimized for non-blocking, rather than event-driven, usage; i.e. no
-   `delayfunc`, but a driver interface where it can schedule timers with a
+   `delayfunc`, but a time-driver interface where it can schedule timers with a
    reactor or event loop
 3. it has an abstract interface for different priority queue implementations;
    experience with Twisted has taught me that different workloads (more or

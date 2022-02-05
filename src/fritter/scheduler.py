@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from itertools import count
 from typing import Callable, Generic, TypeVar
 
-from .boundaries import Driver, PriorityComparable, PriorityQueue
+from .boundaries import TimeDriver, PriorityComparable, PriorityQueue
 
 T = TypeVar("T", bound=PriorityComparable)
 
@@ -37,19 +37,19 @@ class CallHandle(Generic[T]):
 
 
 @dataclass
-class Scheduler:
-    _q: PriorityQueue[FutureCall[float]]
-    _driver: Driver[float]
+class Scheduler(Generic[T]):
+    _q: PriorityQueue[FutureCall[T]]
+    _driver: TimeDriver[T]
 
-    def currentTimestamp(self) -> float:
+    def currentTimestamp(self) -> T:
         return self._driver.currentTimestamp()
 
     def callAtTimestamp(
-        self, when: float, what: Callable[[], None]
-    ) -> CallHandle[float]:
+        self, when: T, what: Callable[[], None]
+    ) -> CallHandle[T]:
         call = FutureCall(when, what)
 
-        def _cancelCall(toRemove: FutureCall[float]) -> None:
+        def _cancelCall(toRemove: FutureCall[T]) -> None:
             old = self._q.peek()
             self._q.remove(toRemove)
             new = self._q.peek()
@@ -70,7 +70,7 @@ class Scheduler:
 
     def _advanceToNow(self) -> None:
         timestamp = self._driver.currentTimestamp()
-        while (each := self._q.peek()) is not None and timestamp >= each.when:
+        while (each := self._q.peek()) is not None and each.when <= timestamp:
             popped = self._q.get()
             assert (
                 popped is each
