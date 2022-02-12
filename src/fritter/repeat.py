@@ -6,6 +6,17 @@ from typing import Generic, Optional
 from .scheduler import CallHandle, Scheduler
 from .boundaries import AsyncType, AsyncDriver, RepeatingWork
 
+class AlreadyRunning(Exception):
+    """
+    The timer is already running.
+    """
+
+
+class NotRunning(Exception):
+    """
+    The timer is not running.
+    """
+
 
 @dataclass
 class Repeating(Generic[AsyncType]):
@@ -24,12 +35,15 @@ class Repeating(Generic[AsyncType]):
         return running
 
     def start(self, interval: float, now: bool = True) -> AsyncType:
+        if self._running is not None:
+            raise AlreadyRunning(f"Repeating({self.work}) is already running.")
         self._running = self._driver.newWithCancel(self.stop)
         startTime = self._scheduler.currentTimestamp()
         last = 0
 
         def one() -> None:
             nonlocal last
+            self._pending = None
             elapsed = self._scheduler.currentTimestamp() - startTime
             count = int(elapsed // interval)
             try:
@@ -39,7 +53,7 @@ class Repeating(Generic[AsyncType]):
             else:
                 last = count
                 if self._running is not None:
-                    self._scheduler.callAtTimestamp(
+                    self._pending = self._scheduler.callAtTimestamp(
                         (interval * (count + 1)) + startTime, one
                     )
 
@@ -49,6 +63,8 @@ class Repeating(Generic[AsyncType]):
             self._scheduler.callAtTimestamp((interval) + startTime, one)
         return self._running
 
-    def stop(self) -> None:
+    def stop(self, raiseIfNotRunning: bool = True) -> None:
         if (running := self._noLongerRunning()) is not None:
             self._driver.complete(running)
+        elif raiseIfNotRunning:
+            raise NotRunning(f"Repeating({self.work}) is not currently running.")
