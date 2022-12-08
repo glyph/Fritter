@@ -4,15 +4,15 @@ from unittest import TestCase
 from ..memory_driver import MemoryDriver
 from ..priority_queue import HeapPriorityQueue
 from ..recursive_driver import RecursiveDriver
-from ..scheduler import Scheduler
+from ..scheduler import SimpleScheduler
 
 
 class RecursiveTest(TestCase):
     def _oneRecursiveCall(
         self, scaleFactor: float
     ) -> List[Tuple[float, float]]:
-        scheduler1 = Scheduler(HeapPriorityQueue(), driver := MemoryDriver())
-        scheduler2 = Scheduler(
+        scheduler1 = SimpleScheduler(HeapPriorityQueue(), driver := MemoryDriver())
+        scheduler2 = SimpleScheduler(
             HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
         )
         recursive.scaleFactor = scaleFactor

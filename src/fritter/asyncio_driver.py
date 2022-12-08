@@ -8,7 +8,7 @@ from typing import Awaitable, Callable, Optional
 from fritter.boundaries import PriorityQueue, RepeatingWork
 from fritter.priority_queue import HeapPriorityQueue
 from fritter.repeat import Repeating
-from fritter.scheduler import FutureCall, Scheduler
+from fritter.scheduler import FutureCall, Scheduler, SimpleScheduler
 
 
 logger = getLogger(__name__)
@@ -80,8 +80,10 @@ class AsyncioAsyncDriver(object):
 
 def asyncioScheduler(
     loop: AbstractEventLoop,
-    queue: Optional[PriorityQueue[FutureCall[float]]] = None,
-) -> Scheduler[float]:
+    queue: Optional[
+        PriorityQueue[FutureCall[float, Callable[[], None]]]
+    ] = None,
+) -> SimpleScheduler:
     """
     Create a scheduler that uses Asyncio.
     """
@@ -92,8 +94,8 @@ def asyncioScheduler(
 
 
 def asyncioRepeating(
-    scheduler: Scheduler[float], work: RepeatingWork
-) -> Repeating[Future[None]]:
+    scheduler: SimpleScheduler, work: RepeatingWork
+) -> Repeating[Future[None], Callable[[], None]]:
     """
     Create a repeating call that returns a Deferred from its start method.
     """

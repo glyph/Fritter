@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Generic, Optional
+from typing import Callable, Generic, Optional
 
-from .scheduler import CallHandle, Scheduler
-from .boundaries import AsyncType, AsyncDriver, RepeatingWork
+from .boundaries import AsyncDriver, AsyncType, RepeatingWork
+from .scheduler import CallHandle, Scheduler, WhatT
+
 
 class AlreadyRunning(Exception):
     """
@@ -19,12 +20,12 @@ class NotRunning(Exception):
 
 
 @dataclass
-class Repeating(Generic[AsyncType]):
+class Repeating(Generic[AsyncType, WhatT]):
     work: RepeatingWork
-    _scheduler: Scheduler[float]
+    _scheduler: Scheduler[float, Callable[[], None]]
     _driver: AsyncDriver[AsyncType]
     _running: Optional[AsyncType] = None
-    _pending: Optional[CallHandle[float]] = None
+    _pending: Optional[CallHandle[float, Callable[[], None]]] = None
 
     @property
     def running(self) -> bool:
@@ -67,4 +68,6 @@ class Repeating(Generic[AsyncType]):
         if (running := self._noLongerRunning()) is not None:
             self._driver.complete(running)
         elif raiseIfNotRunning:
-            raise NotRunning(f"Repeating({self.work}) is not currently running.")
+            raise NotRunning(
+                f"Repeating({self.work}) is not currently running."
+            )

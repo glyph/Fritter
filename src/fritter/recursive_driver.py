@@ -1,19 +1,19 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple
+from typing import Callable, Generic, Optional, Tuple
 
 from .scheduler import CallHandle, Scheduler
 
 
 @dataclass
-class RecursiveDriver(object):
-    _parent: Scheduler[float]
+class RecursiveDriver:
+    _parent: Scheduler[float, Callable[[], None]]
 
     # TODO: support for generic types would be nice here, but things have to be
     # multiplied and divided by the scaling factor, which means it needs to be
     # a float. Even using a TypeVar bound to `float` here creates a ton of
     # awkward casts below.
 
-    _call: Optional[CallHandle[float]] = None
+    _call: Optional[CallHandle[float, Callable[[], None]]] = None
     _offset: float = 0
     """
     amount to subtract from parent's timestamp to get to this driver's

@@ -10,7 +10,7 @@ from .repeat import Repeating
 from .scheduler import Scheduler
 from fritter.boundaries import PriorityQueue
 from fritter.priority_queue import HeapPriorityQueue
-from fritter.scheduler import FutureCall
+from fritter.scheduler import FutureCall, Scheduler, SimpleScheduler
 
 
 log = Logger()
@@ -71,8 +71,10 @@ class TwistedAsyncDriver(object):
 
 def twistedScheduler(
     reactor: IReactorTime,
-    queue: Optional[PriorityQueue[FutureCall[float]]] = None,
-) -> Scheduler[float]:
+    queue: Optional[
+        PriorityQueue[FutureCall[float, Callable[[], None]]]
+    ] = None,
+) -> SimpleScheduler:
     """
     Create a scheduler that uses Twisted.
     """
@@ -83,8 +85,8 @@ def twistedScheduler(
 
 
 def twistedRepeating(
-    scheduler: Scheduler[float], work: RepeatingWork
-) -> Repeating[Deferred[None]]:
+    scheduler: SimpleScheduler, work: RepeatingWork
+) -> Repeating[Deferred[None], Callable[[], None]]:
     """
     Create a repeating call that returns a Deferred from its start method.
     """

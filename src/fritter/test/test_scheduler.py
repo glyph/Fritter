@@ -4,6 +4,7 @@ from unittest import TestCase
 from ..memory_driver import MemoryDriver
 from ..priority_queue import HeapPriorityQueue
 from ..scheduler import Scheduler
+from fritter.scheduler import SimpleScheduler
 
 
 class SchedulerTests(TestCase):
@@ -16,7 +17,7 @@ class SchedulerTests(TestCase):
         Scheduling a call
         """
         driver = MemoryDriver()
-        scheduler = Scheduler(HeapPriorityQueue(), driver)
+        scheduler = SimpleScheduler(HeapPriorityQueue(), driver)
         called = 0
 
         def callme() -> None:
@@ -33,7 +34,7 @@ class SchedulerTests(TestCase):
         """
         CallHandle.cancel() cancels an outstanding call.
         """
-        scheduler = Scheduler(HeapPriorityQueue(), driver := MemoryDriver())
+        scheduler = SimpleScheduler(HeapPriorityQueue(), driver := MemoryDriver())
         callTimes = []
 
         def record(event: str) -> Callable[[], None]:

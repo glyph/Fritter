@@ -10,6 +10,9 @@ license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
 requires-python = ">=3.9"
+dependencies = [
+    "datetype",
+]
 
 [project.urls]
 Home = "https://github.com/glyph/fritter"
