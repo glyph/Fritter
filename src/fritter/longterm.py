@@ -214,8 +214,10 @@ def dailyWithSkips(
         nextDesired += timedelta(days=1)
     return days, nextDesired
 
-__: RuleFunction = daily
-__: RuleFunction = dailyWithSkips
+__: RuleFunction
+
+__ = daily
+__ = dailyWithSkips
 
 
 def schedulerFromJSON(
