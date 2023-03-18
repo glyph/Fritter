@@ -3,7 +3,6 @@ from unittest import TestCase
 
 from ..memory_driver import MemoryDriver
 from ..priority_queue import HeapPriorityQueue
-from ..scheduler import Scheduler
 from fritter.scheduler import SimpleScheduler
 
 
