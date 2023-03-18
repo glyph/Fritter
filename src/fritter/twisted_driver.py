@@ -5,13 +5,10 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 
-from .boundaries import RepeatingWork
+from .boundaries import RepeatingWork, PriorityQueue
 from .repeat import Repeating
-from .scheduler import Scheduler
-from fritter.boundaries import PriorityQueue
-from fritter.priority_queue import HeapPriorityQueue
-from fritter.scheduler import FutureCall, Scheduler, SimpleScheduler
-
+from .scheduler import FutureCall, Scheduler, SimpleScheduler
+from .priority_queue import HeapPriorityQueue
 
 log = Logger()
 
