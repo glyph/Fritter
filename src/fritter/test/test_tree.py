@@ -11,7 +11,9 @@ class RecursiveTest(TestCase):
     def _oneRecursiveCall(
         self, scaleFactor: float
     ) -> List[Tuple[float, float]]:
-        scheduler1 = SimpleScheduler(HeapPriorityQueue(), driver := MemoryDriver())
+        scheduler1 = SimpleScheduler(
+            HeapPriorityQueue(), driver := MemoryDriver()
+        )
         scheduler2 = SimpleScheduler(
             HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
         )

@@ -203,6 +203,7 @@ def daily(
 ) -> tuple[int, DateTime[ZoneInfo]]:
     return 1, desiredTime + timedelta(days=1)
 
+
 def dailyWithSkips(
     desiredTime: DateTime[ZoneInfo],
     currentTime: DateTime[ZoneInfo],
@@ -213,6 +214,7 @@ def dailyWithSkips(
         days += 1
         nextDesired += timedelta(days=1)
     return days, nextDesired
+
 
 __: RuleFunction
 

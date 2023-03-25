@@ -82,4 +82,5 @@ class Scheduler(Generic[WhenT, WhatT]):
         if upNext is not None:
             self._driver.reschedule(upNext.when, self._advanceToNow)
 
+
 SimpleScheduler = Scheduler[float, Callable[[], None]]
