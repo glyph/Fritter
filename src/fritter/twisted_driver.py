@@ -45,7 +45,10 @@ class TwistedAsyncDriver(object):
     """
 
     def newWithCancel(self, cancel: Callable[[], None]) -> Deferred[None]:
-        "Create a new future-ish object with the given callback to execute when canceled."
+        """
+        Create a new future-ish object with the given callback to execute when
+        canceled.
+        """
         return Deferred(lambda d: cancel())
 
     def complete(self, asyncObj: Deferred[None]) -> None:

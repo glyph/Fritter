@@ -67,7 +67,10 @@ AsyncType = TypeVar("AsyncType")
 
 class AsyncDriver(Protocol[AsyncType]):
     def newWithCancel(self, cancel: Callable[[], None]) -> AsyncType:
-        "Create a new future-ish object with the given callback to execute when canceled."
+        """
+        Create a new future-ish object with the given callback to execute when
+        canceled.
+        """
 
     def complete(self, asyncObj: AsyncType) -> None:
         "The asynchronous operation completed successfully."
