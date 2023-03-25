@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Generic, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 from .scheduler import CallHandle, Scheduler
 

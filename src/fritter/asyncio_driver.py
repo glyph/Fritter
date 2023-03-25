@@ -3,7 +3,7 @@ from asyncio.futures import Future
 from dataclasses import dataclass
 from logging import getLogger
 from sys import exc_info
-from typing import Awaitable, Callable, Optional
+from typing import Callable, Optional
 
 from fritter.boundaries import PriorityQueue, RepeatingWork
 from fritter.priority_queue import HeapPriorityQueue
@@ -44,7 +44,10 @@ class AsyncioAsyncDriver(object):
     """
 
     def newWithCancel(self, cancel: Callable[[], None]) -> Future[None]:
-        "Create a new future-ish object with the given callback to execute when canceled."
+        """
+        Create a new future-ish object with the given callback to execute when
+        canceled.
+        """
         f = Future[None]()
 
         @f.add_done_callback
