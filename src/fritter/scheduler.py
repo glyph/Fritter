@@ -42,6 +42,10 @@ class Scheduler(Generic[WhenT, WhatT]):
     _q: PriorityQueue[FutureCall[WhenT, WhatT]]
     _driver: TimeDriver[WhenT]
 
+    def __post_init__(self) -> None:
+        if self._q.peek() is not None:
+            raise ValueError("Priority queue must be initially empty.")
+
     def currentTimestamp(self) -> WhenT:
         return self._driver.currentTimestamp()
 
