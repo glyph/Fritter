@@ -5,15 +5,25 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Callable, Generic, Mapping, Protocol, Type, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterator,
+    Mapping,
+    Protocol,
+    Type,
+    TypeVar,
+)
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
 
-from .boundaries import TimeDriver
 from fritter.boundaries import RepeatingWork
 from fritter.priority_queue import HeapPriorityQueue
 from fritter.scheduler import FutureCall, Scheduler
+
+from .boundaries import TimeDriver
 
 
 @dataclass
@@ -39,7 +49,9 @@ class DateTimeDriver:
         self._driver.reschedule(newTime.timestamp(), work)
 
     def currentTimestamp(self) -> DateTime[ZoneInfo]:
-        return DateTime.now(ZoneInfo("Etc/UTC"))
+        return DateTime.fromtimestamp(
+            self._driver.currentTimestamp(), ZoneInfo("Etc/UTC")
+        )
 
 
 _: Type[TimeDriver[DateTime[ZoneInfo]]] = DateTimeDriver
@@ -51,7 +63,8 @@ FullSerialization = TypeVar("FullSerialization", covariant=True)
 
 class Serializer(Protocol[PersistentCallable, FullSerialization]):
     """
-    An object that can serialize some FutureCalls into something.
+    A L{Serializer}C{[X, Y]} can serialize a collection of C{X} - which must be
+    at least a 0-argument callable returning None - into a C{Y}.
     """
 
     def add(
@@ -70,7 +83,10 @@ class Serializer(Protocol[PersistentCallable, FullSerialization]):
 @dataclass
 class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
     """
-    A scheduler whomst may persist.
+    A L{persistentScheduler}C{[X, Y]} can produce a L{Scheduler} restricted to
+    scheduling callables of type C{X}, which can be serialized to C{Y} by its
+    C{save} method.  You must provide a L{TimeDriver}C{[float]} and a callable
+    that returns a L{Serializer}C{[X, Y]} to construct one.
     """
 
     _runtimeDriver: TimeDriver[float]
@@ -86,18 +102,21 @@ class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
     @property
     def scheduler(self) -> Scheduler[DateTime[ZoneInfo], PersistentCallable]:
         """
-        Create the scheduler if we need one.
+        Create the scheduler.
         """
         if self._scheduler is None:
             self._scheduler = Scheduler(
                 HeapPriorityQueue(self._calls),
+                # TODO: I don't think that Scheduler properly respects being
+                # initialized with a non-empty queue
                 DateTimeDriver(self._runtimeDriver),
             )
         return self._scheduler
 
     def save(self) -> FullSerialization:
         """
-        serialize everything
+        Serialize all the calls scheduled against C{self.scheduler} and return
+        the C{FullSerialization} type provided by the serializer.
         """
         serializer = self._serializerFactory()
         for item in self._calls:
@@ -107,7 +126,8 @@ class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
 
 class JSONableCallable(Protocol):
     """
-    It's callable! It's JSONable!
+    Protocol definition of a serializable callable usable with
+    L{JSONSerializer}.
     """
 
     def __call__(self) -> None:
@@ -122,14 +142,14 @@ class JSONableCallable(Protocol):
 
     def asJSON(self) -> dict[str, object]:
         """
-        Serialize this callable to JSON.
+        Convert this callable to a JSON-serializable dictionary.
         """
 
 
 @dataclass
 class JSONSerializer:
     """
-    JSON Serializer.
+    Implementation of L{Serializer} protocol in terms of L{JSONableCallable}s.
     """
 
     _calls: list[dict[str, object]]
@@ -152,18 +172,9 @@ class JSONSerializer:
 
     def finish(self) -> dict[str, object]:
         """
-        Collect all the calls and save them.
+        Collect all the calls and save them into a JSON object.
         """
         return {"scheduledCalls": self._calls}
-
-
-def jsonScheduler(
-    runtimeDriver: TimeDriver[float],
-) -> PersistableScheduler[JSONableCallable, dict[str, object]]:
-    """
-    Create a new persistable scheduler.
-    """
-    return PersistableScheduler(runtimeDriver, lambda: JSONSerializer([]))
 
 
 RuleFunction = Callable[
@@ -174,8 +185,6 @@ RuleFunction = Callable[
 
 @dataclass
 class Recurring(Generic[PersistentCallable, FullSerialization]):
-    """ """
-
     desiredTime: DateTime[ZoneInfo]
     rule: RuleFunction
     callback: RepeatingWork
@@ -221,42 +230,107 @@ __: RuleFunction
 __ = daily
 __ = dailyWithSkips
 
+JSONDeserializer = Callable[
+    [
+        PersistableScheduler[JSONableCallable, dict[str, object]],
+        dict[str, object],
+    ],
+    JSONableCallable,
+]
+
+TypeCodeLookup = Mapping[str, JSONDeserializer]
+
+
+def jsonScheduler(
+    runtimeDriver: TimeDriver[float],
+) -> PersistableScheduler[JSONableCallable, dict[str, object]]:
+    """
+    Create a new L{PersistableScheduler} using a given L{TimeDriver} that can
+    schedule C{float}s.
+    """
+    return PersistableScheduler(runtimeDriver, lambda: JSONSerializer([]))
+
 
 def schedulerFromJSON(
     runtimeDriver: TimeDriver[float],
     serializedJSON: dict[str, Any],
-    codeLookup: Mapping[
-        str,
-        Callable[
-            [
-                PersistableScheduler[JSONableCallable, dict[str, object]],
-                dict[str, object],
-            ],
-            JSONableCallable,
-        ],
-    ],
+    typeCodeLookup: TypeCodeLookup,
 ) -> PersistableScheduler[JSONableCallable, dict[str, object]]:
     """
-    Load some JSON.
+    Load a JSON object in the format serialized from L{JSONSerializer.finalize}
+    and a runtime L{TimeDriver}C{[float]}, returning a L{PersistableScheduler}.
     """
-    calls: list[FutureCall[DateTime[ZoneInfo], JSONableCallable]] = []
     loadedID = 0
     new = PersistableScheduler(
-        runtimeDriver, lambda: JSONSerializer([]), _calls=calls
+        runtimeDriver,
+        lambda: JSONSerializer([]),
     )
     for callJSON in serializedJSON["scheduledCalls"]:
         loadedID -= 1
-        call = FutureCall(
-            when=fromisoformat(callJSON["what"]["when"]).replace(
-                tzinfo=ZoneInfo(callJSON["tz"])
-            ),
-            what=codeLookup[callJSON["what"]["type"]](
-                new,
-                callJSON["what"]["data"],
-            ),
-            id=loadedID,
-            called=callJSON["called"],
-            canceled=callJSON["canceled"],
+        when = fromisoformat(callJSON["when"]).replace(
+            tzinfo=ZoneInfo(callJSON["tz"])
         )
-        calls.append(call)
+        typeCode = callJSON["what"]["type"]
+        what = typeCodeLookup[typeCode](new, callJSON["what"]["data"])
+        new.scheduler.callAtTimestamp(when, what)
     return new
+
+
+@dataclass
+class SerializableFunction:
+    original: Callable[[], None]
+    typeCode: str
+
+    def __call__(self) -> None:
+        self.original()
+
+    def typeCodeForJSON(self) -> str:
+        return self.typeCode
+
+    def asJSON(self) -> dict[str, object]:
+        return {}
+
+
+@dataclass
+class LoaderMap(TypeCodeLookup):
+    registry: dict[str, JSONableCallable]
+
+    def __getitem__(
+        self, key: str
+    ) -> Callable[
+        [
+            PersistableScheduler[JSONableCallable, dict[str, object]],
+            dict[str, object],
+        ],
+        JSONableCallable,
+    ]:
+        def loader(
+            scheduler: PersistableScheduler[
+                JSONableCallable, dict[str, object]
+            ],
+            json: dict[str, object],
+        ) -> JSONableCallable:
+            return self.registry[key]
+
+        return loader
+
+    def __iter__(self) -> Iterator[str]:
+        if False:
+            yield
+
+    def __len__(self) -> int:
+        return 0
+
+
+@dataclass
+class JSONRegistry:
+    registry: dict[str, JSONableCallable] = field(default_factory=dict)
+
+    @property
+    def loaders(self) -> TypeCodeLookup:
+        return LoaderMap(self.registry)
+
+    def byName(self, cb: Callable[[], None]) -> JSONableCallable:
+        func = SerializableFunction(cb, cb.__name__)
+        self.registry[cb.__name__] = func
+        return func
