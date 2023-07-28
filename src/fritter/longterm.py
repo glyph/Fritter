@@ -83,7 +83,7 @@ class Serializer(Protocol[PersistentCallable, FullSerialization]):
 @dataclass
 class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
     """
-    A L{persistentScheduler}C{[X, Y]} can produce a L{Scheduler} restricted to
+    A L{PersistentScheduler}C{[X, Y]} can produce a L{Scheduler} restricted to
     scheduling callables of type C{X}, which can be serialized to C{Y} by its
     C{save} method.  You must provide a L{TimeDriver}C{[float]} and a callable
     that returns a L{Serializer}C{[X, Y]} to construct one.
@@ -124,7 +124,35 @@ class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
         return serializer.finish()
 
 
-class JSONableCallable(Protocol):
+class JSONable(Protocol):
+    def typeCodeForJSON(self) -> str:
+        """
+        Type-code to be looked up later.
+        """
+
+    def asJSON(self) -> JSONObject:
+        """
+        Convert this callable to a JSON-serializable dictionary.
+        """
+
+
+T = TypeVar("T")
+LoadContext = TypeVar("LoadContext", contravariant=True)
+
+
+class JSONableInstance(JSONable, Protocol[LoadContext]):
+    @classmethod
+    def typeCodeForJSON(cls) -> str:
+        ...
+
+    @classmethod
+    def fromJSON(
+        cls: Type[T], loadContext: LoadContext, json: JSONObject
+    ) -> T:
+        ...
+
+
+class JSONableCallable(JSONable, Protocol):
     """
     Protocol definition of a serializable callable usable with
     L{JSONSerializer}.
@@ -133,16 +161,6 @@ class JSONableCallable(Protocol):
     def __call__(self) -> None:
         """
         Do the work of the callable.
-        """
-
-    def typeCodeForJSON(self) -> str:
-        """
-        Type-code to be looked up later.
-        """
-
-    def asJSON(self) -> dict[str, object]:
-        """
-        Convert this callable to a JSON-serializable dictionary.
         """
 
 
@@ -232,13 +250,14 @@ __ = dailyWithSkips
 
 JSONDeserializer = Callable[
     [
+        LoadContext,
         PersistableScheduler[JSONableCallable, dict[str, object]],
         dict[str, object],
     ],
     JSONableCallable,
 ]
 
-TypeCodeLookup = Mapping[str, JSONDeserializer]
+TypeCodeLookup = Mapping[str, JSONDeserializer[LoadContext]]
 
 
 def jsonScheduler(
@@ -254,7 +273,8 @@ def jsonScheduler(
 def schedulerFromJSON(
     runtimeDriver: TimeDriver[float],
     serializedJSON: dict[str, Any],
-    typeCodeLookup: TypeCodeLookup,
+    typeCodeLookup: TypeCodeLookup[LoadContext],
+    loadContext: LoadContext,
 ) -> PersistableScheduler[JSONableCallable, dict[str, object]]:
     """
     Load a JSON object in the format serialized from L{JSONSerializer.finalize}
@@ -271,7 +291,9 @@ def schedulerFromJSON(
             tzinfo=ZoneInfo(callJSON["tz"])
         )
         typeCode = callJSON["what"]["type"]
-        what = typeCodeLookup[typeCode](new, callJSON["what"]["data"])
+        what = typeCodeLookup[typeCode](
+            loadContext, new, callJSON["what"]["data"]
+        )
         new.scheduler.callAtTimestamp(when, what)
     return new
 
@@ -291,46 +313,115 @@ class SerializableFunction:
         return {}
 
 
-@dataclass
-class LoaderMap(TypeCodeLookup):
-    registry: dict[str, JSONableCallable]
+JSONScheduler = PersistableScheduler[JSONableCallable, dict[str, object]]
+JSONObject = dict[str, Any]
 
-    def __getitem__(
-        self, key: str
-    ) -> Callable[
-        [
-            PersistableScheduler[JSONableCallable, dict[str, object]],
-            dict[str, object],
-        ],
-        JSONableCallable,
-    ]:
+
+JI = TypeVar("JI", bound=JSONableInstance[object])
+
+
+@dataclass
+class JSONableBoundMethod(Generic[JI]):
+    descriptor: JSONableMethodDescriptor[JI, Any]
+    instance: JI
+
+    def __call__(self) -> None:
+        self.descriptor.func(self.instance)
+
+    def asJSON(self) -> dict[str, object]:
+        return self.instance.asJSON()
+
+    def typeCodeForJSON(self) -> str:
+        return f"{self.instance.typeCodeForJSON()}.{self.descriptor.func.__name__}"
+
+__JC: Type[JSONableCallable] = JSONableBoundMethod
+
+
+@dataclass
+class JSONableMethodDescriptor(Generic[JI, LoadContext]):
+    registry: JSONRegistry[LoadContext]
+    func: Callable[[JI], None]
+
+    def __set_name__(self, cls: Type[JI], name: str) -> None:
+        self.registry.registerMethodWithType(cls, self.func.__name__)
+
+    def __get__(
+        self, instance: JI, owner: object = None
+    ) -> JSONableBoundMethod[JI]:
+        return JSONableBoundMethod(self, instance)
+
+
+@dataclass
+class LoaderMap(TypeCodeLookup[LoadContext]):
+    registry: dict[str, JSONableCallable]
+    instanceRegistry: dict[str, Type[JSONableInstance[LoadContext]]]
+
+    def __getitem__(self, key: str) -> JSONDeserializer[LoadContext]:
         def loader(
-            scheduler: PersistableScheduler[
-                JSONableCallable, dict[str, object]
-            ],
-            json: dict[str, object],
+            ctx: LoadContext, sched: JSONScheduler, json: JSONObject
         ) -> JSONableCallable:
-            return self.registry[key]
+            if key in self.registry:
+                return self.registry[key]
+            else:
+                typeCode, methodName = key.rsplit(".", 1)
+                result: JSONableCallable = getattr(
+                    self.instanceRegistry[typeCode].fromJSON(ctx, json),
+                    methodName,
+                )
+                return result
 
         return loader
 
     def __iter__(self) -> Iterator[str]:
-        if False:
-            yield
+        return iter(self.registry.keys())
 
     def __len__(self) -> int:
-        return 0
+        return len(self.registry)
+
+
+SomeContext = TypeVar(
+    "SomeContext",
+    bound=JSONableInstance[Any],
+    # See comment in JSONRegistry.asMethod about this bound
+)
 
 
 @dataclass
-class JSONRegistry:
+class JSONRegistry(Generic[LoadContext]):
     registry: dict[str, JSONableCallable] = field(default_factory=dict)
+    instanceRegistry: dict[str, Type[JSONableInstance[LoadContext]]] = field(
+        default_factory=dict
+    )
 
     @property
-    def loaders(self) -> TypeCodeLookup:
-        return LoaderMap(self.registry)
+    def loaders(self) -> TypeCodeLookup[LoadContext]:
+        return LoaderMap(self.registry, self.instanceRegistry)
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
         func = SerializableFunction(cb, cb.__name__)
-        self.registry[cb.__name__] = func
+        self.registry[func.typeCodeForJSON()] = func
         return func
+
+    def asMethod(
+        self, method: Callable[[SomeContext], None]
+    ) -> JSONableMethodDescriptor[SomeContext, LoadContext]:
+
+        wrapped = JSONableMethodDescriptor[SomeContext, LoadContext](
+            self, method
+        )
+
+        # I want to stipulate that the method I am taking here must have a
+        # 'self' parameter whose type is *at least* as strict as
+        # JSONableInstance[LoadContext] but may be stricter than that.
+        # However, this would require higher-kinded typevars, in order to make
+        # SomeContext bounded by JSONableInstance[LoadContext] rather than
+        # JSONableInstance[Any]: https://github.com/python/typing/issues/548
+
+        return wrapped
+
+    def registerMethodWithType(
+        self, cls: Type[JSONableInstance[LoadContext]], name: str
+    ) -> None:
+        # TODO: honor 'name', keep a record of which ones are allowed for this
+        # type
+        self.instanceRegistry[cls.typeCodeForJSON()] = cls
