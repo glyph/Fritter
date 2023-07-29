@@ -332,7 +332,11 @@ class JSONableBoundMethod(Generic[JI]):
         return self.instance.asJSON()
 
     def typeCodeForJSON(self) -> str:
-        return f"{self.instance.typeCodeForJSON()}.{self.descriptor.func.__name__}"
+        return (
+            f"{self.instance.typeCodeForJSON()}."
+            f"{self.descriptor.func.__name__}"
+        )
+
 
 __JC: Type[JSONableCallable] = JSONableBoundMethod
 
