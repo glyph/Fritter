@@ -7,6 +7,7 @@ from .scheduler import CallHandle, Scheduler
 LocalTime = NewType("LocalTime", float)
 ParentTime = NewType("ParentTime", float)
 
+
 @dataclass
 class RecursiveDriver:
     parent: Scheduler[float, Callable[[], None]]
@@ -56,12 +57,14 @@ class RecursiveDriver:
 
     @property
     def _parent(self) -> Scheduler[ParentTime, Callable[[], None]]:
-        return self.parent      # type:ignore[return-value]
+        return self.parent  # type:ignore[return-value]
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
         self._reschedule(LocalTime(desiredTime), work)
 
-    def _reschedule(self, desiredTime: LocalTime, work: Callable[[], None]) -> None:
+    def _reschedule(
+        self, desiredTime: LocalTime, work: Callable[[], None]
+    ) -> None:
         assert (
             self._call is None or self._running
         ), f"we weren't running, call should be None not {self._call}"
@@ -105,7 +108,9 @@ class RecursiveDriver:
         # shift forward the offset to skip over the time during which we were
         # paused.
         parentTime: ParentTime = self._parent.currentTimestamp()
-        parentDelta: ParentTime = ParentTime(self._pauseTime / self._scaleFactor)
+        parentDelta: ParentTime = ParentTime(
+            self._pauseTime / self._scaleFactor
+        )
 
         # We need to cast to the NewType again here because the results of
         # NewType arithmetic are the base types.

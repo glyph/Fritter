@@ -126,10 +126,10 @@ class RecursiveTest(TestCase):
             HeapPriorityQueue(),
             recursive := RecursiveDriver(scheduler1, _scaleFactor=scaleFactor),
         )
-        baseTime = 1000.
+        baseTime = 1000.0
         driver.advance(baseTime)
         calls = []
-        localDelta = 5.
+        localDelta = 5.0
         scaledDelta = localDelta / scaleFactor
         scheduler2.callAtTimestamp(
             scheduler2.currentTimestamp() + localDelta,
