@@ -1,3 +1,4 @@
+# -*- test-case-name: fritter.test.test_scheduler -*-
 from __future__ import annotations
 
 from dataclasses import dataclass, field

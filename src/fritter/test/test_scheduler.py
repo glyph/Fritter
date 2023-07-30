@@ -1,9 +1,10 @@
 from typing import Callable
 from unittest import TestCase
 
+from fritter.scheduler import FutureCall, SimpleScheduler
+
 from ..memory_driver import MemoryDriver
 from ..priority_queue import HeapPriorityQueue
-from fritter.scheduler import SimpleScheduler
 
 
 class SchedulerTests(TestCase):
@@ -63,7 +64,7 @@ class SchedulerTests(TestCase):
 
             return result
 
-        scheduler.callAtTimestamp(1.0, record("a"))
+        aHandle = scheduler.callAtTimestamp(1.0, record("a"))
         bHandle = scheduler.callAtTimestamp(2.0, record("b"))
         scheduler.callAtTimestamp(3.0, record("c"))
         didCancel = []
@@ -76,9 +77,18 @@ class SchedulerTests(TestCase):
         self.assertEqual(callTimes, [])
         driver.advance()
         self.assertEqual(callTimes, [(1.0, "a")])
+        aHandle.cancel()  # if it's already called it's a no-op
         self.assertEqual(didCancel, [])
         driver.advance()
         self.assertEqual(callTimes, [(1.0, "a")])
         self.assertEqual(didCancel, [True])
+        bHandle.cancel()  # repeated calls are no-ops
+        self.assertEqual(didCancel, [True])
         driver.advance()
         self.assertEqual(callTimes, [(1.0, "a"), (3.0, "c")])
+
+    def test_queueMustBeEmpty(self) -> None:
+        driver = MemoryDriver()
+        q = HeapPriorityQueue([FutureCall(1.0, lambda: None)])
+        with self.assertRaises(ValueError):
+            SimpleScheduler(q, driver)
