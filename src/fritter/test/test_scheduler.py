@@ -29,6 +29,25 @@ class SchedulerTests(TestCase):
         driver.advance(2.0)
         self.assertEqual(1, called)
 
+    def test_moveSooner(self) -> None:
+        driver = MemoryDriver()
+        scheduler = SimpleScheduler(HeapPriorityQueue(), driver)
+        called = 0
+
+        def callme() -> None:
+            nonlocal called
+            called += 1
+
+        scheduler.callAtTimestamp(1.0, callme)
+        scheduler.callAtTimestamp(0.5, callme)
+        self.assertEqual(0, called)
+        driver.advance(0.3)
+        self.assertEqual(0, called)
+        driver.advance(0.3)
+        self.assertEqual(1, called)
+        driver.advance(0.6)
+        self.assertEqual(2, called)
+
     def test_canceling(self) -> None:
         """
         CallHandle.cancel() cancels an outstanding call.
