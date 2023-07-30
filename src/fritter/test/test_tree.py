@@ -37,6 +37,30 @@ class RecursiveTest(TestCase):
         calls = self._oneRecursiveCall(1 / 3.0)
         self.assertEqual(calls, [(3.0, 1.0)])
 
+    def test_moveSooner(self) -> None:
+        scheduler1 = SimpleScheduler(
+            HeapPriorityQueue(), driver := MemoryDriver()
+        )
+        scheduler2 = SimpleScheduler(
+            HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
+        )
+        calls = []
+        recursive.start()
+        scheduler2.callAtTimestamp(
+            1.0,
+            lambda: calls.append(
+                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+            ),
+        )
+        scheduler2.callAtTimestamp(
+            0.5,
+            lambda: calls.append(
+                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+            ),
+        )
+        driver.advance(0.6)
+        self.assertEqual(calls, [(0.6, 0.6)])
+
     def test_pausing(self) -> None:
         scheduler1 = SimpleScheduler(
             HeapPriorityQueue(), driver := MemoryDriver()
