@@ -37,6 +37,24 @@ class RecursiveTest(TestCase):
         calls = self._oneRecursiveCall(1 / 3.0)
         self.assertEqual(calls, [(3.0, 1.0)])
 
+    def test_startPauseStart(self) -> None:
+        scheduler1 = SimpleScheduler(
+            HeapPriorityQueue(), driver := MemoryDriver()
+        )
+        recursive = RecursiveDriver(scheduler1, _scaleFactor=2)
+        recursive.pause()
+        self.assertEqual(recursive.currentTimestamp(), 0.0)
+        driver.advance(500)
+        self.assertEqual(recursive.currentTimestamp(), 0.0)
+        recursive.start()
+        self.assertEqual(recursive.currentTimestamp(), 0.0)
+        driver.advance(10)
+        self.assertEqual(recursive.currentTimestamp(), 20.0)
+        recursive.start()
+        self.assertEqual(recursive.currentTimestamp(), 20.0)
+        driver.advance(10)
+        self.assertEqual(recursive.currentTimestamp(), 40.0)
+
     def test_moveSooner(self) -> None:
         scheduler1 = SimpleScheduler(
             HeapPriorityQueue(), driver := MemoryDriver()
@@ -98,6 +116,36 @@ class RecursiveTest(TestCase):
         self.assertEqual(2.7 + 1.5 + 0.5, driver.currentTimestamp())
         self.assertEqual(1.5 + 0.5, recursive.currentTimestamp())
         self.assertEqual(calls, [(2.7 + 1.5 + 0.5, 2.0)])
+
+    def test_doubleStart(self) -> None:
+        scheduler1 = SimpleScheduler(
+            HeapPriorityQueue(), driver := MemoryDriver()
+        )
+        scaleFactor = 2.0
+        scheduler2 = SimpleScheduler(
+            HeapPriorityQueue(),
+            recursive := RecursiveDriver(scheduler1, _scaleFactor=scaleFactor),
+        )
+        baseTime = 1000.
+        driver.advance(baseTime)
+        calls = []
+        localDelta = 5.
+        scaledDelta = localDelta / scaleFactor
+        scheduler2.callAtTimestamp(
+            scheduler2.currentTimestamp() + localDelta,
+            lambda: calls.append(
+                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+            ),
+        )
+        recursive.start()
+        driver.advance(1.0)
+        self.assertEqual(calls, [])
+        recursive.start()
+        driver.advance(1.0)
+        self.assertEqual(calls, [])
+        recursive.start()
+        driver.advance(0.5)
+        self.assertEqual(calls, [(baseTime + scaledDelta, localDelta)])
 
     def test_idling(self) -> None:
         scheduler1 = SimpleScheduler(
