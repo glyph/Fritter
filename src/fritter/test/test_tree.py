@@ -93,4 +93,3 @@ class RecursiveTest(TestCase):
         self.assertTrue(driver.isScheduled())
         onlyCall.cancel()
         self.assertFalse(driver.isScheduled())
-
