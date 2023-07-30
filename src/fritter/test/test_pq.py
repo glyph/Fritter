@@ -2,6 +2,7 @@ from fritter.priority_queue import HeapPriorityQueue
 
 from unittest import TestCase
 
+
 class QueueTests(TestCase):
     def setUp(self) -> None:
         self.q: HeapPriorityQueue[int] = HeapPriorityQueue()
