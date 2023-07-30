@@ -64,7 +64,7 @@ class RecursiveTest(TestCase):
         calls[:] = []
         recursive.pause()
         # paused at 1.5, with 0.5 left until second call (at 2.0)
-        driver.advance(2.7)     # we should not be advancing
+        driver.advance(2.7)
         # move to 4.2, still 0.5 left, no call yet
         self.assertEqual(calls, [])
         self.assertEqual(2.7 + 1.5, driver.currentTimestamp())
