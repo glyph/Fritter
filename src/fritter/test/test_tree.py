@@ -36,3 +36,41 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [(1 / 3.0, 1.0)])
         calls = self._oneRecursiveCall(1 / 3.0)
         self.assertEqual(calls, [(3.0, 1.0)])
+
+    def test_pausing(self) -> None:
+        scheduler1 = SimpleScheduler(
+            HeapPriorityQueue(), driver := MemoryDriver()
+        )
+        scheduler2 = SimpleScheduler(
+            HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
+        )
+        recursive.start()
+        calls = []
+        scheduler2.callAtTimestamp(
+            1.0,
+            lambda: calls.append(
+                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+            ),
+        )
+        scheduler2.callAtTimestamp(
+            2.0,
+            lambda: calls.append(
+                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+            ),
+        )
+        self.assertEqual(calls, [])
+        driver.advance(1.5)
+        self.assertEqual(calls, [(1.5, 1.5)])
+        calls[:] = []
+        recursive.pause()
+        # paused at 1.5, with 0.5 left until second call (at 2.0)
+        driver.advance(2.7)     # we should not be advancing
+        # move to 4.2, still 0.5 left, no call yet
+        self.assertEqual(calls, [])
+        self.assertEqual(2.7 + 1.5, driver.currentTimestamp())
+        self.assertEqual(1.5, recursive.currentTimestamp())
+        recursive.start()
+        driver.advance(0.5)
+        self.assertEqual(2.7 + 1.5 + 0.5, driver.currentTimestamp())
+        self.assertEqual(1.5 + 0.5, recursive.currentTimestamp())
+        self.assertEqual(calls, [(2.7 + 1.5 + 0.5, 2.0)])

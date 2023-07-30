@@ -66,9 +66,8 @@ class RecursiveDriver:
     def start(self) -> None:
         if self._running:
             return
-        self._offset = self._parent.currentTimestamp() + (
-            self._pauseTime / self._scaleFactor
-        )
+        parentTime = self._parent.currentTimestamp()
+        self._offset = parentTime - (self._pauseTime / self._scaleFactor)
         self._pauseTime = 0
         self._running = True
         rws = self._toRunWhenStarted
