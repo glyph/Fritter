@@ -24,7 +24,7 @@ class RecursiveDriver:
     _pauseTime: float = (
         0.0  # *local* (not parent's) timestamp at which we were paused
     )
-    _toRunWhenStarted: Optional[Tuple[float, Callable[[], None]]] = None
+    _scheduleWhenStarted: Optional[Tuple[float, Callable[[], None]]] = None
     _scaleFactor: float = 1.0  # how much faster the local time coordinate
     # system is within this scheduler.
 
@@ -34,7 +34,7 @@ class RecursiveDriver:
             self._call is None or self._running
         ), f"we weren't running, call should be None not {self._call}"
 
-        self._toRunWhenStarted = desiredTime, work
+        self._scheduleWhenStarted = desiredTime, work
         if not self._running:
             return
 
@@ -44,14 +44,14 @@ class RecursiveDriver:
         parentTimestamp = (desiredTime / self._scaleFactor) + self._offset
 
         def clearAndRun() -> None:
-            self._toRunWhenStarted = None
+            self._scheduleWhenStarted = None
             self._call = None
             work()
 
         self._call = self._parent.callAtTimestamp(parentTimestamp, clearAndRun)
 
     def unschedule(self) -> None:
-        self._toRunWhenStarted = None
+        self._scheduleWhenStarted = None
         if self._call is not None:
             self._call.cancel()
             self._call = None
@@ -74,9 +74,10 @@ class RecursiveDriver:
         self._offset = parentTime - (self._pauseTime / self._scaleFactor)
         self._pauseTime = 0
         self._running = True
-        rws = self._toRunWhenStarted
-        if rws is not None:
-            self.reschedule(*rws)
+        scheduleWhenStarted = self._scheduleWhenStarted
+        if scheduleWhenStarted is not None:
+            desiredTime, work = scheduleWhenStarted
+            self.reschedule(desiredTime, work)
 
     def pause(self) -> None:
         self._pauseTime = self.currentTimestamp()
