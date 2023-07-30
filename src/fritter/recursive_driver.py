@@ -29,22 +29,26 @@ class RecursiveDriver:
     # system is within this scheduler.
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
-        def _() -> None:
+
+        assert (
+            self._call is None or self._running
+        ), f"we weren't running, call should be None not {self._call}"
+
+        self._toRunWhenStarted = desiredTime, work
+        if not self._running:
+            return
+
+        if self._call is not None:
+            self._call.cancel()
+
+        parentTimestamp = (desiredTime / self._scaleFactor) + self._offset
+
+        def clearAndRun() -> None:
             self._toRunWhenStarted = None
             self._call = None
             work()
 
-        if self._call is not None:
-            self._call.cancel()
-        self._toRunWhenStarted = desiredTime, work
-        if self._running:
-            self._call = self._parent.callAtTimestamp(
-                (desiredTime / self._scaleFactor) + self._offset, _
-            )
-        else:
-            assert (
-                self._call is None
-            ), f"we weren't running, call should be None not {self._call}"
+        self._call = self._parent.callAtTimestamp(parentTimestamp, clearAndRun)
 
     def unschedule(self) -> None:
         self._toRunWhenStarted = None
