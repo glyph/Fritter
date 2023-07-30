@@ -32,3 +32,6 @@ class MemoryDriver(object):
             what = self._scheduledWork[1]
             self._scheduledWork = None
             what()
+
+    def isScheduled(self) -> bool:
+        return self._scheduledWork is not None

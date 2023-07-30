@@ -74,3 +74,23 @@ class RecursiveTest(TestCase):
         self.assertEqual(2.7 + 1.5 + 0.5, driver.currentTimestamp())
         self.assertEqual(1.5 + 0.5, recursive.currentTimestamp())
         self.assertEqual(calls, [(2.7 + 1.5 + 0.5, 2.0)])
+
+    def test_idling(self) -> None:
+        scheduler1 = SimpleScheduler(
+            HeapPriorityQueue(), driver := MemoryDriver()
+        )
+        scheduler2 = SimpleScheduler(
+            HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
+        )
+        recursive.start()
+        calls = []
+        onlyCall = scheduler2.callAtTimestamp(
+            1.0,
+            lambda: calls.append(
+                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+            ),
+        )
+        self.assertTrue(driver.isScheduled())
+        onlyCall.cancel()
+        self.assertFalse(driver.isScheduled())
+
