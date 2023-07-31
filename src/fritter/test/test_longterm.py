@@ -140,3 +140,14 @@ class PersistentSchedulerTests(TestCase):
         self.assertEqual(memoryDriver.isScheduled(), False)
         memoryDriver.advance(dt.timestamp() + 1)
         self.assertEqual(calls, [])
+
+    def test_loaderMapMethods(self) -> None:
+        """
+        LoaderMap can act like a mapping, even though it's rarely used as one.
+        """
+        # TODO: Mapping requires we implement these methods, but are these
+        # event he right ones?  we don't enumerate the instance registry, and
+        # in order to do it we'd need to more explicitly remember which
+        # specific methods are registered.
+        self.assertEqual(len(registry.loaders), 2)
+        self.assertEqual(list(registry.loaders), ["call1", "call2"])
