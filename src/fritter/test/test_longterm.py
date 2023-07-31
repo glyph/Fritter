@@ -118,3 +118,25 @@ class PersistentSchedulerTests(TestCase):
                 "test_scheduleRunSaveRun value/method2",
             ],
         )
+
+    def test_idling(self) -> None:
+        memoryDriver = MemoryDriver()
+        persistentScheduler = jsonScheduler(memoryDriver)
+        dt = aware(
+            datetime(
+                2023,
+                7,
+                21,
+                1,
+                1,
+                1,
+                tzinfo=ZoneInfo(key="America/Los_Angeles"),
+            ),
+            ZoneInfo,
+        )
+        handle = persistentScheduler.scheduler.callAtTimestamp(dt, call1)
+        self.assertEqual(memoryDriver.isScheduled(), True)
+        handle.cancel()
+        self.assertEqual(memoryDriver.isScheduled(), False)
+        memoryDriver.advance(dt.timestamp() + 1)
+        self.assertEqual(calls, [])
