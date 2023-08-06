@@ -474,7 +474,7 @@ class RecurrenceConverter(Generic[LoadContext]):
         return {
             "ts": when.replace(tzinfo=None).isoformat(),
             "tz": when.tzinfo.key,
-            "rule": self.recurring.rule.__name__,  # TODO: lookup table for `RuleFunction` callables
+            "rule": self.recurring.rule.__name__,
             "callable": _whatJSON(self.recurring.callable),
             # "convert": is self, effectively
             # "scheduler": is what's doing the serializing
