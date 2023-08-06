@@ -120,41 +120,50 @@ RuleFunction = Callable[
 ]
 
 
+BasePersistentCallable = TypeVar(
+    "BasePersistentCallable", bound=Callable[[], None]
+)
+RecurringPersistentCallable = TypeVar(
+    "RecurringPersistentCallable", bound=RepeatingWork
+)
+
+
 @dataclass
-class Recurring(Generic[PersistentCallable, FullSerialization]):
+class Recurring(
+    Generic[
+        BasePersistentCallable, RecurringPersistentCallable, FullSerialization
+    ]
+):
     initialTime: DateTime[ZoneInfo]
     rule: RuleFunction
-    callback: RepeatingWork
+    callable: RecurringPersistentCallable
     convert: Callable[
-        [Recurring[PersistentCallable, FullSerialization]],
-        PersistentCallable,
+        [
+            Recurring[
+                BasePersistentCallable,
+                RecurringPersistentCallable,
+                FullSerialization,
+            ]
+        ],
+        BasePersistentCallable,
     ]
-    scheduler: PersistableScheduler[PersistentCallable, FullSerialization]
+    scheduler: PersistableScheduler[BasePersistentCallable, FullSerialization]
 
     def recur(self) -> None:
-        callIncrement, self.initialTime = self.rule(
-            self.initialTime,
-            self.scheduler.scheduler.currentTimestamp(),
-        )
-        self.callback(callIncrement)
+        now = self.scheduler.scheduler.currentTimestamp()
+        callIncrement, self.initialTime = self.rule(self.initialTime, now)
+        self.callable(callIncrement)
         self.scheduler.scheduler.callAtTimestamp(
-            self.initialTime,
-            self.convert(self),
+            self.initialTime, self.convert(self)
         )
 
 
 def daily(
     initialTime: DateTime[ZoneInfo], currentTime: DateTime[ZoneInfo]
 ) -> tuple[int, DateTime[ZoneInfo]]:
-    return 1, initialTime + timedelta(days=1)
-
-
-def dailyWithSkips(
-    initialTime: DateTime[ZoneInfo], currentTime: DateTime[ZoneInfo]
-) -> tuple[int, DateTime[ZoneInfo]]:
     days = 0
     nextDesired = initialTime
-    while nextDesired < currentTime:
+    while nextDesired <= currentTime:
         days += 1
         nextDesired += timedelta(days=1)
     return days, nextDesired
@@ -163,4 +172,4 @@ def dailyWithSkips(
 __: RuleFunction
 
 __ = daily
-__ = dailyWithSkips
+# __ = dailyWithSkips

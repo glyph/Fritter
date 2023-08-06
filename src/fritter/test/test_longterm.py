@@ -12,11 +12,9 @@ from ..jsonterm import (
     JSONableCallable,
     JSONObject,
     JSONRegistry,
-    JSONSerializer,
     jsonScheduler,
-    schedulerFromJSON,
 )
-from ..longterm import PersistableScheduler, Recurring, daily
+from ..longterm import PersistableScheduler, daily
 
 
 @dataclass
@@ -38,6 +36,10 @@ def call1() -> None:
 def call2() -> None:
     calls.append("goodbye")
 
+
+@registry.recurringFunction
+def repeating(steps: int) -> None:
+    calls.append(f"repeating {steps}")
 
 @dataclass
 class InstanceWithMethods:
@@ -69,6 +71,10 @@ class InstanceWithMethods:
     @registry.asMethod
     def method2(self) -> None:
         self.info.calls.append(f"{self.value}/method2")
+
+    @registry.recurringMethod
+    def recurrence(self, steps: int) -> None:
+        self.info.calls.append(f"recurrence {steps}")
 
 
 class PersistentSchedulerTests(TestCase):
@@ -117,7 +123,7 @@ class PersistentSchedulerTests(TestCase):
         saved = persistentScheduler.save()
         memory2 = MemoryDriver()
         ri = RegInfo([])
-        schedulerFromJSON(memory2, saved, registry.loaders, ri)
+        registry.load(memory2, saved, ri)
         memory2.advance(dt2.timestamp() + 1)
         self.assertEqual(calls, ["goodbye"])
         self.assertEqual(ri0.calls, ["test_scheduleRunSaveRun value/method1"])
@@ -153,21 +159,8 @@ class PersistentSchedulerTests(TestCase):
 
     def test_emptyScheduler(self) -> None:
         memory = MemoryDriver()
-        schedulerFromJSON(
-            memory, {"scheduledCalls": []}, registry.loaders, RegInfo([])
-        )
+        registry.load(memory, {"scheduledCalls": []}, RegInfo([]))
         self.assertEqual(memory.isScheduled(), False)
-
-    def test_loaderMapMethods(self) -> None:
-        """
-        LoaderMap can act like a mapping, even though it's rarely used as one.
-        """
-        # TODO: Mapping requires we implement these methods, but are these
-        # event he right ones?  we don't enumerate the instance registry, and
-        # in order to do it we'd need to more explicitly remember which
-        # specific methods are registered.
-        self.assertEqual(len(registry.loaders), 2)
-        self.assertEqual(list(registry.loaders), ["call1", "call2"])
 
     def test_recurring(self) -> None:
         dt = aware(
@@ -183,22 +176,20 @@ class PersistentSchedulerTests(TestCase):
             ZoneInfo,
         )
         memoryDriver = MemoryDriver()
+        memoryDriver.advance(dt.timestamp())
         persistentScheduler = jsonScheduler(memoryDriver)
-
-        def jsonRecurrenceConversion(
-            r: Recurring[JSONableCallable, JSONSerializer]
-        ) -> None:
-            pass
-
-        def callEveryDay(steps: int) -> None:
-            pass
-
-        r = registry.recurring(
-            dt,
-            daily,
-            callEveryDay,
-            persistentScheduler,
-        )
-        r.recur()
-        memoryDriver.advance(dt.timestamp() + 1)
-        print(calls)
+        registry.recurring(dt, daily, repeating, persistentScheduler).recur()
+        self.assertEqual(calls, ["repeating 1"])
+        del calls[:]
+        def days(n: int) -> float:
+            return (60 * 60 * 24 * n)
+        memoryDriver.advance(days(3))
+        self.assertEqual(calls, ["repeating 3"])
+        del calls[:]
+        from json import loads, dumps
+        newInfo = RegInfo([])
+        mem2 = MemoryDriver()
+        mem2.advance(dt.timestamp())
+        mem2.advance(days(7))
+        registry.load(mem2, loads(dumps(persistentScheduler.save())), newInfo)
+        self.assertEqual(calls, ["repeating 4"])

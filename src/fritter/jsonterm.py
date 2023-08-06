@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Generic,
-    Iterator,
     Mapping,
+    ParamSpec,
     Protocol,
     Type,
     TypeVar,
@@ -22,7 +23,6 @@ from .longterm import (
     Recurring,
     RuleFunction,
     daily,
-    dailyWithSkips,
 )
 from .scheduler import FutureCall
 
@@ -55,6 +55,18 @@ class JSONableCallable(JSONable, Protocol):
         Do the work of the callable.
         """
 
+
+class JSONableRecurring(JSONable, Protocol):
+    def __call__(self, steps: int) -> None:
+        """
+        Do some recurring work.
+        """
+
+
+if TYPE_CHECKING:
+    __R: RepeatingWork
+    __JR: JSONableRecurring
+    __R = __JR
 
 JSONDeserializer = Callable[
     [
@@ -106,6 +118,13 @@ class JSONableLoader(Protocol[LoadContextInv, JSONableSelfCo]):
         ...
 
 
+def _whatJSON(what: JSONable) -> JSONObject:
+    return {
+        "type": what.typeCodeForJSON(),
+        "data": what.asJSON(),
+    }
+
+
 @dataclass
 class JSONSerializer:
     """
@@ -121,10 +140,7 @@ class JSONSerializer:
             {
                 "when": item.when.replace(tzinfo=None).isoformat(),
                 "tz": item.when.tzinfo.key,
-                "what": {
-                    "type": item.what.typeCodeForJSON(),
-                    "data": item.what.asJSON(),
-                },
+                "what": _whatJSON(item.what),
                 "called": item.called,
                 "canceled": item.canceled,
             }
@@ -147,41 +163,19 @@ def jsonScheduler(
     return PersistableScheduler(runtimeDriver, lambda: JSONSerializer([]))
 
 
-def schedulerFromJSON(
-    runtimeDriver: TimeDriver[float],
-    serializedJSON: JSONObject,
-    typeCodeLookup: TypeCodeLookup[LoadContext],
-    loadContext: LoadContext,
-) -> PersistableScheduler[JSONableCallable, JSONObject]:
-    """
-    Load a JSON object in the format serialized from L{JSONSerializer.finalize}
-    and a runtime L{TimeDriver}C{[float]}, returning a L{PersistableScheduler}.
-    """
-    loadedID = 0
-    new = PersistableScheduler(
-        runtimeDriver,
-        lambda: JSONSerializer([]),
-    )
-    for callJSON in serializedJSON["scheduledCalls"]:
-        loadedID -= 1
-        when = fromisoformat(callJSON["when"]).replace(
-            tzinfo=ZoneInfo(callJSON["tz"])
-        )
-        typeCode = callJSON["what"]["type"]
-        what = typeCodeLookup[typeCode](
-            loadContext, new, callJSON["what"]["data"]
-        )
-        new.scheduler.callAtTimestamp(when, what)
-    return new
+SomeCallable = TypeVar("SomeCallable", bound=Callable[..., Any])
+SomeSignature = ParamSpec("SomeSignature")
 
 
 @dataclass
-class SerializableFunction:
-    original: Callable[[], None]
+class SerializableFunction(Generic[SomeSignature]):
+    original: Callable[SomeSignature, object]
     typeCode: str
 
-    def __call__(self) -> None:
-        self.original()
+    def __call__(
+        self, *args: SomeSignature.args, **kwargs: SomeSignature.kwargs
+    ) -> None:
+        self.original(*args, **kwargs)
 
     def typeCodeForJSON(self) -> str:
         return self.typeCode
@@ -228,32 +222,37 @@ class JSONableMethodDescriptor(Generic[JSONableSelf, LoadContext]):
 
 
 @dataclass
-class LoaderMap(TypeCodeLookup[LoadContext]):
+class JSONableBoundRecurring(Generic[JSONableSelf]):
+    descriptor: JSONableRecurringDescriptor[JSONableSelf, Any]
+    instance: JSONableSelf
+
+    def __call__(self, steps: int) -> None:
+        self.descriptor.func(self.instance, steps)
+
+    def asJSON(self) -> JSONObject:
+        return self.instance.asJSON()
+
+    def typeCodeForJSON(self) -> str:
+        return (
+            f"{self.instance.typeCodeForJSON()}."
+            f"{self.descriptor.func.__name__}"
+        )
+
+
+@dataclass
+class JSONableRecurringDescriptor(Generic[JSONableSelf, LoadContext]):
     registry: JSONRegistry[LoadContext]
+    func: Callable[[JSONableSelf, int], None]
 
-    def __getitem__(self, key: str) -> JSONDeserializer[LoadContext]:
-        def loader(
-            ctx: LoadContext, sched: JSONScheduler, json: JSONObject
-        ) -> JSONableCallable:
-            if key in self.registry.registeredFunctions:
-                return self.registry.registeredFunctions[key]
-            else:
-                typeCode, methodName = key.rsplit(".", 1)
-                result: JSONableCallable = getattr(
-                    self.registry.registeredInstances[typeCode].fromJSON(
-                        self.registry, sched, ctx, json
-                    ),
-                    methodName,
-                )
-                return result
+    def __set_name__(
+        self, cls: Type[JSONableInstance[LoadContext]], name: str
+    ) -> None:
+        self.registry.registerType(cls)
 
-        return loader
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.registry.registeredFunctions.keys())
-
-    def __len__(self) -> int:
-        return len(self.registry.registeredFunctions)
+    def __get__(
+        self, instance: JSONableSelf, owner: object = None
+    ) -> JSONableBoundRecurring[JSONableSelf]:
+        return JSONableBoundRecurring(self, instance)
 
 
 class JSONableMethodBinder(Protocol[LoadContextInv]):
@@ -265,17 +264,66 @@ class JSONableMethodBinder(Protocol[LoadContextInv]):
         ...
 
 
+class HasTypeCode(Protocol):
+    def typeCodeForJSON(self) -> str:
+        ...
+
+
+JSONableType = TypeVar("JSONableType", bound=HasTypeCode)
+
+
+@dataclass
+class SpecificTypeRegistration(Generic[JSONableType]):
+    registered: dict[str, JSONableType] = field(default_factory=dict)
+
+    def add(self, item: JSONableType) -> JSONableType:
+        self.registered[item.typeCodeForJSON()] = item
+        return item
+
+    def get(self, typeCode: str) -> JSONableType | None:
+        return self.registered.get(typeCode, None)
+
+
 @dataclass
 class JSONRegistry(Generic[LoadContext]):
-    registeredFunctions: dict[str, JSONableCallable] = field(
-        default_factory=dict
+    _functions: SpecificTypeRegistration[JSONableCallable] = field(
+        default_factory=SpecificTypeRegistration
     )
-    registeredInstances: dict[
-        str, Type[JSONableInstance[LoadContext]]
-    ] = field(default_factory=dict)
+    _recurring: SpecificTypeRegistration[JSONableRecurring] = field(
+        default_factory=SpecificTypeRegistration
+    )
+    _instances: SpecificTypeRegistration[
+        Type[JSONableInstance[LoadContext]]
+    ] = field(default_factory=SpecificTypeRegistration)
 
     # Can't store the descriptor directly due to https://github.com/python/mypy/issues/15822
     converterMethod: JSONableMethodBinder[LoadContext] = field(init=False)
+
+    def _loadOne(
+        self,
+        json: JSONObject,
+        which: SpecificTypeRegistration[JSONableType],
+        ctx: LoadContext,
+        sched: JSONScheduler,
+    ) -> JSONableType:
+        # inverse of _whatJSON
+        typeCode = json["type"]
+        blob = json["data"]
+
+        if (it := which.get(typeCode)) is not None:
+            return it
+        elif (
+            instanceType := self._instances.get(
+                (splitName := typeCode.rsplit(".", 1))[0]
+            )
+        ) is not None:
+            result: JSONableType = getattr(
+                instanceType.fromJSON(self, sched, ctx, blob),
+                splitName[1],
+            )
+            return result
+        else:
+            raise KeyError(f"cannot interpret type code {repr(typeCode)}")
 
     def __post_init__(self) -> None:
         # TODO: something about bound methods of generics (specifically
@@ -287,34 +335,30 @@ class JSONRegistry(Generic[LoadContext]):
         ] = self.asMethod(RecurrenceConverter.recurrenceWrapper)
         self.converterMethod = descriptor.__get__
 
-    @property
-    def loaders(self) -> LoaderMap[LoadContext]:
-        return LoaderMap(self)
-
     def recurring(
         self,
         initialTime: DateTime[ZoneInfo],
         rule: RuleFunction,
-        callback: RepeatingWork,
+        work: JSONableRecurring,
         scheduler: PersistableScheduler[JSONableCallable, JSONObject],
-    ) -> Recurring[JSONableCallable, JSONObject]:
+    ) -> Recurring[JSONableCallable, JSONableRecurring, JSONObject]:
         def convert(
-            recurring: Recurring[JSONableCallable, JSONObject]
+            recurring: Recurring[
+                JSONableCallable, JSONableRecurring, JSONObject
+            ]
         ) -> JSONableCallable:
             return self.converterMethod(RecurrenceConverter(self, recurring))
 
         return Recurring(
             initialTime,
             rule,
-            callback,
+            work,
             convert,
             scheduler,
         )
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
-        func = SerializableFunction(cb, cb.__name__)
-        self.registeredFunctions[func.typeCodeForJSON()] = func
-        return func
+        return self._functions.add(SerializableFunction(cb, cb.__name__))
 
     def asMethod(
         self, method: Callable[[JSONableSelf], None]
@@ -332,16 +376,58 @@ class JSONRegistry(Generic[LoadContext]):
 
         return wrapped
 
+    def recurringFunction(self, cb: RepeatingWork) -> JSONableRecurring:
+        return self._recurring.add(
+            SerializableFunction(cb, getattr(cb, "__name__"))
+        )
+
+    def recurringMethod(
+        self, recurring: Callable[[JSONableSelf, int], None]
+    ) -> JSONableRecurringDescriptor[JSONableSelf, LoadContext]:
+        wrapped = JSONableRecurringDescriptor[JSONableSelf, LoadContext](
+            self, recurring
+        )
+        return wrapped
+
     def registerType(self, cls: Type[JSONableInstance[LoadContext]]) -> None:
         # TODO: honor method name, keep a record of which ones are allowed for
         # this type
-        self.registeredInstances[cls.typeCodeForJSON()] = cls
+        self._instances.add(cls)
+
+    def load(
+        self,
+        runtimeDriver: TimeDriver[float],
+        serializedJSON: JSONObject,
+        loadContext: LoadContext,
+    ) -> PersistableScheduler[JSONableCallable, JSONObject]:
+        """
+        Load a JSON object in the format serialized from L{JSONSerializer.finalize}
+        and a runtime L{TimeDriver}C{[float]}, returning a L{PersistableScheduler}.
+        """
+        loadedID = 0
+        new = PersistableScheduler(
+            runtimeDriver,
+            lambda: JSONSerializer([]),
+        )
+        for callJSON in serializedJSON["scheduledCalls"]:
+            loadedID -= 1
+            when = fromisoformat(callJSON["when"]).replace(
+                tzinfo=ZoneInfo(callJSON["tz"])
+            )
+            what = self._loadOne(
+                callJSON["what"],
+                self._functions,
+                loadContext,
+                new,
+            )
+            new.scheduler.callAtTimestamp(when, what)
+        return new
 
 
 @dataclass
 class RecurrenceConverter(Generic[LoadContext]):
     jsonRegistry: JSONRegistry[LoadContext]
-    recurring: Recurring[JSONableCallable, JSONObject]
+    recurring: Recurring[JSONableCallable, JSONableRecurring, JSONObject]
 
     @classmethod
     def typeCodeForJSON(self) -> str:
@@ -355,15 +441,19 @@ class RecurrenceConverter(Generic[LoadContext]):
         loadContext: LoadContext,
         json: JSONObject,
     ) -> RecurrenceConverter[LoadContext]:
-        ruleFunction = {"daily": daily, "dailyWithSkips": dailyWithSkips}[
+        ruleFunction = {"daily": daily# , "dailyWithSkips": dailyWithSkips
+                        }[
             json["rule"]
         ]
+        what = json["callable"]
         return cls(
             registry,
             Recurring(
                 fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"])),
                 ruleFunction,
-                json["callback"],  # TODO
+                registry._loadOne(
+                    what, registry._recurring, loadContext, scheduler
+                ),
                 lambda it: registry.converterMethod(
                     RecurrenceConverter(registry, it)
                 ),
@@ -378,7 +468,7 @@ class RecurrenceConverter(Generic[LoadContext]):
                 "ts": when.replace(tzinfo=None).isoformat(),
                 "tz": when.tzinfo.key,
                 "rule": self.recurring.rule.__name__,  # TODO: lookup table for `RuleFunction` callables
-                "callback": "TODO",  # TODO: lookup table for recurring callables (takes)
+                "callable": _whatJSON(self.recurring.callable),
                 # "convert": is self, effectively
                 # "scheduler": is what's doing the serializing
             }

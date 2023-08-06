@@ -55,7 +55,7 @@ class RepeatingWork(Protocol):
     The signature of work that is repeated in a loop.
     """
 
-    def __call__(self, steps: int) -> object:
+    def __call__(self, steps: int) -> None:
         """
         @param steps: The number of steps which have passed since the previous
             invocation.
