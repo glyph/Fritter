@@ -19,12 +19,12 @@ class MemoryDriver(object):
     # |   memory driver only  |
     # v                       v
 
-    def advance(self, delta: Optional[float] = None) -> None:
+    def advance(self, delta: Optional[float] = None) -> float | None:
         if delta is None:
             if self._scheduledWork is not None:
-                delta = self._scheduledWork[0] - self._currentTime
+                delta = max(0, self._scheduledWork[0] - self._currentTime)
             else:
-                return
+                return None
         self._currentTime += delta
         while (self._scheduledWork is not None) and (
             self._currentTime >= self._scheduledWork[0]
@@ -32,6 +32,7 @@ class MemoryDriver(object):
             what = self._scheduledWork[1]
             self._scheduledWork = None
             what()
+        return delta
 
     def isScheduled(self) -> bool:
         return self._scheduledWork is not None

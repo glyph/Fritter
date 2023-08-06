@@ -312,18 +312,28 @@ class JSONRegistry(Generic[LoadContext]):
 
         if (it := which.get(typeCode)) is not None:
             return it
-        elif (
-            instanceType := self._instances.get(
-                (splitName := typeCode.rsplit(".", 1))[0]
-            )
-        ) is not None:
+
+        classCode, methodName = typeCode.rsplit(".", 1)
+        if (instanceType := self._instances.get(classCode)) is not None:
+            # TODO: record allowable instance/method pairs so that we have some
+            # confidence that the resulting type here is in fact actually
+            # `JSONableType`.  probably the right way to do this is to have
+            # _instances live on SpecificTypeRegistration rather than be shared
+            # between both recurring/non-recurring types
             result: JSONableType = getattr(
                 instanceType.fromJSON(self, sched, ctx, blob),
-                splitName[1],
+                methodName,
             )
             return result
-        else:
-            raise KeyError(f"cannot interpret type code {repr(typeCode)}")
+
+        # TODO: this is for *long-term* storage of sets of scheduled events, so
+        # failing the entire load like this is probably not always an
+        # acceptable failure mode.  We should identify any calls that failed to
+        # load, remember their uninterpreted blobs to be included again in
+        # save() so we don't lose them, then communicate the failure to an
+        # object passed to .load()
+
+        raise KeyError(f"cannot interpret type code {repr(typeCode)}")
 
     def __post_init__(self) -> None:
         # TODO: something about bound methods of generics (specifically
@@ -333,6 +343,9 @@ class JSONRegistry(Generic[LoadContext]):
         descriptor: JSONableMethodDescriptor[
             RecurrenceConverter[LoadContext], LoadContext
         ] = self.asMethod(RecurrenceConverter.recurrenceWrapper)
+        # this is happening after the fact, not during a class definition, so
+        # we need to take care of the __set_name__ step manually.
+        descriptor.__set_name__(RecurrenceConverter, "recurrenceWrapper")
         self.converterMethod = descriptor.__get__
 
     def recurring(
@@ -342,6 +355,7 @@ class JSONRegistry(Generic[LoadContext]):
         work: JSONableRecurring,
         scheduler: PersistableScheduler[JSONableCallable, JSONObject],
     ) -> Recurring[JSONableCallable, JSONableRecurring, JSONObject]:
+
         def convert(
             recurring: Recurring[
                 JSONableCallable, JSONableRecurring, JSONObject
@@ -349,13 +363,7 @@ class JSONRegistry(Generic[LoadContext]):
         ) -> JSONableCallable:
             return self.converterMethod(RecurrenceConverter(self, recurring))
 
-        return Recurring(
-            initialTime,
-            rule,
-            work,
-            convert,
-            scheduler,
-        )
+        return Recurring(initialTime, rule, work, convert, scheduler)
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
         return self._functions.add(SerializableFunction(cb, cb.__name__))
@@ -441,8 +449,7 @@ class RecurrenceConverter(Generic[LoadContext]):
         loadContext: LoadContext,
         json: JSONObject,
     ) -> RecurrenceConverter[LoadContext]:
-        ruleFunction = {"daily": daily# , "dailyWithSkips": dailyWithSkips
-                        }[
+        ruleFunction = {"daily": daily}[  # , "dailyWithSkips": dailyWithSkips
             json["rule"]
         ]
         what = json["callable"]
@@ -464,14 +471,12 @@ class RecurrenceConverter(Generic[LoadContext]):
     def asJSON(self) -> dict[str, object]:
         when = self.recurring.initialTime
         return {
-            "recurring": {
-                "ts": when.replace(tzinfo=None).isoformat(),
-                "tz": when.tzinfo.key,
-                "rule": self.recurring.rule.__name__,  # TODO: lookup table for `RuleFunction` callables
-                "callable": _whatJSON(self.recurring.callable),
-                # "convert": is self, effectively
-                # "scheduler": is what's doing the serializing
-            }
+            "ts": when.replace(tzinfo=None).isoformat(),
+            "tz": when.tzinfo.key,
+            "rule": self.recurring.rule.__name__,  # TODO: lookup table for `RuleFunction` callables
+            "callable": _whatJSON(self.recurring.callable),
+            # "convert": is self, effectively
+            # "scheduler": is what's doing the serializing
         }
 
     def recurrenceWrapper(self) -> None:
