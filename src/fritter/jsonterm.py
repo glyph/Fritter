@@ -296,7 +296,8 @@ class JSONRegistry(Generic[LoadContext]):
         Type[JSONableInstance[LoadContext]]
     ] = field(default_factory=SpecificTypeRegistration)
 
-    # Can't store the descriptor directly due to https://github.com/python/mypy/issues/15822
+    # Can't store the descriptor directly due to
+    # https://github.com/python/mypy/issues/15822
     converterMethod: JSONableMethodBinder[LoadContext] = field(init=False)
 
     def _loadOne(
@@ -408,8 +409,9 @@ class JSONRegistry(Generic[LoadContext]):
         loadContext: LoadContext,
     ) -> PersistableScheduler[JSONableCallable, JSONObject]:
         """
-        Load a JSON object in the format serialized from L{JSONSerializer.finalize}
-        and a runtime L{TimeDriver}C{[float]}, returning a L{PersistableScheduler}.
+        Load a JSON object in the format serialized from
+        L{JSONSerializer.finalize} and a runtime L{TimeDriver}C{[float]},
+        returning a L{PersistableScheduler}.
         """
         loadedID = 0
         new = PersistableScheduler(
