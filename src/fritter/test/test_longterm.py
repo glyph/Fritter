@@ -6,13 +6,17 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import aware
-from fritter.longterm import (
+from fritter.memory_driver import MemoryDriver
+
+from ..jsonterm import (
+    JSONableCallable,
     JSONObject,
     JSONRegistry,
+    JSONSerializer,
     jsonScheduler,
     schedulerFromJSON,
 )
-from fritter.memory_driver import MemoryDriver
+from ..longterm import PersistableScheduler, Recurring, daily
 
 
 @dataclass
@@ -45,9 +49,15 @@ class InstanceWithMethods:
         return "instanceWithMethods"
 
     @classmethod
-    def fromJSON(cls, ctx: RegInfo, json: JSONObject) -> InstanceWithMethods:
-        ctx.calls.append("InstanceWithMethods.fromJSON")
-        return cls(json["value"], ctx)
+    def fromJSON(
+        cls,
+        registry: JSONRegistry[RegInfo],
+        scheduler: PersistableScheduler[JSONableCallable, JSONObject],
+        loadContext: RegInfo,
+        json: JSONObject,
+    ) -> InstanceWithMethods:
+        loadContext.calls.append("InstanceWithMethods.fromJSON")
+        return cls(json["value"], loadContext)
 
     def asJSON(self) -> dict[str, object]:
         return {"value": self.value}
@@ -141,6 +151,13 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(dt.timestamp() + 1)
         self.assertEqual(calls, [])
 
+    def test_emptyScheduler(self) -> None:
+        memory = MemoryDriver()
+        schedulerFromJSON(
+            memory, {"scheduledCalls": []}, registry.loaders, RegInfo([])
+        )
+        self.assertEqual(memory.isScheduled(), False)
+
     def test_loaderMapMethods(self) -> None:
         """
         LoaderMap can act like a mapping, even though it's rarely used as one.
@@ -151,3 +168,37 @@ class PersistentSchedulerTests(TestCase):
         # specific methods are registered.
         self.assertEqual(len(registry.loaders), 2)
         self.assertEqual(list(registry.loaders), ["call1", "call2"])
+
+    def test_recurring(self) -> None:
+        dt = aware(
+            datetime(
+                2023,
+                7,
+                21,
+                1,
+                1,
+                1,
+                tzinfo=ZoneInfo(key="America/Los_Angeles"),
+            ),
+            ZoneInfo,
+        )
+        memoryDriver = MemoryDriver()
+        persistentScheduler = jsonScheduler(memoryDriver)
+
+        def jsonRecurrenceConversion(
+            r: Recurring[JSONableCallable, JSONSerializer]
+        ) -> None:
+            pass
+
+        def callEveryDay(steps: int) -> None:
+            pass
+
+        r = registry.recurring(
+            dt,
+            daily,
+            callEveryDay,
+            persistentScheduler,
+        )
+        r.recur()
+        memoryDriver.advance(dt.timestamp() + 1)
+        print(calls)
