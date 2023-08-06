@@ -355,7 +355,6 @@ class JSONRegistry(Generic[LoadContext]):
         work: JSONableRecurring,
         scheduler: PersistableScheduler[JSONableCallable, JSONObject],
     ) -> Recurring[JSONableCallable, JSONableRecurring, JSONObject]:
-
         def convert(
             recurring: Recurring[
                 JSONableCallable, JSONableRecurring, JSONObject

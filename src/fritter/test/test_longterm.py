@@ -41,6 +41,7 @@ def call2() -> None:
 def repeating(steps: int) -> None:
     calls.append(f"repeating {steps}")
 
+
 @dataclass
 class InstanceWithMethods:
     value: str
@@ -181,12 +182,15 @@ class PersistentSchedulerTests(TestCase):
         registry.recurring(dt, daily, repeating, persistentScheduler).recur()
         self.assertEqual(calls, ["repeating 1"])
         del calls[:]
+
         def days(n: int) -> float:
-            return (60 * 60 * 24 * n)
+            return 60 * 60 * 24 * n
+
         memoryDriver.advance(days(3))
         self.assertEqual(calls, ["repeating 3"])
         del calls[:]
         from json import loads, dumps
+
         newInfo = RegInfo([])
         mem2 = MemoryDriver()
         mem2.advance(dt.timestamp())
