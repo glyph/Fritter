@@ -6,8 +6,8 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import aware
-from fritter.memory_driver import MemoryDriver
 
+from ..memory_driver import MemoryDriver
 from ..jsonterm import (
     JSONableCallable,
     JSONObject,

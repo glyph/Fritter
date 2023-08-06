@@ -1,8 +1,7 @@
 from typing import Callable
 from unittest import TestCase
 
-from fritter.scheduler import FutureCall, SimpleScheduler
-
+from ..scheduler import FutureCall, SimpleScheduler
 from ..memory_driver import MemoryDriver
 from ..priority_queue import HeapPriorityQueue
 

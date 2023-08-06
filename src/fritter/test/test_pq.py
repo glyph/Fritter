@@ -1,4 +1,4 @@
-from fritter.priority_queue import HeapPriorityQueue
+from ..priority_queue import HeapPriorityQueue
 
 from unittest import TestCase
 

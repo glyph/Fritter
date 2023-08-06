@@ -5,10 +5,10 @@ from logging import getLogger
 from sys import exc_info
 from typing import Callable, Optional
 
-from fritter.boundaries import PriorityQueue, RepeatingWork
-from fritter.priority_queue import HeapPriorityQueue
-from fritter.repeat import Repeating
-from fritter.scheduler import FutureCall, Scheduler, SimpleScheduler
+from .boundaries import PriorityQueue, RepeatingWork
+from .priority_queue import HeapPriorityQueue
+from .repeat import Repeating
+from .scheduler import FutureCall, Scheduler, SimpleScheduler
 
 
 logger = getLogger(__name__)
