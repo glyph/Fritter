@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from itertools import count
 from typing import Callable, Generic, TypeVar
 
-from .boundaries import TimeDriver, PriorityComparable, PriorityQueue
+from .boundaries import PriorityComparable, PriorityQueue, TimeDriver
+from .priority_queue import HeapPriorityQueue
 
 WhenT = TypeVar("WhenT", bound=PriorityComparable)
 WhatT = TypeVar("WhatT", bound=Callable[[], None])
@@ -40,8 +41,10 @@ class CallHandle(Generic[WhenT, WhatT]):
 
 @dataclass
 class Scheduler(Generic[WhenT, WhatT]):
-    _q: PriorityQueue[FutureCall[WhenT, WhatT]]
     _driver: TimeDriver[WhenT]
+    _q: PriorityQueue[FutureCall[WhenT, WhatT]] = field(
+        default_factory=HeapPriorityQueue
+    )
 
     def __post_init__(self) -> None:
         if self._q.peek() is not None:

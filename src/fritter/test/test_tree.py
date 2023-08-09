@@ -2,7 +2,6 @@ from typing import List, Tuple
 from unittest import TestCase
 
 from ..memory_driver import MemoryDriver
-from ..priority_queue import HeapPriorityQueue
 from ..recursive_driver import RecursiveDriver
 from ..scheduler import SimpleScheduler
 
@@ -11,12 +10,8 @@ class RecursiveTest(TestCase):
     def _oneRecursiveCall(
         self, scaleFactor: float
     ) -> List[Tuple[float, float]]:
-        scheduler1 = SimpleScheduler(
-            HeapPriorityQueue(), driver := MemoryDriver()
-        )
-        scheduler2 = SimpleScheduler(
-            HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
-        )
+        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
         recursive.scaleFactor = scaleFactor
         recursive.start()
         calls = []
@@ -37,18 +32,33 @@ class RecursiveTest(TestCase):
         calls = self._oneRecursiveCall(1 / 3.0)
         self.assertEqual(calls, [(3.0, 1.0)])
 
+    def test_changeScaling(self) -> None:
+        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
+        recursive.scaleFactor = 2.0
+        recursive.start()
+        calls = []
+        scheduler2.callAtTimestamp(
+            1.0,
+            lambda: calls.append(
+                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+            ),
+        )
+        driver.advance(1 / 4)
+        recursive.scaleFactor *= 2.0
+        self.assertEqual(driver.advance(), 1 / 8)
+        self.assertEqual(calls, [((1 / 4) + (1 / 8), 1.0)])
+
     def test_unscheduleNoOp(self) -> None:
         """
         Unscheduling when not scheduled is a no-op.
         """
-        scheduler1 = SimpleScheduler(HeapPriorityQueue(), MemoryDriver())
+        scheduler1 = SimpleScheduler(MemoryDriver())
         recursive = RecursiveDriver(scheduler1)
         recursive.unschedule()
 
     def test_startPauseStart(self) -> None:
-        scheduler1 = SimpleScheduler(
-            HeapPriorityQueue(), driver := MemoryDriver()
-        )
+        scheduler1 = SimpleScheduler(driver := MemoryDriver())
         recursive = RecursiveDriver(scheduler1, _scaleFactor=2)
         recursive.pause()
         self.assertEqual(recursive.currentTimestamp(), 0.0)
@@ -64,12 +74,8 @@ class RecursiveTest(TestCase):
         self.assertEqual(recursive.currentTimestamp(), 40.0)
 
     def test_moveSooner(self) -> None:
-        scheduler1 = SimpleScheduler(
-            HeapPriorityQueue(), driver := MemoryDriver()
-        )
-        scheduler2 = SimpleScheduler(
-            HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
-        )
+        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
         calls = []
         recursive.start()
         scheduler2.callAtTimestamp(
@@ -88,12 +94,8 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [(0.6, 0.6)])
 
     def test_pausing(self) -> None:
-        scheduler1 = SimpleScheduler(
-            HeapPriorityQueue(), driver := MemoryDriver()
-        )
-        scheduler2 = SimpleScheduler(
-            HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
-        )
+        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
         recursive.start()
         calls = []
         scheduler2.callAtTimestamp(
@@ -126,13 +128,10 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [(2.7 + 1.5 + 0.5, 2.0)])
 
     def test_doubleStart(self) -> None:
-        scheduler1 = SimpleScheduler(
-            HeapPriorityQueue(), driver := MemoryDriver()
-        )
+        scheduler1 = SimpleScheduler(driver := MemoryDriver())
         scaleFactor = 2.0
         scheduler2 = SimpleScheduler(
-            HeapPriorityQueue(),
-            recursive := RecursiveDriver(scheduler1, _scaleFactor=scaleFactor),
+            recursive := RecursiveDriver(scheduler1, _scaleFactor=scaleFactor)
         )
         baseTime = 1000.0
         driver.advance(baseTime)
@@ -156,12 +155,8 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [(baseTime + scaledDelta, localDelta)])
 
     def test_idling(self) -> None:
-        scheduler1 = SimpleScheduler(
-            HeapPriorityQueue(), driver := MemoryDriver()
-        )
-        scheduler2 = SimpleScheduler(
-            HeapPriorityQueue(), recursive := RecursiveDriver(scheduler1)
-        )
+        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
         recursive.start()
         calls = []
         onlyCall = scheduler2.callAtTimestamp(
