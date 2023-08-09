@@ -37,6 +37,16 @@ class RecursiveTest(TestCase):
         calls = self._oneRecursiveCall(1 / 3.0)
         self.assertEqual(calls, [(3.0, 1.0)])
 
+    def test_unscheduleNoOp(self) -> None:
+        """
+        Unscheduling when not scheduled is a no-op.
+        """
+        scheduler1 = SimpleScheduler(
+            HeapPriorityQueue(), MemoryDriver()
+        )
+        recursive = RecursiveDriver(scheduler1)
+        recursive.unschedule()
+
     def test_startPauseStart(self) -> None:
         scheduler1 = SimpleScheduler(
             HeapPriorityQueue(), driver := MemoryDriver()
