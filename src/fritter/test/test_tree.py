@@ -155,12 +155,13 @@ class RecursiveTest(TestCase):
         scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
         recursive.start()
         calls = []
-        onlyCall = scheduler2.callAtTimestamp(
-            1.0,
-            lambda: calls.append(
+
+        def recordTimestamp() -> None:
+            calls.append(
                 (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-            ),
-        )
+            )
+
+        onlyCall = scheduler2.callAtTimestamp(1.0, recordTimestamp)
         self.assertTrue(driver.isScheduled())
         onlyCall.cancel()
         self.assertFalse(driver.isScheduled())
