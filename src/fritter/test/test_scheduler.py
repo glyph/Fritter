@@ -52,9 +52,7 @@ class SchedulerTests(TestCase):
         """
         CallHandle.cancel() cancels an outstanding call.
         """
-        scheduler = SimpleScheduler(
-            driver := MemoryDriver()
-        )
+        scheduler = SimpleScheduler(driver := MemoryDriver())
         callTimes = []
 
         def record(event: str) -> Callable[[], None]:
