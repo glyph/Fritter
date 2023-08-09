@@ -23,11 +23,12 @@ class SchedulerTests(TestCase):
             nonlocal called
             called += 1
 
-        scheduler.callAtTimestamp(1.0, callme)
+        handle = scheduler.callAtTimestamp(1.0, callme)
         scheduler.callAtTimestamp(3.0, callme)
         self.assertEqual(0, called)
         driver.advance(2.0)
         self.assertEqual(1, called)
+        handle.cancel()         # no-op
 
     def test_moveSooner(self) -> None:
         driver = MemoryDriver()
