@@ -2,6 +2,7 @@ from unittest import TestCase
 
 from ..memory_driver import MemoryDriver
 
+
 class MemoryDriverTests(TestCase):
     def test_advance(self) -> None:
         driver = MemoryDriver()
@@ -16,4 +17,3 @@ class MemoryDriverTests(TestCase):
         self.assertEqual(driver.currentTimestamp(), 3.5)
         self.assertEqual(driver.isScheduled(), False)
         self.assertEqual(driver.advance(), None)
-
