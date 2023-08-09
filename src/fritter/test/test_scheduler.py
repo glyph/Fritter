@@ -28,6 +28,7 @@ class SchedulerTests(TestCase):
         self.assertEqual(0, called)
         driver.advance(2.0)
         self.assertEqual(1, called)
+        self.assertEqual(handle.call.called, True)
         handle.cancel()  # no-op
 
     def test_moveSooner(self) -> None:

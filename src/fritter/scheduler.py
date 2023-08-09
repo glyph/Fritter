@@ -81,10 +81,10 @@ class Scheduler(Generic[WhenT, WhatT]):
         timestamp = self._driver.currentTimestamp()
         while (each := self._q.peek()) is not None and each.when <= timestamp:
             popped = self._q.get()
-            assert (
-                popped is each
-            )  # not sure if there's a more graceful way to put this
+            assert popped is each
+            # not sure if there's a more graceful way to put this
             # todo: failure handling
+            each.called = True
             each.what()
         upNext = self._q.peek()
         if upNext is not None:
