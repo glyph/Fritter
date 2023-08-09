@@ -25,6 +25,7 @@ class RegInfo:
 
 
 registry = JSONRegistry[RegInfo]()
+emptyRegistry = JSONRegistry[RegInfo]()
 
 calls = []
 
@@ -273,7 +274,12 @@ class PersistentSchedulerTests(TestCase):
         mem2.advance(dt.timestamp())
         mem2.advance(days(7))
         self.assertEqual(mem2.isScheduled(), False)
-        registry.load(mem2, loads(dumps(persistentScheduler.save())), newInfo)
+        persistent = dumps(persistentScheduler.save())
+        registry.load(mem2, loads(persistent), newInfo)
+        loaded = loads(persistent)
+        with self.assertRaises(KeyError):
+            # TODO: allow for better error handling that doesn't just blow up
+            emptyRegistry.load(MemoryDriver(), loaded, newInfo)
         self.assertEqual(mem2.isScheduled(), True)
         amount = mem2.advance()
         self.assertEqual(amount, 0.0)
