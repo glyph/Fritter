@@ -131,7 +131,7 @@ class JSONSerializer:
     Implementation of L{Serializer} protocol in terms of L{JSONableCallable}s.
     """
 
-    _calls: list[JSONObject]
+    _calls: list[JSONObject] = field(default_factory=list)
 
     def add(
         self, item: FutureCall[DateTime[ZoneInfo], JSONableCallable]
@@ -160,7 +160,7 @@ def jsonScheduler(
     Create a new L{PersistableScheduler} using a given L{TimeDriver} that can
     schedule C{float}s.
     """
-    return PersistableScheduler(runtimeDriver, lambda: JSONSerializer([]))
+    return PersistableScheduler(runtimeDriver, JSONSerializer)
 
 
 SomeCallable = TypeVar("SomeCallable", bound=Callable[..., Any])
@@ -414,10 +414,7 @@ class JSONRegistry(Generic[LoadContext]):
         returning a L{PersistableScheduler}.
         """
         loadedID = 0
-        new = PersistableScheduler(
-            runtimeDriver,
-            lambda: JSONSerializer([]),
-        )
+        new = PersistableScheduler(runtimeDriver, JSONSerializer)
         for callJSON in serializedJSON["scheduledCalls"]:
             loadedID -= 1
             when = fromisoformat(callJSON["when"]).replace(
@@ -454,6 +451,12 @@ class RecurrenceConverter(Generic[LoadContext]):
             json["rule"]
         ]
         what = json["callable"]
+
+        def convertToMethod(
+            it: Recurring[JSONableCallable, JSONableRecurring, JSONObject]
+        ) -> JSONableCallable:
+            return registry.converterMethod(RecurrenceConverter(registry, it))
+
         return cls(
             registry,
             Recurring(
@@ -462,9 +465,7 @@ class RecurrenceConverter(Generic[LoadContext]):
                 registry._loadOne(
                     what, registry._recurring, loadContext, scheduler
                 ),
-                lambda it: registry.converterMethod(
-                    RecurrenceConverter(registry, it)
-                ),
+                convertToMethod,
                 scheduler,
             ),
         )
