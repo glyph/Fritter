@@ -16,7 +16,7 @@ class SchedulerTests(TestCase):
         Scheduling a call
         """
         driver = MemoryDriver()
-        scheduler = SimpleScheduler(HeapPriorityQueue(), driver)
+        scheduler = SimpleScheduler(driver)
         called = 0
 
         def callme() -> None:
@@ -31,7 +31,7 @@ class SchedulerTests(TestCase):
 
     def test_moveSooner(self) -> None:
         driver = MemoryDriver()
-        scheduler = SimpleScheduler(HeapPriorityQueue(), driver)
+        scheduler = SimpleScheduler(driver)
         called = 0
 
         def callme() -> None:
@@ -53,7 +53,7 @@ class SchedulerTests(TestCase):
         CallHandle.cancel() cancels an outstanding call.
         """
         scheduler = SimpleScheduler(
-            HeapPriorityQueue(), driver := MemoryDriver()
+            driver := MemoryDriver()
         )
         callTimes = []
 
@@ -90,4 +90,4 @@ class SchedulerTests(TestCase):
         driver = MemoryDriver()
         q = HeapPriorityQueue([FutureCall(1.0, lambda: None)])
         with self.assertRaises(ValueError):
-            SimpleScheduler(q, driver)
+            SimpleScheduler(driver, q)

@@ -91,8 +91,8 @@ def asyncioScheduler(
     Create a scheduler that uses Asyncio.
     """
     return Scheduler(
-        queue if queue is not None else HeapPriorityQueue(),
         AsyncioTimeDriver(loop),
+        queue if queue is not None else HeapPriorityQueue(),
     )
 
 

@@ -79,8 +79,8 @@ def twistedScheduler(
     Create a scheduler that uses Twisted.
     """
     return Scheduler(
-        queue if queue is not None else HeapPriorityQueue(),
         TwistedTimeDriver(reactor),
+        queue if queue is not None else HeapPriorityQueue(),
     )
 
 

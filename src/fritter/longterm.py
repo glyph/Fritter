@@ -96,10 +96,10 @@ class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
         """
         if self._scheduler is None:
             self._scheduler = Scheduler(
-                HeapPriorityQueue(self._calls),
-                # TODO: I don't think that Scheduler properly respects being
-                # initialized with a non-empty queue
                 DateTimeDriver(self._runtimeDriver),
+                # TODO: Scheduler cannot be initialized with a non-empty queue,
+                # so this interface is risky
+                HeapPriorityQueue(self._calls),
             )
         return self._scheduler
 
