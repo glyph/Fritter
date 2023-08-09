@@ -41,9 +41,7 @@ class RecursiveTest(TestCase):
         """
         Unscheduling when not scheduled is a no-op.
         """
-        scheduler1 = SimpleScheduler(
-            HeapPriorityQueue(), MemoryDriver()
-        )
+        scheduler1 = SimpleScheduler(HeapPriorityQueue(), MemoryDriver())
         recursive = RecursiveDriver(scheduler1)
         recursive.unschedule()
 
