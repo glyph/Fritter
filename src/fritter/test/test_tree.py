@@ -78,9 +78,12 @@ class RecursiveTest(TestCase):
         scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
         calls = []
         recursive.start()
-        recordTimestamp = lambda: calls.append(
-            (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-        )
+
+        def recordTimestamp() -> None:
+            calls.append(
+                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+            )
+
         scheduler2.callAtTimestamp(1.0, recordTimestamp)
         scheduler2.callAtTimestamp(0.5, recordTimestamp)
         driver.advance(0.6)
