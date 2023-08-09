@@ -66,6 +66,8 @@ class SchedulerTests(TestCase):
         aHandle = scheduler.callAtTimestamp(1.0, record("a"))
         bHandle = scheduler.callAtTimestamp(2.0, record("b"))
         scheduler.callAtTimestamp(3.0, record("c"))
+        last = scheduler.callAtTimestamp(2.5, record("d"))
+        last.cancel()
         didCancel = []
 
         def bCancel() -> None:
