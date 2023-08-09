@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import aware
 
-from ..memory_driver import MemoryDriver
 from ..jsonterm import (
     JSONableCallable,
     JSONObject,
@@ -15,11 +15,13 @@ from ..jsonterm import (
     jsonScheduler,
 )
 from ..longterm import PersistableScheduler, daily
+from ..memory_driver import MemoryDriver
 
 
 @dataclass
 class RegInfo:
     calls: list[str]
+    identityMap: dict[str, Any] = field(default_factory=dict)
 
 
 registry = JSONRegistry[RegInfo]()
@@ -46,6 +48,7 @@ def repeating(steps: int) -> None:
 class InstanceWithMethods:
     value: str
     info: RegInfo
+    calls: int = 0
 
     @classmethod
     def typeCodeForJSON(self) -> str:
@@ -59,11 +62,21 @@ class InstanceWithMethods:
         loadContext: RegInfo,
         json: JSONObject,
     ) -> InstanceWithMethods:
+        key = json["identity"]
+        if key in loadContext.identityMap:
+            loadContext.calls.append("InstanceWithMethods.fromJSON (cached)")
+            self: InstanceWithMethods = loadContext.identityMap[key]
+            return self
         loadContext.calls.append("InstanceWithMethods.fromJSON")
-        return cls(json["value"], loadContext)
+        new = cls(json["value"], loadContext)
+        loadContext.identityMap[key] = new
+        return new
 
     def asJSON(self) -> dict[str, object]:
-        return {"value": self.value}
+        return {
+            "value": self.value,
+            "identity": id(self),
+        }
 
     @registry.asMethod
     def method1(self) -> None:
@@ -75,7 +88,8 @@ class InstanceWithMethods:
 
     @registry.recurringMethod
     def recurrence(self, steps: int) -> None:
-        self.info.calls.append(f"recurrence {steps}")
+        self.calls += 1
+        self.info.calls.append(f"recurrence {steps} {self.value=} {self.calls=}")
 
 
 class PersistentSchedulerTests(TestCase):
@@ -189,7 +203,7 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(days(3))
         self.assertEqual(calls, ["repeating 3"])
         del calls[:]
-        from json import loads, dumps
+        from json import dumps, loads
 
         newInfo = RegInfo([])
         mem2 = MemoryDriver()
@@ -201,3 +215,68 @@ class PersistentSchedulerTests(TestCase):
         amount = mem2.advance()
         self.assertEqual(amount, 0.0)
         self.assertEqual(calls, ["repeating 4"])
+
+    def test_recurringMethod(self) -> None:
+        dt = aware(
+            datetime(
+                2023,
+                7,
+                21,
+                1,
+                1,
+                1,
+                tzinfo=ZoneInfo(key="America/Los_Angeles"),
+            ),
+            ZoneInfo,
+        )
+        memoryDriver = MemoryDriver()
+        memoryDriver.advance(dt.timestamp())
+        persistentScheduler = jsonScheduler(memoryDriver)
+        info = RegInfo([])
+        method = InstanceWithMethods("sample", info).recurrence
+        shared = InstanceWithMethods("shared", info)
+        registry.recurring(dt, daily, method, persistentScheduler).recur()
+        registry.recurring(
+            dt, daily, shared.recurrence, persistentScheduler
+        ).recur()
+        registry.recurring(
+            dt, daily, shared.recurrence, persistentScheduler
+        ).recur()
+        self.assertEqual(info.calls, [
+            "recurrence 1 self.value='sample' self.calls=1",
+            "recurrence 1 self.value='shared' self.calls=1",
+            "recurrence 1 self.value='shared' self.calls=2",
+        ])
+        del info.calls[:]
+
+        def days(n: int) -> float:
+            return 60 * 60 * 24 * n
+
+        memoryDriver.advance(days(3))
+        self.assertEqual(info.calls, [
+            "recurrence 3 self.value='sample' self.calls=2",
+            "recurrence 3 self.value='shared' self.calls=3",
+            "recurrence 3 self.value='shared' self.calls=4",
+        ])
+        from json import dumps, loads
+
+        newInfo = RegInfo([])
+        mem2 = MemoryDriver()
+        mem2.advance(dt.timestamp())
+        mem2.advance(days(7))
+        self.assertEqual(mem2.isScheduled(), False)
+        registry.load(mem2, loads(dumps(persistentScheduler.save())), newInfo)
+        self.assertEqual(mem2.isScheduled(), True)
+        amount = mem2.advance()
+        self.assertEqual(amount, 0.0)
+        self.assertEqual(
+            newInfo.calls,
+            [
+                "InstanceWithMethods.fromJSON",
+                "InstanceWithMethods.fromJSON",
+                "InstanceWithMethods.fromJSON (cached)",
+                "recurrence 4 self.value='sample' self.calls=1",
+                "recurrence 4 self.value='shared' self.calls=1",
+                "recurrence 4 self.value='shared' self.calls=2",
+            ],
+        )
