@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 from unittest import TestCase
 
 from ..memory_driver import MemoryDriver
@@ -76,13 +76,10 @@ class RecursiveTest(TestCase):
     def test_moveSooner(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
         scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
-        calls = []
+        calls: list[tuple[float, float]] = []
         recursive.start()
 
-        def recordTimestamp() -> None:
-            calls.append(
-                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-            )
+        recordTimestamp = timestampRecorder(calls, scheduler1, scheduler2)
 
         scheduler2.callAtTimestamp(1.0, recordTimestamp)
         scheduler2.callAtTimestamp(0.5, recordTimestamp)
@@ -154,14 +151,22 @@ class RecursiveTest(TestCase):
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
         scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
         recursive.start()
-        calls = []
-
-        def recordTimestamp() -> None:
-            calls.append(
-                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-            )
-
+        calls: list[tuple[float, float]] = []
+        recordTimestamp = timestampRecorder(calls, scheduler1, scheduler2)
         onlyCall = scheduler2.callAtTimestamp(1.0, recordTimestamp)
         self.assertTrue(driver.isScheduled())
         onlyCall.cancel()
         self.assertFalse(driver.isScheduled())
+
+
+def timestampRecorder(
+    calls: list[tuple[float, float]],
+    scheduler1: SimpleScheduler,
+    scheduler2: SimpleScheduler,
+) -> Callable[[], None]:
+    def recorder() -> None:
+        calls.append(
+            (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
+        )
+
+    return recorder
