@@ -89,7 +89,9 @@ class InstanceWithMethods:
     @registry.recurringMethod
     def recurrence(self, steps: int) -> None:
         self.calls += 1
-        self.info.calls.append(f"recurrence {steps} {self.value=} {self.calls=}")
+        self.info.calls.append(
+            f"recurrence {steps} {self.value=} {self.calls=}"
+        )
 
 
 class PersistentSchedulerTests(TestCase):
@@ -242,22 +244,28 @@ class PersistentSchedulerTests(TestCase):
         registry.recurring(
             dt, daily, shared.recurrence, persistentScheduler
         ).recur()
-        self.assertEqual(info.calls, [
-            "recurrence 1 self.value='sample' self.calls=1",
-            "recurrence 1 self.value='shared' self.calls=1",
-            "recurrence 1 self.value='shared' self.calls=2",
-        ])
+        self.assertEqual(
+            info.calls,
+            [
+                "recurrence 1 self.value='sample' self.calls=1",
+                "recurrence 1 self.value='shared' self.calls=1",
+                "recurrence 1 self.value='shared' self.calls=2",
+            ],
+        )
         del info.calls[:]
 
         def days(n: int) -> float:
             return 60 * 60 * 24 * n
 
         memoryDriver.advance(days(3))
-        self.assertEqual(info.calls, [
-            "recurrence 3 self.value='sample' self.calls=2",
-            "recurrence 3 self.value='shared' self.calls=3",
-            "recurrence 3 self.value='shared' self.calls=4",
-        ])
+        self.assertEqual(
+            info.calls,
+            [
+                "recurrence 3 self.value='sample' self.calls=2",
+                "recurrence 3 self.value='shared' self.calls=3",
+                "recurrence 3 self.value='shared' self.calls=4",
+            ],
+        )
         from json import dumps, loads
 
         newInfo = RegInfo([])
