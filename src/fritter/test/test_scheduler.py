@@ -88,6 +88,10 @@ class SchedulerTests(TestCase):
 
     def test_queueMustBeEmpty(self) -> None:
         driver = MemoryDriver()
-        q = HeapPriorityQueue([FutureCall(1.0, lambda: None)])
+        q = HeapPriorityQueue([FutureCall(1.0, noop)])
         with self.assertRaises(ValueError):
             SimpleScheduler(driver, q)
+
+
+def noop() -> None:
+    ...
