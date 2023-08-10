@@ -11,27 +11,27 @@ from .boundaries import AsyncDriver, AsyncType, RepeatingWork
 from .scheduler import CallHandle, Scheduler, WhatT, WhenT
 
 RuleFunction = Callable[[WhenT, WhenT], tuple[int, WhenT]]
-RecurringWhatT = TypeVar("RecurringWhatT", bound=RepeatingWork)
+RepeatingWhatT = TypeVar("RepeatingWhatT", bound=RepeatingWork)
 AnyWhat = Callable[[], None]
 DTZ = DateTime[ZoneInfo]
 DTRule = RuleFunction[DTZ]
 
 
 @dataclass
-class Recurring(Generic[WhenT, WhatT, RecurringWhatT]):
+class Repeating(Generic[WhenT, WhatT, RepeatingWhatT]):
     reference: WhenT
     rule: RuleFunction[WhenT]
-    callable: RecurringWhatT
-    convert: Callable[[Recurring[WhenT, WhatT, RecurringWhatT]], WhatT]
+    callable: RepeatingWhatT
+    convert: Callable[[Repeating[WhenT, WhatT, RepeatingWhatT]], WhatT]
     scheduler: Scheduler[WhenT, WhatT]
 
-    def recur(self) -> CallHandle[WhenT, WhatT]:
+    def repeat(self) -> CallHandle[WhenT, WhatT]:
         callIncrement, self.reference = self.rule(
             self.reference, self.scheduler.now()
         )
-        callRecur = self.convert(self)
+        callRepeat = self.convert(self)
         self.callable(callIncrement)
-        return self.scheduler.callAt(self.reference, callRecur)
+        return self.scheduler.callAt(self.reference, callRepeat)
 
 
 @dataclass(frozen=True)
@@ -71,17 +71,17 @@ def repeatAsync(
     scheduler: Scheduler[WhenT, AnyWhat],
 ) -> AsyncType:
     currentlyRunning: bool = False
-    awaitingRecurrence: bool = False
-    pendingRecur = None
+    awaitingRepeatence: bool = False
+    pendingRepeat = None
     pendingAsync = None
 
-    def doRecur() -> None:
-        nonlocal pendingRecur
-        pendingRecur = recurring.recur()
+    def doRepeat() -> None:
+        nonlocal pendingRepeat
+        pendingRepeat = repeating.repeat()
 
     def stop() -> None:
-        if pendingRecur is not None:
-            pendingRecur.cancel()
+        if pendingRepeat is not None:
+            pendingRepeat.cancel()
         if pendingAsync is not None:
             pendingAsync.cancel()
         if result is not None:
@@ -91,30 +91,30 @@ def repeatAsync(
         nonlocal pendingAsync
 
         async def coro() -> None:
-            nonlocal currentlyRunning, awaitingRecurrence, pendingAsync
+            nonlocal currentlyRunning, awaitingRepeatence, pendingAsync
             currentlyRunning = True
             try:
                 await work(steps)
             finally:
                 pendingAsync = None
                 currentlyRunning = False
-                if awaitingRecurrence:
-                    awaitingRecurrence = False
-                    doRecur()
+                if awaitingRepeatence:
+                    awaitingRepeatence = False
+                    doRepeat()
 
         pendingAsync = asyncDriver.runAsync(coro())
 
-    def recurWhenDone() -> None:
-        nonlocal awaitingRecurrence
+    def repeatWhenDone() -> None:
+        nonlocal awaitingRepeatence
         if currentlyRunning:
-            awaitingRecurrence = True
+            awaitingRepeatence = True
         else:
-            doRecur()
+            doRepeat()
 
     now = scheduler.driver.now()
-    recurring = Recurring(
-        now, rule, someWork, lambda _: recurWhenDone, scheduler
+    repeating = Repeating(
+        now, rule, someWork, lambda _: repeatWhenDone, scheduler
     )
     result = asyncDriver.newWithCancel(stop)
-    doRecur()
+    doRepeat()
     return result

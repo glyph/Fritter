@@ -21,7 +21,7 @@ from .boundaries import RepeatingWork, TimeDriver
 from .longterm import (
     PersistableScheduler,
 )
-from .recur import Recurring, RuleFunction, daily
+from .repeat import Repeating, RuleFunction, daily
 
 from .scheduler import FutureCall
 
@@ -55,16 +55,16 @@ class JSONableCallable(JSONable, Protocol):
         """
 
 
-class JSONableRecurring(JSONable, Protocol):
+class JSONableRepeating(JSONable, Protocol):
     def __call__(self, steps: int) -> None:
         """
-        Do some recurring work.
+        Do some repeating work.
         """
 
 
 if TYPE_CHECKING:
     __R: RepeatingWork
-    __JR: JSONableRecurring
+    __JR: JSONableRepeating
     __R = __JR
 
 JSONDeserializer = Callable[
@@ -221,8 +221,8 @@ class JSONableMethodDescriptor(Generic[JSONableSelf, LoadContext]):
 
 
 @dataclass
-class JSONableBoundRecurring(Generic[JSONableSelf]):
-    descriptor: JSONableRecurringDescriptor[JSONableSelf, Any]
+class JSONableBoundRepeating(Generic[JSONableSelf]):
+    descriptor: JSONableRepeatingDescriptor[JSONableSelf, Any]
     instance: JSONableSelf
 
     def __call__(self, steps: int) -> None:
@@ -239,7 +239,7 @@ class JSONableBoundRecurring(Generic[JSONableSelf]):
 
 
 @dataclass
-class JSONableRecurringDescriptor(Generic[JSONableSelf, LoadContext]):
+class JSONableRepeatingDescriptor(Generic[JSONableSelf, LoadContext]):
     registry: JSONRegistry[LoadContext]
     func: Callable[[JSONableSelf, int], None]
 
@@ -250,16 +250,16 @@ class JSONableRecurringDescriptor(Generic[JSONableSelf, LoadContext]):
 
     def __get__(
         self, instance: JSONableSelf, owner: object = None
-    ) -> JSONableBoundRecurring[JSONableSelf]:
-        return JSONableBoundRecurring(self, instance)
+    ) -> JSONableBoundRepeating[JSONableSelf]:
+        return JSONableBoundRepeating(self, instance)
 
 
 class JSONableMethodBinder(Protocol[LoadContextInv]):
     def __call__(
         self,
-        instance: RecurrenceConverter[LoadContextInv],
+        instance: RepeatenceConverter[LoadContextInv],
         owner: object = None,
-    ) -> JSONableBoundMethod[RecurrenceConverter[LoadContextInv]]:
+    ) -> JSONableBoundMethod[RepeatenceConverter[LoadContextInv]]:
         ...
 
 
@@ -288,7 +288,7 @@ class JSONRegistry(Generic[LoadContext]):
     _functions: SpecificTypeRegistration[JSONableCallable] = field(
         default_factory=SpecificTypeRegistration
     )
-    _recurring: SpecificTypeRegistration[JSONableRecurring] = field(
+    _repeating: SpecificTypeRegistration[JSONableRepeating] = field(
         default_factory=SpecificTypeRegistration
     )
     _instances: SpecificTypeRegistration[
@@ -319,7 +319,7 @@ class JSONRegistry(Generic[LoadContext]):
             # confidence that the resulting type here is in fact actually
             # `JSONableType`.  probably the right way to do this is to have
             # _instances live on SpecificTypeRegistration rather than be shared
-            # between both recurring/non-recurring types
+            # between both repeating/non-repeating types
             result: JSONableType = getattr(
                 instanceType.fromJSON(self, sched, ctx, blob),
                 methodName,
@@ -337,34 +337,34 @@ class JSONRegistry(Generic[LoadContext]):
 
     def __post_init__(self) -> None:
         # TODO: something about bound methods of generics (specifically
-        # RecurrenceConverter[LoadContext].recurrenceWrapper) breaks type
+        # RepeatenceConverter[LoadContext].repeatenceWrapper) breaks type
         # inference here so we need an explicit declaration, should report this
         # upstream.
         descriptor: JSONableMethodDescriptor[
-            RecurrenceConverter[LoadContext], LoadContext
-        ] = self.asMethod(RecurrenceConverter.recurrenceWrapper)
+            RepeatenceConverter[LoadContext], LoadContext
+        ] = self.asMethod(RepeatenceConverter.repeatenceWrapper)
         # this is happening after the fact, not during a class definition, so
         # we need to take care of the __set_name__ step manually.
-        descriptor.__set_name__(RecurrenceConverter, "recurrenceWrapper")
+        descriptor.__set_name__(RepeatenceConverter, "repeatenceWrapper")
         self.converterMethod = descriptor.__get__
 
-    def recurring(
+    def repeating(
         self,
         reference: DateTime[ZoneInfo],
         rule: RuleFunction[DateTime[ZoneInfo]],
-        work: JSONableRecurring,
+        work: JSONableRepeating,
         scheduler: PersistableScheduler[JSONableCallable, JSONObject],
-    ) -> Recurring[DateTime[ZoneInfo], JSONableCallable, JSONableRecurring]:
+    ) -> Repeating[DateTime[ZoneInfo], JSONableCallable, JSONableRepeating]:
         def convert(
-            recurring: Recurring[
+            repeating: Repeating[
                 DateTime[ZoneInfo],
                 JSONableCallable,
-                JSONableRecurring,
+                JSONableRepeating,
             ]
         ) -> JSONableCallable:
-            return self.converterMethod(RecurrenceConverter(self, recurring))
+            return self.converterMethod(RepeatenceConverter(self, repeating))
 
-        return Recurring(reference, rule, work, convert, scheduler.scheduler)
+        return Repeating(reference, rule, work, convert, scheduler.scheduler)
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
         return self._functions.add(SerializableFunction(cb, cb.__name__))
@@ -385,16 +385,16 @@ class JSONRegistry(Generic[LoadContext]):
 
         return wrapped
 
-    def recurringFunction(self, cb: RepeatingWork) -> JSONableRecurring:
-        return self._recurring.add(
+    def repeatingFunction(self, cb: RepeatingWork) -> JSONableRepeating:
+        return self._repeating.add(
             SerializableFunction(cb, getattr(cb, "__name__"))
         )
 
-    def recurringMethod(
-        self, recurring: Callable[[JSONableSelf, int], None]
-    ) -> JSONableRecurringDescriptor[JSONableSelf, LoadContext]:
-        wrapped = JSONableRecurringDescriptor[JSONableSelf, LoadContext](
-            self, recurring
+    def repeatingMethod(
+        self, repeating: Callable[[JSONableSelf, int], None]
+    ) -> JSONableRepeatingDescriptor[JSONableSelf, LoadContext]:
+        wrapped = JSONableRepeatingDescriptor[JSONableSelf, LoadContext](
+            self, repeating
         )
         return wrapped
 
@@ -432,15 +432,15 @@ class JSONRegistry(Generic[LoadContext]):
 
 
 @dataclass
-class RecurrenceConverter(Generic[LoadContext]):
+class RepeatenceConverter(Generic[LoadContext]):
     jsonRegistry: JSONRegistry[LoadContext]
-    recurring: Recurring[
-        DateTime[ZoneInfo], JSONableCallable, JSONableRecurring
+    repeating: Repeating[
+        DateTime[ZoneInfo], JSONableCallable, JSONableRepeating
     ]
 
     @classmethod
     def typeCodeForJSON(self) -> str:
-        return "recurrence"
+        return "repeatence"
 
     @classmethod
     def fromJSON(
@@ -449,28 +449,28 @@ class RecurrenceConverter(Generic[LoadContext]):
         scheduler: PersistableScheduler[JSONableCallable, JSONObject],
         loadContext: LoadContext,
         json: JSONObject,
-    ) -> RecurrenceConverter[LoadContext]:
+    ) -> RepeatenceConverter[LoadContext]:
         ruleFunction = {"daily": daily}[  # , "dailyWithSkips": dailyWithSkips
             json["rule"]
         ]
         what = json["callable"]
 
         def convertToMethod(
-            it: Recurring[
+            it: Repeating[
                 DateTime[ZoneInfo],
                 JSONableCallable,
-                JSONableRecurring,
+                JSONableRepeating,
             ]
         ) -> JSONableCallable:
-            return registry.converterMethod(RecurrenceConverter(registry, it))
+            return registry.converterMethod(RepeatenceConverter(registry, it))
 
         return cls(
             registry,
-            Recurring(
+            Repeating(
                 fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"])),
                 ruleFunction,
                 registry._loadOne(
-                    what, registry._recurring, loadContext, scheduler
+                    what, registry._repeating, loadContext, scheduler
                 ),
                 convertToMethod,
                 scheduler.scheduler,
@@ -478,15 +478,15 @@ class RecurrenceConverter(Generic[LoadContext]):
         )
 
     def asJSON(self) -> dict[str, object]:
-        when = self.recurring.reference
+        when = self.repeating.reference
         return {
             "ts": when.replace(tzinfo=None).isoformat(),
             "tz": when.tzinfo.key,
-            "rule": {daily: "daily"}[self.recurring.rule],
-            "callable": _whatJSON(self.recurring.callable),
+            "rule": {daily: "daily"}[self.repeating.rule],
+            "callable": _whatJSON(self.repeating.callable),
             # "convert": is self, effectively
             # "scheduler": is what's doing the serializing
         }
 
-    def recurrenceWrapper(self) -> None:
-        self.recurring.recur()
+    def repeatenceWrapper(self) -> None:
+        self.repeating.repeat()

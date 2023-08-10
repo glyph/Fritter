@@ -14,7 +14,7 @@ from ..jsonterm import (
     JSONRegistry,
     jsonScheduler,
 )
-from ..recur import daily
+from ..repeat import daily
 from ..longterm import PersistableScheduler
 from ..memory_driver import MemoryDriver
 
@@ -41,7 +41,7 @@ def call2() -> None:
     calls.append("goodbye")
 
 
-@registry.recurringFunction
+@registry.repeatingFunction
 def repeating(steps: int) -> None:
     calls.append(f"repeating {steps}")
 
@@ -88,11 +88,11 @@ class InstanceWithMethods:
     def method2(self) -> None:
         self.info.calls.append(f"{self.value}/method2")
 
-    @registry.recurringMethod
-    def recurrence(self, steps: int) -> None:
+    @registry.repeatingMethod
+    def repeatence(self, steps: int) -> None:
         self.calls += 1
         self.info.calls.append(
-            f"recurrence {steps} {self.value=} {self.calls=}"
+            f"repeatence {steps} {self.value=} {self.calls=}"
         )
 
 
@@ -181,7 +181,7 @@ class PersistentSchedulerTests(TestCase):
         registry.load(memory, {"scheduledCalls": []}, RegInfo([]))
         self.assertEqual(memory.isScheduled(), False)
 
-    def test_recurring(self) -> None:
+    def test_repeating(self) -> None:
         dt = aware(
             datetime(
                 2023,
@@ -197,7 +197,7 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver = MemoryDriver()
         memoryDriver.advance(dt.timestamp())
         persistentScheduler = jsonScheduler(memoryDriver)
-        registry.recurring(dt, daily, repeating, persistentScheduler).recur()
+        registry.repeating(dt, daily, repeating, persistentScheduler).repeat()
         self.assertEqual(calls, ["repeating 1"])
         del calls[:]
 
@@ -220,7 +220,7 @@ class PersistentSchedulerTests(TestCase):
         self.assertEqual(amount, 0.0)
         self.assertEqual(calls, ["repeating 4"])
 
-    def test_recurringMethod(self) -> None:
+    def test_repeatingMethod(self) -> None:
         dt = aware(
             datetime(
                 2023,
@@ -237,21 +237,21 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(dt.timestamp())
         persistentScheduler = jsonScheduler(memoryDriver)
         info = RegInfo([])
-        method = InstanceWithMethods("sample", info).recurrence
+        method = InstanceWithMethods("sample", info).repeatence
         shared = InstanceWithMethods("shared", info)
-        registry.recurring(dt, daily, method, persistentScheduler).recur()
-        registry.recurring(
-            dt, daily, shared.recurrence, persistentScheduler
-        ).recur()
-        registry.recurring(
-            dt, daily, shared.recurrence, persistentScheduler
-        ).recur()
+        registry.repeating(dt, daily, method, persistentScheduler).repeat()
+        registry.repeating(
+            dt, daily, shared.repeatence, persistentScheduler
+        ).repeat()
+        registry.repeating(
+            dt, daily, shared.repeatence, persistentScheduler
+        ).repeat()
         self.assertEqual(
             info.calls,
             [
-                "recurrence 1 self.value='sample' self.calls=1",
-                "recurrence 1 self.value='shared' self.calls=1",
-                "recurrence 1 self.value='shared' self.calls=2",
+                "repeatence 1 self.value='sample' self.calls=1",
+                "repeatence 1 self.value='shared' self.calls=1",
+                "repeatence 1 self.value='shared' self.calls=2",
             ],
         )
         del info.calls[:]
@@ -263,9 +263,9 @@ class PersistentSchedulerTests(TestCase):
         self.assertEqual(
             info.calls,
             [
-                "recurrence 3 self.value='sample' self.calls=2",
-                "recurrence 3 self.value='shared' self.calls=3",
-                "recurrence 3 self.value='shared' self.calls=4",
+                "repeatence 3 self.value='sample' self.calls=2",
+                "repeatence 3 self.value='shared' self.calls=3",
+                "repeatence 3 self.value='shared' self.calls=4",
             ],
         )
         from json import dumps, loads
@@ -290,8 +290,8 @@ class PersistentSchedulerTests(TestCase):
                 "InstanceWithMethods.fromJSON",
                 "InstanceWithMethods.fromJSON",
                 "InstanceWithMethods.fromJSON (cached)",
-                "recurrence 4 self.value='sample' self.calls=1",
-                "recurrence 4 self.value='shared' self.calls=1",
-                "recurrence 4 self.value='shared' self.calls=2",
+                "repeatence 4 self.value='sample' self.calls=1",
+                "repeatence 4 self.value='shared' self.calls=1",
+                "repeatence 4 self.value='shared' self.calls=2",
             ],
         )
