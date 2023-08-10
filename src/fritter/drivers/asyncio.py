@@ -8,9 +8,9 @@ from logging import getLogger
 from sys import exc_info
 from typing import Callable, Coroutine, Optional
 
-from .boundaries import Cancelable, PriorityQueue, RepeatingWork
-from .heap import Heap
-from .scheduler import FutureCall, Scheduler, SimpleScheduler
+from ..boundaries import Cancelable, PriorityQueue, RepeatingWork
+from ..heap import Heap
+from ..scheduler import FutureCall, Scheduler, SimpleScheduler
 
 logger = getLogger(__name__)
 

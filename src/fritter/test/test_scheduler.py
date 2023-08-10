@@ -2,7 +2,7 @@ from typing import Callable
 from unittest import TestCase
 
 from ..scheduler import FutureCall, SimpleScheduler
-from ..memory_driver import MemoryDriver
+from ..drivers.memory import MemoryDriver
 from ..heap import Heap
 
 

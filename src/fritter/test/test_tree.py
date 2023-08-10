@@ -1,7 +1,7 @@
 from typing import Callable, List, Tuple
 from unittest import TestCase
 
-from ..memory_driver import MemoryDriver
+from ..drivers.memory import MemoryDriver
 from ..tree import child, _ChildDriver
 from ..scheduler import SimpleScheduler
 

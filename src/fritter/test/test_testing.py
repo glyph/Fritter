@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from ..memory_driver import MemoryDriver
+from ..drivers.memory import MemoryDriver
 
 
 class MemoryDriverTests(TestCase):

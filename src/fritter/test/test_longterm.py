@@ -8,15 +8,15 @@ from zoneinfo import ZoneInfo
 
 from datetype import aware
 
-from ..jsonterm import (
+from ..persistent.json import (
     JSONableCallable,
     JSONObject,
     JSONRegistry,
     jsonScheduler,
 )
 from ..repeat import daily
-from ..longterm import PersistableScheduler
-from ..memory_driver import MemoryDriver
+from ..persistent.core import PersistableScheduler
+from ..drivers.memory import MemoryDriver
 
 
 @dataclass
