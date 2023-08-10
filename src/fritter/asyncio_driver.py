@@ -1,13 +1,14 @@
 from __future__ import annotations
+
 from asyncio import get_event_loop
 from asyncio.events import AbstractEventLoop, TimerHandle
 from asyncio.futures import Future
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from logging import getLogger
 from sys import exc_info
 from typing import Callable, Coroutine, Optional
 
-from .boundaries import PriorityQueue, RepeatingWork, Cancelable
+from .boundaries import Cancelable, PriorityQueue, RepeatingWork
 from .priority_queue import HeapPriorityQueue
 from .scheduler import FutureCall, Scheduler, SimpleScheduler
 
@@ -16,7 +17,7 @@ logger = getLogger(__name__)
 
 @dataclass
 class AsyncioTimeDriver:
-    _loop: AbstractEventLoop
+    _loop: AbstractEventLoop = field(default_factory=get_event_loop)
     _call: Optional[TimerHandle] = None
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
