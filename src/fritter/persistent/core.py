@@ -1,9 +1,11 @@
+# -*- test-case-name: fritter.test.test_longterm -*-
 """
 Schedule things in terms of datetimes.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Callable, Generic, Protocol, Type, TypeVar
 from zoneinfo import ZoneInfo
 
@@ -67,38 +69,32 @@ class Serializer(Protocol[PersistentCallable, FullSerialization]):
         """
 
 
-@dataclass
-class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
+@dataclass(frozen=True)
+class Persistence(Generic[PersistentCallable, FullSerialization]):
     """
-    A L{PersistentScheduler}C{[X, Y]} can produce a L{Scheduler} restricted to
+    A L{Persistence}C{[X, Y]} can produce a L{Scheduler} restricted to
     scheduling callables of type C{X}, which can be serialized to C{Y} by its
     C{save} method.  You must provide a L{TimeDriver}C{[float]} and a callable
     that returns a L{Serializer}C{[X, Y]} to construct one.
     """
 
-    _runtimeDriver: TimeDriver[float]
+    driver: TimeDriver[float]
     _serializerFactory: Callable[
         [], Serializer[PersistentCallable, FullSerialization]
     ]
 
-    _scheduler: Scheduler[DateTime[ZoneInfo], PersistentCallable] | None = None
     _calls: list[FutureCall[DateTime[ZoneInfo], PersistentCallable]] = field(
         default_factory=list
     )
 
-    @property
+    @cached_property
     def scheduler(self) -> Scheduler[DateTime[ZoneInfo], PersistentCallable]:
         """
         Create the scheduler.
         """
-        if self._scheduler is None:
-            self._scheduler = Scheduler(
-                DateTimeDriver(self._runtimeDriver),
-                # TODO: Scheduler cannot be initialized with a non-empty queue,
-                # so this interface is risky
-                Heap(self._calls),
-            )
-        return self._scheduler
+        # TODO: Scheduler cannot be initialized with a non-empty queue, so this
+        # interface is risky
+        return Scheduler(DateTimeDriver(self.driver), Heap(self._calls))
 
     def save(self) -> FullSerialization:
         """

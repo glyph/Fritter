@@ -15,7 +15,7 @@ from ..persistent.json import (
     jsonScheduler,
 )
 from ..repeat import daily
-from ..persistent.core import PersistableScheduler
+from ..persistent.core import Persistence
 from ..drivers.memory import MemoryDriver
 
 
@@ -60,7 +60,7 @@ class InstanceWithMethods:
     def fromJSON(
         cls,
         registry: JSONRegistry[RegInfo],
-        scheduler: PersistableScheduler[JSONableCallable, JSONObject],
+        scheduler: Persistence[JSONableCallable, JSONObject],
         loadContext: RegInfo,
         json: JSONObject,
     ) -> InstanceWithMethods:
