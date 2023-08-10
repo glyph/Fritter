@@ -31,7 +31,7 @@ class Recurring(Generic[WhenT, WhatT, RecurringWhatT]):
         )
         callRecur = self.convert(self)
         self.callable(callIncrement)
-        return self.scheduler.callAtTimestamp(self.reference, callRecur)
+        return self.scheduler.callAt(self.reference, callRecur)
 
 
 @dataclass(frozen=True)

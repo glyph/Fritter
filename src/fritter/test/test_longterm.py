@@ -132,10 +132,10 @@ class PersistentSchedulerTests(TestCase):
         )
         ri0 = RegInfo([])
         iwm = InstanceWithMethods("test_scheduleRunSaveRun value", ri0)
-        persistentScheduler.scheduler.callAtTimestamp(dt, call1)
-        persistentScheduler.scheduler.callAtTimestamp(dt, iwm.method1)
-        persistentScheduler.scheduler.callAtTimestamp(dt2, call2)
-        persistentScheduler.scheduler.callAtTimestamp(dt2, iwm.method2)
+        persistentScheduler.scheduler.callAt(dt, call1)
+        persistentScheduler.scheduler.callAt(dt, iwm.method1)
+        persistentScheduler.scheduler.callAt(dt2, call2)
+        persistentScheduler.scheduler.callAt(dt2, iwm.method2)
         memoryDriver.advance(dt.timestamp() + 1)
         self.assertEqual(calls, ["hello"])
         del calls[:]
@@ -169,7 +169,7 @@ class PersistentSchedulerTests(TestCase):
             ),
             ZoneInfo,
         )
-        handle = persistentScheduler.scheduler.callAtTimestamp(dt, call1)
+        handle = persistentScheduler.scheduler.callAt(dt, call1)
         self.assertEqual(memoryDriver.isScheduled(), True)
         handle.cancel()
         self.assertEqual(memoryDriver.isScheduled(), False)

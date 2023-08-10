@@ -15,7 +15,7 @@ class RecursiveTest(TestCase):
         recursive.scaleFactor = scaleFactor
         recursive.start()
         calls = []
-        scheduler2.callAtTimestamp(
+        scheduler2.callAt(
             1.0,
             lambda: calls.append(
                 (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
@@ -38,7 +38,7 @@ class RecursiveTest(TestCase):
         recursive.scaleFactor = 2.0
         recursive.start()
         calls = []
-        scheduler2.callAtTimestamp(
+        scheduler2.callAt(
             1.0,
             lambda: calls.append(
                 (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
@@ -81,8 +81,8 @@ class RecursiveTest(TestCase):
 
         recordTimestamp = timestampRecorder(calls, scheduler1, scheduler2)
 
-        scheduler2.callAtTimestamp(1.0, recordTimestamp)
-        scheduler2.callAtTimestamp(0.5, recordTimestamp)
+        scheduler2.callAt(1.0, recordTimestamp)
+        scheduler2.callAt(0.5, recordTimestamp)
         driver.advance(0.6)
         self.assertEqual(calls, [(0.6, 0.6)])
 
@@ -91,13 +91,13 @@ class RecursiveTest(TestCase):
         scheduler2 = SimpleScheduler(recursive := RecursiveDriver(scheduler1))
         recursive.start()
         calls = []
-        scheduler2.callAtTimestamp(
+        scheduler2.callAt(
             1.0,
             lambda: calls.append(
                 (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
             ),
         )
-        scheduler2.callAtTimestamp(
+        scheduler2.callAt(
             2.0,
             lambda: calls.append(
                 (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
@@ -131,7 +131,7 @@ class RecursiveTest(TestCase):
         calls = []
         localDelta = 5.0
         scaledDelta = localDelta / scaleFactor
-        scheduler2.callAtTimestamp(
+        scheduler2.callAt(
             scheduler2.currentTimestamp() + localDelta,
             lambda: calls.append(
                 (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
@@ -153,7 +153,7 @@ class RecursiveTest(TestCase):
         recursive.start()
         calls: list[tuple[float, float]] = []
         recordTimestamp = timestampRecorder(calls, scheduler1, scheduler2)
-        onlyCall = scheduler2.callAtTimestamp(1.0, recordTimestamp)
+        onlyCall = scheduler2.callAt(1.0, recordTimestamp)
         self.assertTrue(driver.isScheduled())
         onlyCall.cancel()
         self.assertFalse(driver.isScheduled())

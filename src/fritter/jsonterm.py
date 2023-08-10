@@ -427,7 +427,7 @@ class JSONRegistry(Generic[LoadContext]):
                 loadContext,
                 new,
             )
-            new.scheduler.callAtTimestamp(when, what)
+            new.scheduler.callAt(when, what)
         return new
 
 

@@ -54,14 +54,14 @@ class Repeating(Generic[AsyncType, WhatT]):
             else:
                 last = count
                 if self._running is not None:
-                    self._pending = self._scheduler.callAtTimestamp(
+                    self._pending = self._scheduler.callAt(
                         (interval * (count + 1)) + startTime, one
                     )
 
         if now:
             one()
         else:
-            self._scheduler.callAtTimestamp((interval) + startTime, one)
+            self._scheduler.callAt((interval) + startTime, one)
         return self._running
 
     def stop(self, raiseIfNotRunning: bool = True) -> None:

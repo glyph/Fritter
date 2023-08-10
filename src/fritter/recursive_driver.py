@@ -27,7 +27,7 @@ class RecursiveDriver:
     """
     How much faster the local time coordinate system is within this scheduler?
     i.e.: with a scale factor of 2, that means time is running 2 times faster
-    in this local temporal coordinate system, and C{self.callAtTimestamp(3.0,
+    in this local temporal coordinate system, and C{self.callAt(3.0,
     X)} will run C{X} when the parent's current timestamp is 1.5.
     """
 
@@ -82,7 +82,7 @@ class RecursiveDriver:
             self._call = None
             work()
 
-        self._call = self._parent.callAtTimestamp(parentTimestamp, clearAndRun)
+        self._call = self._parent.callAt(parentTimestamp, clearAndRun)
 
     def unschedule(self) -> None:
         self._scheduleWhenStarted = None

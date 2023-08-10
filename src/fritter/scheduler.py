@@ -57,9 +57,7 @@ class Scheduler(Generic[WhenT, WhatT]):
     def currentTimestamp(self) -> WhenT:
         return self._driver.currentTimestamp()
 
-    def callAtTimestamp(
-        self, when: WhenT, what: WhatT
-    ) -> CallHandle[WhenT, WhatT]:
+    def callAt(self, when: WhenT, what: WhatT) -> CallHandle[WhenT, WhatT]:
         call = FutureCall(when, what)
 
         def _cancelCall(toRemove: FutureCall[WhenT, WhatT]) -> None:

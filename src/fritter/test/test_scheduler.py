@@ -23,8 +23,8 @@ class SchedulerTests(TestCase):
             nonlocal called
             called += 1
 
-        handle = scheduler.callAtTimestamp(1.0, callme)
-        scheduler.callAtTimestamp(3.0, callme)
+        handle = scheduler.callAt(1.0, callme)
+        scheduler.callAt(3.0, callme)
         self.assertEqual(0, called)
         driver.advance(2.0)
         self.assertEqual(1, called)
@@ -40,8 +40,8 @@ class SchedulerTests(TestCase):
             nonlocal called
             called += 1
 
-        scheduler.callAtTimestamp(1.0, callme)
-        scheduler.callAtTimestamp(0.5, callme)
+        scheduler.callAt(1.0, callme)
+        scheduler.callAt(0.5, callme)
         self.assertEqual(0, called)
         driver.advance(0.3)
         self.assertEqual(0, called)
@@ -63,10 +63,10 @@ class SchedulerTests(TestCase):
 
             return result
 
-        aHandle = scheduler.callAtTimestamp(1.0, record("a"))
-        bHandle = scheduler.callAtTimestamp(2.0, record("b"))
-        scheduler.callAtTimestamp(3.0, record("c"))
-        last = scheduler.callAtTimestamp(2.5, record("d"))
+        aHandle = scheduler.callAt(1.0, record("a"))
+        bHandle = scheduler.callAt(2.0, record("b"))
+        scheduler.callAt(3.0, record("c"))
+        last = scheduler.callAt(2.5, record("d"))
         last.cancel()
         didCancel = []
 
@@ -74,7 +74,7 @@ class SchedulerTests(TestCase):
             didCancel.append(True)
             bHandle.cancel()
 
-        scheduler.callAtTimestamp(1.5, bCancel)
+        scheduler.callAt(1.5, bCancel)
         self.assertEqual(callTimes, [])
         driver.advance()
         self.assertEqual(callTimes, [(1.0, "a")])
