@@ -363,7 +363,7 @@ class JSONRegistry(Generic[LoadContext]):
         ) -> JSONableCallable:
             return self.converterMethod(RepeatenceConverter(self, repeating))
 
-        return Repeating(reference, rule, work, convert, scheduler.scheduler)
+        return Repeating(reference, rule, work, convert, persistence.scheduler)
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
         return self._functions.add(SerializableFunction(cb, cb.__name__))
@@ -471,10 +471,10 @@ class RepeatenceConverter(Generic[LoadContext]):
                 fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"])),
                 ruleFunction,
                 registry._loadOne(
-                    what, registry._repeating, loadContext, scheduler
+                    what, registry._repeating, loadContext, persistence
                 ),
                 convertToMethod,
-                scheduler.scheduler,
+                persistence.scheduler,
             ),
         )
 
