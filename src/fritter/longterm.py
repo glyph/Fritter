@@ -15,20 +15,20 @@ from .priority_queue import HeapPriorityQueue
 from .scheduler import FutureCall, Scheduler
 
 
-@dataclass
+@dataclass(frozen=True)
 class DateTimeDriver:
     """
     Driver based on aware datetimes.
     """
 
-    _driver: TimeDriver[float]
-    _localTimezone: ZoneInfo = ZoneInfo("Etc/UTC")
+    driver: TimeDriver[float]
+    zoneInfo: ZoneInfo = ZoneInfo("Etc/UTC")
 
     def unschedule(self) -> None:
         """
         Unschedule from underlying driver.
         """
-        self._driver.unschedule()
+        self.driver.unschedule()
 
     def reschedule(
         self, newTime: DateTime[ZoneInfo], work: Callable[[], None]
@@ -36,11 +36,11 @@ class DateTimeDriver:
         """
         Re-schedule to a new time.
         """
-        self._driver.reschedule(newTime.timestamp(), work)
+        self.driver.reschedule(newTime.timestamp(), work)
 
     def currentTimestamp(self) -> DateTime[ZoneInfo]:
         return DateTime.fromtimestamp(
-            self._driver.currentTimestamp(), self._localTimezone
+            self.driver.currentTimestamp(), self.zoneInfo
         )
 
 
