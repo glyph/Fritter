@@ -19,6 +19,7 @@ class PriorityComparable(Protocol):
 
 T = TypeVar("T", bound=PriorityComparable)
 T1 = TypeVar("T1", bound=PriorityComparable, contravariant=True)
+AsyncType = TypeVar("AsyncType", bound=Awaitable[Any])
 
 
 class PriorityQueue(Protocol[T]):
@@ -75,9 +76,6 @@ class Cancelable(Protocol):
         """
         Stop the work.
         """
-
-
-AsyncType = TypeVar("AsyncType", bound=Awaitable[Any])
 
 
 class AsyncDriver(Protocol[AsyncType]):
