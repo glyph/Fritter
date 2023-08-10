@@ -10,6 +10,8 @@ from zoneinfo import ZoneInfo
 
 from datetype import DateTime
 
+from fritter.scheduler import WhenT
+
 from .boundaries import RepeatingWork, TimeDriver
 from .priority_queue import HeapPriorityQueue
 from .scheduler import FutureCall, Scheduler
@@ -114,48 +116,45 @@ class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
         return serializer.finish()
 
 
-RuleFunction = Callable[
-    [DateTime[ZoneInfo], DateTime[ZoneInfo]],
-    tuple[int, DateTime[ZoneInfo]],
-]
+RuleFunction = Callable[[WhenT, WhenT], tuple[int, WhenT]]
 
 
-BasePersistentCallable = TypeVar(
-    "BasePersistentCallable", bound=Callable[[], None]
+BaseCallable = TypeVar(
+    "BaseCallable", bound=Callable[[], None]
 )
-RecurringPersistentCallable = TypeVar(
-    "RecurringPersistentCallable", bound=RepeatingWork
+RecurringCallable = TypeVar(
+    "RecurringCallable", bound=RepeatingWork
 )
 
+RepeatingWhatT = TypeVar("RepeatingWhatT", bound=RepeatingWork)
 
 @dataclass
 class Recurring(
     Generic[
-        BasePersistentCallable, RecurringPersistentCallable, FullSerialization
+        WhenT, BaseCallable, RecurringCallable, FullSerialization
     ]
 ):
-    initialTime: DateTime[ZoneInfo]
-    rule: RuleFunction
-    callable: RecurringPersistentCallable
+    initialTime: WhenT
+    rule: RuleFunction[WhenT]
+    callable: RecurringCallable
     convert: Callable[
         [
             Recurring[
-                BasePersistentCallable,
-                RecurringPersistentCallable,
+                WhenT,
+                BaseCallable,
+                RecurringCallable,
                 FullSerialization,
             ]
         ],
-        BasePersistentCallable,
+        BaseCallable,
     ]
-    scheduler: PersistableScheduler[BasePersistentCallable, FullSerialization]
+    scheduler: Scheduler[WhenT, BaseCallable]
 
     def recur(self) -> None:
-        now = self.scheduler.scheduler.currentTimestamp()
+        now = self.scheduler.currentTimestamp()
         callIncrement, self.initialTime = self.rule(self.initialTime, now)
         self.callable(callIncrement)
-        self.scheduler.scheduler.callAtTimestamp(
-            self.initialTime, self.convert(self)
-        )
+        self.scheduler.callAtTimestamp(self.initialTime, self.convert(self))
 
 
 def daily(
@@ -169,7 +168,7 @@ def daily(
     return days, nextDesired
 
 
-__: RuleFunction
+__: RuleFunction[DateTime[ZoneInfo]]
 
 __ = daily
 # __ = dailyWithSkips
