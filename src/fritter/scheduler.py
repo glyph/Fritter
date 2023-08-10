@@ -39,23 +39,19 @@ class CallHandle(Generic[WhenT, WhatT]):
         self._canceller(self.call)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Scheduler(Generic[WhenT, WhatT]):
-    _driver: TimeDriver[WhenT]
+    driver: TimeDriver[WhenT]
     _q: PriorityQueue[FutureCall[WhenT, WhatT]] = field(
         default_factory=HeapPriorityQueue
     )
-
-    @property
-    def driver(self) -> TimeDriver[WhenT]:
-        return self._driver
 
     def __post_init__(self) -> None:
         if self._q.peek() is not None:
             raise ValueError("Priority queue must be initially empty.")
 
     def now(self) -> WhenT:
-        return self._driver.now()
+        return self.driver.now()
 
     def callAt(self, when: WhenT, what: WhatT) -> CallHandle[WhenT, WhatT]:
         call = FutureCall(when, what)
@@ -65,9 +61,9 @@ class Scheduler(Generic[WhenT, WhatT]):
             self._q.remove(toRemove)
             new = self._q.peek()
             if new is None:
-                self._driver.unschedule()
+                self.driver.unschedule()
             elif old is None or new is not old:
-                self._driver.reschedule(new.when, self._advanceToNow)
+                self.driver.reschedule(new.when, self._advanceToNow)
 
         previously = self._q.peek()
         self._q.add(call)
@@ -76,11 +72,11 @@ class Scheduler(Generic[WhenT, WhatT]):
         # signature
         assert currently is not None
         if previously is None or previously.when != currently.when:
-            self._driver.reschedule(currently.when, self._advanceToNow)
+            self.driver.reschedule(currently.when, self._advanceToNow)
         return CallHandle(call, _cancelCall)
 
     def _advanceToNow(self) -> None:
-        timestamp = self._driver.now()
+        timestamp = self.driver.now()
         while (each := self._q.peek()) is not None and each.when <= timestamp:
             popped = self._q.get()
             assert popped is each
@@ -90,7 +86,7 @@ class Scheduler(Generic[WhenT, WhatT]):
             each.what()
         upNext = self._q.peek()
         if upNext is not None:
-            self._driver.reschedule(upNext.when, self._advanceToNow)
+            self.driver.reschedule(upNext.when, self._advanceToNow)
 
 
 SimpleScheduler = Scheduler[float, Callable[[], None]]
