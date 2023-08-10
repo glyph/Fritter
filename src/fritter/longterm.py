@@ -11,7 +11,7 @@ from datetype import DateTime
 
 
 from .boundaries import TimeDriver
-from .priority_queue import HeapPriorityQueue
+from .heap import Heap
 from .scheduler import FutureCall, Scheduler
 
 PersistentCallable = TypeVar("PersistentCallable", bound=Callable[[], None])
@@ -97,7 +97,7 @@ class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
                 DateTimeDriver(self._runtimeDriver),
                 # TODO: Scheduler cannot be initialized with a non-empty queue,
                 # so this interface is risky
-                HeapPriorityQueue(self._calls),
+                Heap(self._calls),
             )
         return self._scheduler
 

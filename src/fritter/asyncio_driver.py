@@ -9,7 +9,7 @@ from sys import exc_info
 from typing import Callable, Coroutine, Optional
 
 from .boundaries import Cancelable, PriorityQueue, RepeatingWork
-from .priority_queue import HeapPriorityQueue
+from .heap import Heap
 from .scheduler import FutureCall, Scheduler, SimpleScheduler
 
 logger = getLogger(__name__)
@@ -100,5 +100,5 @@ def asyncioScheduler(
     """
     return Scheduler(
         AsyncioTimeDriver(loop),
-        queue if queue is not None else HeapPriorityQueue(),
+        queue if queue is not None else Heap(),
     )

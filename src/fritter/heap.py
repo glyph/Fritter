@@ -2,11 +2,11 @@ from dataclasses import dataclass, field
 from heapq import heappop, heappush
 from typing import Generic, List, Optional
 
-from .boundaries import T
+from .boundaries import T, PriorityQueue
 
 
 @dataclass
-class HeapPriorityQueue(Generic[T]):
+class Heap(Generic[T]):
     _values: List[T] = field(default_factory=list)
 
     def add(self, item: T) -> None:
@@ -29,3 +29,6 @@ class HeapPriorityQueue(Generic[T]):
             return False
         else:
             return True
+
+
+_HeapIsQueue: type[PriorityQueue[int]] = Heap[int]

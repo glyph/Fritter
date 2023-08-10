@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from ..scheduler import FutureCall, SimpleScheduler
 from ..memory_driver import MemoryDriver
-from ..priority_queue import HeapPriorityQueue
+from ..heap import Heap
 
 
 class SchedulerTests(TestCase):
@@ -90,7 +90,7 @@ class SchedulerTests(TestCase):
 
     def test_queueMustBeEmpty(self) -> None:
         driver = MemoryDriver()
-        q = HeapPriorityQueue([FutureCall(1.0, noop)])
+        q = Heap([FutureCall(1.0, noop)])
         with self.assertRaises(ValueError):
             SimpleScheduler(driver, q)
 

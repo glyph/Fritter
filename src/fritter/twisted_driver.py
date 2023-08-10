@@ -6,7 +6,7 @@ from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 
 from .boundaries import Cancelable, PriorityQueue, RepeatingWork
-from .priority_queue import HeapPriorityQueue
+from .heap import Heap
 from .scheduler import FutureCall, Scheduler, SimpleScheduler
 
 log = Logger()
@@ -84,5 +84,5 @@ def twistedScheduler(
     """
     return Scheduler(
         TwistedTimeDriver(reactor),
-        queue if queue is not None else HeapPriorityQueue(),
+        queue if queue is not None else Heap(),
     )

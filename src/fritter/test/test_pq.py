@@ -1,11 +1,11 @@
-from ..priority_queue import HeapPriorityQueue
+from ..heap import Heap
 
 from unittest import TestCase
 
 
 class QueueTests(TestCase):
     def setUp(self) -> None:
-        self.q: HeapPriorityQueue[int] = HeapPriorityQueue()
+        self.q: Heap[int] = Heap()
 
     def test_get(self) -> None:
         self.q.add(3)
