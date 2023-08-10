@@ -15,7 +15,7 @@ logger = getLogger(__name__)
 
 
 @dataclass
-class AsyncioTimeDriver(object):
+class AsyncioTimeDriver:
     _loop: AbstractEventLoop
     _call: Optional[TimerHandle] = None
 

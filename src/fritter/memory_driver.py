@@ -3,7 +3,7 @@ from typing import Callable, Optional, Tuple
 
 
 @dataclass
-class MemoryDriver(object):
+class MemoryDriver:
     _currentTime: float = 0.0
     _scheduledWork: Optional[Tuple[float, Callable[[], None]]] = None
 

@@ -13,7 +13,7 @@ log = Logger()
 
 
 @dataclass
-class TwistedTimeDriver(object):
+class TwistedTimeDriver:
     _reactor: IReactorTime
     _call: Optional[IDelayedCall] = None
 
@@ -38,7 +38,7 @@ class TwistedTimeDriver(object):
 
 
 @dataclass
-class TwistedAsyncDriver(object):
+class TwistedAsyncDriver:
     """
     Driver for Deferred-flavored repeating scheduler.
     """
