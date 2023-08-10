@@ -69,6 +69,7 @@ class RepeatingWork(Protocol):
             invocation.
         """
 
+
 class Cancelable(Protocol):
     def cancel(self) -> None:
         """
