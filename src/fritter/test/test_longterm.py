@@ -14,7 +14,8 @@ from ..jsonterm import (
     JSONRegistry,
     jsonScheduler,
 )
-from ..longterm import PersistableScheduler, daily
+from ..recur import daily
+from ..longterm import PersistableScheduler
 from ..memory_driver import MemoryDriver
 
 

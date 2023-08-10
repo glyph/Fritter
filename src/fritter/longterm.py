@@ -4,15 +4,13 @@ Schedule things in terms of datetimes.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timedelta
 from typing import Callable, Generic, Protocol, Type, TypeVar
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
 
-from fritter.scheduler import WhenT
 
-from .boundaries import RepeatingWork, TimeDriver
+from .boundaries import TimeDriver
 from .priority_queue import HeapPriorityQueue
 from .scheduler import FutureCall, Scheduler
 
@@ -114,61 +112,3 @@ class PersistableScheduler(Generic[PersistentCallable, FullSerialization]):
         for item in self._calls:
             serializer.add(item)
         return serializer.finish()
-
-
-RuleFunction = Callable[[WhenT, WhenT], tuple[int, WhenT]]
-
-
-BaseCallable = TypeVar(
-    "BaseCallable", bound=Callable[[], None]
-)
-RecurringCallable = TypeVar(
-    "RecurringCallable", bound=RepeatingWork
-)
-
-RepeatingWhatT = TypeVar("RepeatingWhatT", bound=RepeatingWork)
-
-@dataclass
-class Recurring(
-    Generic[
-        WhenT, BaseCallable, RecurringCallable, FullSerialization
-    ]
-):
-    initialTime: WhenT
-    rule: RuleFunction[WhenT]
-    callable: RecurringCallable
-    convert: Callable[
-        [
-            Recurring[
-                WhenT,
-                BaseCallable,
-                RecurringCallable,
-                FullSerialization,
-            ]
-        ],
-        BaseCallable,
-    ]
-    scheduler: Scheduler[WhenT, BaseCallable]
-
-    def recur(self) -> None:
-        now = self.scheduler.currentTimestamp()
-        callIncrement, self.initialTime = self.rule(self.initialTime, now)
-        self.callable(callIncrement)
-        self.scheduler.callAtTimestamp(self.initialTime, self.convert(self))
-
-
-def daily(
-    initialTime: DateTime[ZoneInfo], currentTime: DateTime[ZoneInfo]
-) -> tuple[int, DateTime[ZoneInfo]]:
-    days = 0
-    nextDesired = initialTime
-    while nextDesired <= currentTime:
-        days += 1
-        nextDesired += timedelta(days=1)
-    return days, nextDesired
-
-
-__: RuleFunction[DateTime[ZoneInfo]]
-
-__ = daily
-# __ = dailyWithSkips

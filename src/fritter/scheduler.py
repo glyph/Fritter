@@ -46,6 +46,10 @@ class Scheduler(Generic[WhenT, WhatT]):
         default_factory=HeapPriorityQueue
     )
 
+    @property
+    def driver(self) -> TimeDriver[WhenT]:
+        return self._driver
+
     def __post_init__(self) -> None:
         if self._q.peek() is not None:
             raise ValueError("Priority queue must be initially empty.")

@@ -20,10 +20,9 @@ from datetype import DateTime, fromisoformat
 from .boundaries import RepeatingWork, TimeDriver
 from .longterm import (
     PersistableScheduler,
-    Recurring,
-    RuleFunction,
-    daily,
 )
+from .recur import Recurring, RuleFunction, daily
+
 from .scheduler import FutureCall
 
 T = TypeVar("T")
@@ -355,10 +354,12 @@ class JSONRegistry(Generic[LoadContext]):
         rule: RuleFunction[DateTime[ZoneInfo]],
         work: JSONableRecurring,
         scheduler: PersistableScheduler[JSONableCallable, JSONObject],
-    ) -> Recurring[DateTime[ZoneInfo], JSONableCallable, JSONableRecurring, JSONObject]:
+    ) -> Recurring[DateTime[ZoneInfo], JSONableCallable, JSONableRecurring]:
         def convert(
             recurring: Recurring[
-                DateTime[ZoneInfo], JSONableCallable, JSONableRecurring, JSONObject
+                DateTime[ZoneInfo],
+                JSONableCallable,
+                JSONableRecurring,
             ]
         ) -> JSONableCallable:
             return self.converterMethod(RecurrenceConverter(self, recurring))
@@ -433,7 +434,9 @@ class JSONRegistry(Generic[LoadContext]):
 @dataclass
 class RecurrenceConverter(Generic[LoadContext]):
     jsonRegistry: JSONRegistry[LoadContext]
-    recurring: Recurring[DateTime[ZoneInfo], JSONableCallable, JSONableRecurring, JSONObject]
+    recurring: Recurring[
+        DateTime[ZoneInfo], JSONableCallable, JSONableRecurring
+    ]
 
     @classmethod
     def typeCodeForJSON(self) -> str:
@@ -453,7 +456,11 @@ class RecurrenceConverter(Generic[LoadContext]):
         what = json["callable"]
 
         def convertToMethod(
-            it: Recurring[DateTime[ZoneInfo], JSONableCallable, JSONableRecurring, JSONObject]
+            it: Recurring[
+                DateTime[ZoneInfo],
+                JSONableCallable,
+                JSONableRecurring,
+            ]
         ) -> JSONableCallable:
             return registry.converterMethod(RecurrenceConverter(registry, it))
 
@@ -471,11 +478,11 @@ class RecurrenceConverter(Generic[LoadContext]):
         )
 
     def asJSON(self) -> dict[str, object]:
-        when = self.recurring.initialTime
+        when = self.recurring.reference
         return {
             "ts": when.replace(tzinfo=None).isoformat(),
             "tz": when.tzinfo.key,
-            "rule": self.recurring.rule.__name__,
+            "rule": {daily: "daily"}[self.recurring.rule],
             "callable": _whatJSON(self.recurring.callable),
             # "convert": is self, effectively
             # "scheduler": is what's doing the serializing

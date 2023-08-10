@@ -1,4 +1,12 @@
-from typing import Any, Callable, Optional, Protocol, TypeVar
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Optional,
+    Protocol,
+    TypeVar,
+)
 
 
 class PriorityComparable(Protocol):
@@ -61,8 +69,14 @@ class RepeatingWork(Protocol):
             invocation.
         """
 
+class Cancelable(Protocol):
+    def cancel(self) -> None:
+        """
+        Stop the work.
+        """
 
-AsyncType = TypeVar("AsyncType")
+
+AsyncType = TypeVar("AsyncType", bound=Awaitable[Any])
 
 
 class AsyncDriver(Protocol[AsyncType]):
@@ -73,11 +87,22 @@ class AsyncDriver(Protocol[AsyncType]):
         """
 
     def complete(self, asyncObj: AsyncType) -> None:
-        "The asynchronous operation completed successfully."
+        """
+        The asynchronous operation completed successfully.
+        """
+
+    def runAsync(
+        self, coroutine: Coroutine[object, AsyncType, object]
+    ) -> Cancelable:
+        """
+        Run the given coroutine.
+        """
 
     def unhandledError(
         self,
         applicationCode: RepeatingWork,
         inProgressObj: Optional[AsyncType],
     ) -> None:
-        "called in an exception scope when"
+        """
+        called in an exception scope when
+        """
