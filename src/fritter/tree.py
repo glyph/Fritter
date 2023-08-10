@@ -1,6 +1,6 @@
 # -*- test-case-name: fritter.test.test_tree -*-
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple, NewType
+from typing import Callable, NewType, Optional, Protocol, Tuple
 
 from .scheduler import CallHandle, Scheduler
 
@@ -8,10 +8,51 @@ LocalTime = NewType("LocalTime", float)
 ParentTime = NewType("ParentTime", float)
 
 
+class Group(Protocol):
+    """
+    A L{Group} presents an interface to control a group of timers collected
+    into a scheduler; pausing the group, unpausing it, or making its relative
+    rate of progress faster or slower.
+    """
+
+    scaleFactor: float
+    """
+    How much faster the local time coordinate system is within this scheduler?
+    i.e.: with a scale factor of 2, that means time is running 2 times faster
+    in this local temporal coordinate system, and C{self.callAt(3.0,
+    X)} will run C{X} when the parent's current timestamp is 1.5.
+    """
+
+    def unpause(self) -> None:
+        """
+        Start the group of timers again.
+        """
+
+    def pause(self) -> None:
+        """
+        Pause the group of timers.
+        """
+
+
+def child(
+    parent: Scheduler[float, Callable[[], None]], scaleFactor: float = 1.0
+) -> tuple[Group, Scheduler[float, Callable[[], None]]]:
+    """
+    Derive a child scheduler from a parent scheduler.
+    """
+    driver = _ChildDriver(parent)
+    driver.scaleFactor = scaleFactor
+    childScheduler: Scheduler[float, Callable[[], None]] = Scheduler(driver)
+    driver.unpause()
+    return driver, childScheduler
+
+
 @dataclass
-class RecursiveDriver:
+class _ChildDriver:
     parent: Scheduler[float, Callable[[], None]]
-    "the parent scheduler"
+    """
+    The scheduler that this driver is a child of.
+    """
 
     # TODO: support for generic types would be nice here, but:
 
@@ -37,8 +78,8 @@ class RecursiveDriver:
     """
     Amount to subtract from parent's timestamp to get to this driver's base
     relative timestamp - in parent's (unscaled, not local) time-scale.  When a
-    L{RecursiveDriver} is created, it has a default offset of 0, which means
-    that the moment '.start()' is called, that is time 0 in local time.
+    L{ChildDriver} is created, it has a default offset of 0, which means that
+    the moment '.start()' is called, that is time 0 in local time.
     """
 
     _running: bool = False
@@ -99,10 +140,9 @@ class RecursiveDriver:
         else:
             return self._pauseTime
 
-    # |                       |
-    # v recursive driver only v
+    # implementation of 'Group' interface
 
-    def start(self) -> None:
+    def unpause(self) -> None:
         if self._running:
             return
         # shift forward the offset to skip over the time during which we were
@@ -149,6 +189,6 @@ class RecursiveDriver:
         if wasRunning:
             self.pause()
             self._scaleFactor = newScaleFactor
-            self.start()
+            self.unpause()
         else:
             self._scaleFactor = newScaleFactor
