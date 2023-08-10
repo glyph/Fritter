@@ -1,14 +1,14 @@
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Any, Callable, Coroutine, Optional
 
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 
-from .boundaries import RepeatingWork, PriorityQueue
+from .boundaries import Cancelable, PriorityQueue, RepeatingWork
+from .priority_queue import HeapPriorityQueue
 from .repeat import Repeating
 from .scheduler import FutureCall, Scheduler, SimpleScheduler
-from .priority_queue import HeapPriorityQueue
 
 log = Logger()
 
@@ -67,6 +67,11 @@ class TwistedAsyncDriver(object):
             log.failure(
                 "Unhandled error while doing {work}", work=applicationCode
             )
+
+    def runAsync(
+        self, coroutine: Coroutine[Deferred[None], Any, None]
+    ) -> Cancelable:
+        return Deferred.fromCoroutine(coroutine)
 
 
 def twistedScheduler(

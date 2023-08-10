@@ -71,7 +71,7 @@ class RepeatingWork(Protocol):
 
 
 class Cancelable(Protocol):
-    def cancel(self) -> None:
+    def cancel(self) -> object:
         """
         Stop the work.
         """
@@ -93,7 +93,7 @@ class AsyncDriver(Protocol[AsyncType]):
         """
 
     def runAsync(
-        self, coroutine: Coroutine[object, AsyncType, object]
+        self, coroutine: Coroutine[AsyncType, Any, Any]
     ) -> Cancelable:
         """
         Run the given coroutine.

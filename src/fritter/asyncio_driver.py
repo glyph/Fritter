@@ -1,15 +1,16 @@
+from __future__ import annotations
+from asyncio import get_event_loop
 from asyncio.events import AbstractEventLoop, TimerHandle
 from asyncio.futures import Future
 from dataclasses import dataclass
 from logging import getLogger
 from sys import exc_info
-from typing import Callable, Optional
+from typing import Callable, Coroutine, Optional
 
-from .boundaries import PriorityQueue, RepeatingWork
+from .boundaries import PriorityQueue, RepeatingWork, Cancelable
 from .priority_queue import HeapPriorityQueue
 from .repeat import Repeating
 from .scheduler import FutureCall, Scheduler, SimpleScheduler
-
 
 logger = getLogger(__name__)
 
@@ -38,10 +39,12 @@ class AsyncioTimeDriver(object):
 
 
 @dataclass
-class AsyncioAsyncDriver(object):
+class AsyncioAsyncDriver:
     """
-    Driver for Deferred-flavored repeating scheduler.
+    Driver for asyncio.Future-flavored repeating scheduler.
     """
+
+    _loop: AbstractEventLoop
 
     def newWithCancel(self, cancel: Callable[[], None]) -> Future[None]:
         """
@@ -80,6 +83,11 @@ class AsyncioAsyncDriver(object):
                 exc_info=(t, v, tb),
             )
 
+    def runAsync(
+        self, coroutine: Coroutine[object, Future[None], object]
+    ) -> Cancelable:
+        return self._loop.create_task(coroutine)
+
 
 def asyncioScheduler(
     loop: AbstractEventLoop,
@@ -102,4 +110,4 @@ def asyncioRepeating(
     """
     Create a repeating call that returns a Deferred from its start method.
     """
-    return Repeating(work, scheduler, AsyncioAsyncDriver())
+    return Repeating(work, scheduler, AsyncioAsyncDriver(get_event_loop()))
