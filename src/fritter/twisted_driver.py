@@ -26,7 +26,7 @@ class TwistedTimeDriver(object):
         if self._call is not None:
             self._call.cancel()
         self._call = self._reactor.callLater(
-            max(0, desiredTime - self.currentTimestamp()), _
+            max(0, desiredTime - self.now()), _
         )
 
     def unschedule(self) -> None:
@@ -34,7 +34,7 @@ class TwistedTimeDriver(object):
             self._call.cancel()
             self._call = None
 
-    def currentTimestamp(self) -> float:
+    def now(self) -> float:
         return self._reactor.seconds()
 
 

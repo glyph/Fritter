@@ -14,6 +14,9 @@ from .boundaries import TimeDriver
 from .priority_queue import HeapPriorityQueue
 from .scheduler import FutureCall, Scheduler
 
+PersistentCallable = TypeVar("PersistentCallable", bound=Callable[[], None])
+FullSerialization = TypeVar("FullSerialization", covariant=True)
+
 
 @dataclass(frozen=True)
 class DateTimeDriver:
@@ -22,7 +25,7 @@ class DateTimeDriver:
     """
 
     driver: TimeDriver[float]
-    zoneInfo: ZoneInfo = ZoneInfo("Etc/UTC")
+    zone: ZoneInfo = ZoneInfo("Etc/UTC")
 
     def unschedule(self) -> None:
         """
@@ -38,17 +41,12 @@ class DateTimeDriver:
         """
         self.driver.reschedule(newTime.timestamp(), work)
 
-    def currentTimestamp(self) -> DateTime[ZoneInfo]:
-        return DateTime.fromtimestamp(
-            self.driver.currentTimestamp(), self.zoneInfo
-        )
+    def now(self) -> DateTime[ZoneInfo]:
+        timestamp = self.driver.now()
+        return DateTime.fromtimestamp(timestamp, self.zone)
 
 
-_: Type[TimeDriver[DateTime[ZoneInfo]]] = DateTimeDriver
-
-
-PersistentCallable = TypeVar("PersistentCallable", bound=Callable[[], None])
-FullSerialization = TypeVar("FullSerialization", covariant=True)
+_DriverTypeCheck: Type[TimeDriver[DateTime[ZoneInfo]]] = DateTimeDriver
 
 
 class Serializer(Protocol[PersistentCallable, FullSerialization]):

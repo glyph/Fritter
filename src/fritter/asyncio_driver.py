@@ -33,7 +33,7 @@ class AsyncioTimeDriver(object):
             self._call.cancel()
             self._call = None
 
-    def currentTimestamp(self) -> float:
+    def now(self) -> float:
         return self._loop.time()
 
 

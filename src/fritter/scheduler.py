@@ -54,8 +54,8 @@ class Scheduler(Generic[WhenT, WhatT]):
         if self._q.peek() is not None:
             raise ValueError("Priority queue must be initially empty.")
 
-    def currentTimestamp(self) -> WhenT:
-        return self._driver.currentTimestamp()
+    def now(self) -> WhenT:
+        return self._driver.now()
 
     def callAt(self, when: WhenT, what: WhatT) -> CallHandle[WhenT, WhatT]:
         call = FutureCall(when, what)
@@ -80,7 +80,7 @@ class Scheduler(Generic[WhenT, WhatT]):
         return CallHandle(call, _cancelCall)
 
     def _advanceToNow(self) -> None:
-        timestamp = self._driver.currentTimestamp()
+        timestamp = self._driver.now()
         while (each := self._q.peek()) is not None and each.when <= timestamp:
             popped = self._q.get()
             assert popped is each

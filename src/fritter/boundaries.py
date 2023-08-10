@@ -54,7 +54,7 @@ class TimeDriver(Protocol[T]):
     def unschedule(self) -> None:
         ...
 
-    def currentTimestamp(self) -> T:
+    def now(self) -> T:
         ...
 
 

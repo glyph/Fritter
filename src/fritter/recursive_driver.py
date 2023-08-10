@@ -90,12 +90,12 @@ class RecursiveDriver:
             self._call.cancel()
             self._call = None
 
-    def currentTimestamp(self) -> float:
-        return self._currentTimestamp()
+    def now(self) -> float:
+        return self._now()
 
-    def _currentTimestamp(self) -> LocalTime:
+    def _now(self) -> LocalTime:
         if self._running:
-            return self._parentToLocal(self._parent.currentTimestamp())
+            return self._parentToLocal(self._parent.now())
         else:
             return self._pauseTime
 
@@ -107,7 +107,7 @@ class RecursiveDriver:
             return
         # shift forward the offset to skip over the time during which we were
         # paused.
-        parentTime: ParentTime = self._parent.currentTimestamp()
+        parentTime: ParentTime = self._parent.now()
         parentDelta: ParentTime = ParentTime(
             self._pauseTime / self._scaleFactor
         )
@@ -123,7 +123,7 @@ class RecursiveDriver:
             self._reschedule(desiredTime, work)
 
     def pause(self) -> None:
-        self._pauseTime = self._currentTimestamp()
+        self._pauseTime = self._now()
         self._running = False
         if self._call is not None:
             self._call.cancel()

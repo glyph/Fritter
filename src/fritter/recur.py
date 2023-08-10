@@ -27,7 +27,7 @@ class Recurring(Generic[WhenT, WhatT, RecurringWhatT]):
 
     def recur(self) -> CallHandle[WhenT, WhatT]:
         callIncrement, self.reference = self.rule(
-            self.reference, self.scheduler.currentTimestamp()
+            self.reference, self.scheduler.now()
         )
         callRecur = self.convert(self)
         self.callable(callIncrement)
@@ -111,7 +111,7 @@ def repeatAsync(
         else:
             doRecur()
 
-    now = scheduler.driver.currentTimestamp()
+    now = scheduler.driver.now()
     recurring = Recurring(
         now, rule, someWork, lambda _: recurWhenDone, scheduler
     )

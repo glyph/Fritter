@@ -59,7 +59,7 @@ class SchedulerTests(TestCase):
 
         def record(event: str) -> Callable[[], None]:
             def result() -> None:
-                callTimes.append((scheduler.currentTimestamp(), event))
+                callTimes.append((scheduler.now(), event))
 
             return result
 

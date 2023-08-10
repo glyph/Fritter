@@ -13,7 +13,7 @@ class MemoryDriver(object):
     def unschedule(self) -> None:
         self._scheduledWork = None
 
-    def currentTimestamp(self) -> float:
+    def now(self) -> float:
         return self._currentTime
 
     # |   memory driver only  |

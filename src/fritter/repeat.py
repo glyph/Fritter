@@ -39,13 +39,13 @@ class Repeating(Generic[AsyncType, WhatT]):
         if self._running is not None:
             raise AlreadyRunning(f"Repeating({self.work}) is already running.")
         self._running = self._driver.newWithCancel(self.stop)
-        startTime = self._scheduler.currentTimestamp()
+        startTime = self._scheduler.now()
         last = 0
 
         def one() -> None:
             nonlocal last
             self._pending = None
-            elapsed = self._scheduler.currentTimestamp() - startTime
+            elapsed = self._scheduler.now() - startTime
             count = int(elapsed // interval)
             try:
                 self.work(count - last)

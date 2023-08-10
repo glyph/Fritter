@@ -17,9 +17,7 @@ class RecursiveTest(TestCase):
         calls = []
         scheduler2.callAt(
             1.0,
-            lambda: calls.append(
-                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-            ),
+            lambda: calls.append((scheduler1.now(), scheduler2.now())),
         )
         driver.advance()
         return calls
@@ -40,9 +38,7 @@ class RecursiveTest(TestCase):
         calls = []
         scheduler2.callAt(
             1.0,
-            lambda: calls.append(
-                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-            ),
+            lambda: calls.append((scheduler1.now(), scheduler2.now())),
         )
         driver.advance(1 / 4)
         recursive.scaleFactor *= 2.0
@@ -61,17 +57,17 @@ class RecursiveTest(TestCase):
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
         recursive = RecursiveDriver(scheduler1, _scaleFactor=2)
         recursive.pause()
-        self.assertEqual(recursive.currentTimestamp(), 0.0)
+        self.assertEqual(recursive.now(), 0.0)
         driver.advance(500)
-        self.assertEqual(recursive.currentTimestamp(), 0.0)
+        self.assertEqual(recursive.now(), 0.0)
         recursive.start()
-        self.assertEqual(recursive.currentTimestamp(), 0.0)
+        self.assertEqual(recursive.now(), 0.0)
         driver.advance(10)
-        self.assertEqual(recursive.currentTimestamp(), 20.0)
+        self.assertEqual(recursive.now(), 20.0)
         recursive.start()
-        self.assertEqual(recursive.currentTimestamp(), 20.0)
+        self.assertEqual(recursive.now(), 20.0)
         driver.advance(10)
-        self.assertEqual(recursive.currentTimestamp(), 40.0)
+        self.assertEqual(recursive.now(), 40.0)
 
     def test_moveSooner(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
@@ -93,15 +89,11 @@ class RecursiveTest(TestCase):
         calls = []
         scheduler2.callAt(
             1.0,
-            lambda: calls.append(
-                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-            ),
+            lambda: calls.append((scheduler1.now(), scheduler2.now())),
         )
         scheduler2.callAt(
             2.0,
-            lambda: calls.append(
-                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-            ),
+            lambda: calls.append((scheduler1.now(), scheduler2.now())),
         )
         self.assertEqual(calls, [])
         driver.advance(1.5)
@@ -112,12 +104,12 @@ class RecursiveTest(TestCase):
         driver.advance(2.7)
         # move to 4.2, still 0.5 left, no call yet
         self.assertEqual(calls, [])
-        self.assertEqual(2.7 + 1.5, driver.currentTimestamp())
-        self.assertEqual(1.5, recursive.currentTimestamp())
+        self.assertEqual(2.7 + 1.5, driver.now())
+        self.assertEqual(1.5, recursive.now())
         recursive.start()
         driver.advance(0.5)
-        self.assertEqual(2.7 + 1.5 + 0.5, driver.currentTimestamp())
-        self.assertEqual(1.5 + 0.5, recursive.currentTimestamp())
+        self.assertEqual(2.7 + 1.5 + 0.5, driver.now())
+        self.assertEqual(1.5 + 0.5, recursive.now())
         self.assertEqual(calls, [(2.7 + 1.5 + 0.5, 2.0)])
 
     def test_doubleStart(self) -> None:
@@ -132,10 +124,8 @@ class RecursiveTest(TestCase):
         localDelta = 5.0
         scaledDelta = localDelta / scaleFactor
         scheduler2.callAt(
-            scheduler2.currentTimestamp() + localDelta,
-            lambda: calls.append(
-                (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-            ),
+            scheduler2.now() + localDelta,
+            lambda: calls.append((scheduler1.now(), scheduler2.now())),
         )
         recursive.start()
         driver.advance(1.0)
@@ -165,8 +155,6 @@ def timestampRecorder(
     scheduler2: SimpleScheduler,
 ) -> Callable[[], None]:
     def recorder() -> None:
-        calls.append(
-            (scheduler1.currentTimestamp(), scheduler2.currentTimestamp())
-        )
+        calls.append((scheduler1.now(), scheduler2.now()))
 
     return recorder
