@@ -350,7 +350,7 @@ class JSONRegistry(Generic[LoadContext]):
 
     def recurring(
         self,
-        initialTime: DateTime[ZoneInfo],
+        reference: DateTime[ZoneInfo],
         rule: RuleFunction[DateTime[ZoneInfo]],
         work: JSONableRecurring,
         scheduler: PersistableScheduler[JSONableCallable, JSONObject],
@@ -364,7 +364,7 @@ class JSONRegistry(Generic[LoadContext]):
         ) -> JSONableCallable:
             return self.converterMethod(RecurrenceConverter(self, recurring))
 
-        return Recurring(initialTime, rule, work, convert, scheduler.scheduler)
+        return Recurring(reference, rule, work, convert, scheduler.scheduler)
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
         return self._functions.add(SerializableFunction(cb, cb.__name__))
