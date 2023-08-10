@@ -60,7 +60,7 @@ class InstanceWithMethods:
     def fromJSON(
         cls,
         registry: JSONRegistry[RegInfo],
-        scheduler: Persistence[JSONableCallable, JSONObject],
+        persistence: Persistence[JSONableCallable, JSONObject],
         loadContext: RegInfo,
         json: JSONObject,
     ) -> InstanceWithMethods:

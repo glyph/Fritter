@@ -87,7 +87,7 @@ class JSONableInstance(JSONable, Protocol[LoadContextInv]):
     def fromJSON(
         cls: Type[JSONableSelfCo],
         registry: JSONRegistry[LoadContextInv],
-        scheduler: Persistence[JSONableCallable, JSONObject],
+        persistence: Persistence[JSONableCallable, JSONObject],
         loadContext: LoadContextInv,
         json: JSONObject,
     ) -> JSONableSelfCo:
@@ -109,7 +109,7 @@ class JSONableLoader(Protocol[LoadContextInv, JSONableSelfCo]):
     def fromJSON(
         self,
         registry: JSONRegistry[LoadContextInv],
-        scheduler: Persistence[JSONableCallable, JSONObject],
+        persistence: Persistence[JSONableCallable, JSONObject],
         loadContext: LoadContextInv,
         json: JSONObject,
     ) -> JSONableSelfCo:
@@ -352,7 +352,7 @@ class JSONRegistry(Generic[LoadContext]):
         reference: DateTime[ZoneInfo],
         rule: RuleFunction[DateTime[ZoneInfo]],
         work: JSONableRepeating,
-        scheduler: Persistence[JSONableCallable, JSONObject],
+        persistence: Persistence[JSONableCallable, JSONObject],
     ) -> Repeating[DateTime[ZoneInfo], JSONableCallable, JSONableRepeating]:
         def convert(
             repeating: Repeating[
@@ -414,9 +414,9 @@ class JSONRegistry(Generic[LoadContext]):
         returning a L{Persistence}.
         """
         loadedID = 0
-        new: Persistence[
-            JSONableCallable, JSONObject
-        ] = Persistence(runtimeDriver, JSONSerializer)
+        new: Persistence[JSONableCallable, JSONObject] = Persistence(
+            runtimeDriver, JSONSerializer
+        )
         for callJSON in serializedJSON["scheduledCalls"]:
             loadedID -= 1
             when = fromisoformat(callJSON["when"]).replace(
@@ -447,7 +447,7 @@ class RepeatenceConverter(Generic[LoadContext]):
     def fromJSON(
         cls,
         registry: JSONRegistry[LoadContext],
-        scheduler: Persistence[JSONableCallable, JSONObject],
+        persistence: Persistence[JSONableCallable, JSONObject],
         loadContext: LoadContext,
         json: JSONObject,
     ) -> RepeatenceConverter[LoadContext]:
