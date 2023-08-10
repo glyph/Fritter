@@ -17,13 +17,12 @@ from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
 
-from .boundaries import RepeatingWork, TimeDriver
-from .longterm import (
+from ..boundaries import RepeatingWork, TimeDriver
+from .core import (
     PersistableScheduler,
 )
-from .repeat import Repeating, RuleFunction, daily
-
-from .scheduler import FutureCall
+from ..repeat import Repeating, RuleFunction, daily
+from ..scheduler import FutureCall
 
 T = TypeVar("T")
 LoadContext = TypeVar("LoadContext", contravariant=True)
@@ -415,7 +414,9 @@ class JSONRegistry(Generic[LoadContext]):
         returning a L{PersistableScheduler}.
         """
         loadedID = 0
-        new = PersistableScheduler(runtimeDriver, JSONSerializer)
+        new: PersistableScheduler[
+            JSONableCallable, JSONObject
+        ] = PersistableScheduler(runtimeDriver, JSONSerializer)
         for callJSON in serializedJSON["scheduledCalls"]:
             loadedID -= 1
             when = fromisoformat(callJSON["when"]).replace(
