@@ -15,8 +15,8 @@ a stream, move an object in a simulation, or advance to the appropriate image
 for the current frame of an animation.
 
 The 'fritter' package provides a few tools to make that easier, particularly
-the 'repeating' module.  Inspired by Twisted's "LoopingCall.withCount" which
-does something similar, it is a much simpler and more decoupled implementation.
+the 'recur' module.  Inspired by Twisted's "LoopingCall.withCount" which does
+something similar, it is a much simpler and more decoupled implementation.
 
 The 'scheduler' core is quite a lot like the built-in 'sched' module, with a
 few key differences:
