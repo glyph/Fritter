@@ -9,7 +9,6 @@ from typing import Callable, Coroutine, Optional
 
 from .boundaries import PriorityQueue, RepeatingWork, Cancelable
 from .priority_queue import HeapPriorityQueue
-from .repeat import Repeating
 from .scheduler import FutureCall, Scheduler, SimpleScheduler
 
 logger = getLogger(__name__)
@@ -102,12 +101,3 @@ def asyncioScheduler(
         AsyncioTimeDriver(loop),
         queue if queue is not None else HeapPriorityQueue(),
     )
-
-
-def asyncioRepeating(
-    scheduler: SimpleScheduler, work: RepeatingWork
-) -> Repeating[Future[None], Callable[[], None]]:
-    """
-    Create a repeating call that returns a Deferred from its start method.
-    """
-    return Repeating(work, scheduler, AsyncioAsyncDriver(get_event_loop()))

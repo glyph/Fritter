@@ -7,7 +7,6 @@ from twisted.logger import Logger
 
 from .boundaries import Cancelable, PriorityQueue, RepeatingWork
 from .priority_queue import HeapPriorityQueue
-from .repeat import Repeating
 from .scheduler import FutureCall, Scheduler, SimpleScheduler
 
 log = Logger()
@@ -87,12 +86,3 @@ def twistedScheduler(
         TwistedTimeDriver(reactor),
         queue if queue is not None else HeapPriorityQueue(),
     )
-
-
-def twistedRepeating(
-    scheduler: SimpleScheduler, work: RepeatingWork
-) -> Repeating[Deferred[None], Callable[[], None]]:
-    """
-    Create a repeating call that returns a Deferred from its start method.
-    """
-    return Repeating(work, scheduler, TwistedAsyncDriver())
