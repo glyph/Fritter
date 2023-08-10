@@ -352,18 +352,18 @@ class JSONRegistry(Generic[LoadContext]):
     def recurring(
         self,
         initialTime: DateTime[ZoneInfo],
-        rule: RuleFunction,
+        rule: RuleFunction[DateTime[ZoneInfo]],
         work: JSONableRecurring,
         scheduler: PersistableScheduler[JSONableCallable, JSONObject],
-    ) -> Recurring[JSONableCallable, JSONableRecurring, JSONObject]:
+    ) -> Recurring[DateTime[ZoneInfo], JSONableCallable, JSONableRecurring, JSONObject]:
         def convert(
             recurring: Recurring[
-                JSONableCallable, JSONableRecurring, JSONObject
+                DateTime[ZoneInfo], JSONableCallable, JSONableRecurring, JSONObject
             ]
         ) -> JSONableCallable:
             return self.converterMethod(RecurrenceConverter(self, recurring))
 
-        return Recurring(initialTime, rule, work, convert, scheduler)
+        return Recurring(initialTime, rule, work, convert, scheduler.scheduler)
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
         return self._functions.add(SerializableFunction(cb, cb.__name__))
@@ -433,7 +433,7 @@ class JSONRegistry(Generic[LoadContext]):
 @dataclass
 class RecurrenceConverter(Generic[LoadContext]):
     jsonRegistry: JSONRegistry[LoadContext]
-    recurring: Recurring[JSONableCallable, JSONableRecurring, JSONObject]
+    recurring: Recurring[DateTime[ZoneInfo], JSONableCallable, JSONableRecurring, JSONObject]
 
     @classmethod
     def typeCodeForJSON(self) -> str:
@@ -453,7 +453,7 @@ class RecurrenceConverter(Generic[LoadContext]):
         what = json["callable"]
 
         def convertToMethod(
-            it: Recurring[JSONableCallable, JSONableRecurring, JSONObject]
+            it: Recurring[DateTime[ZoneInfo], JSONableCallable, JSONableRecurring, JSONObject]
         ) -> JSONableCallable:
             return registry.converterMethod(RecurrenceConverter(registry, it))
 
@@ -466,7 +466,7 @@ class RecurrenceConverter(Generic[LoadContext]):
                     what, registry._recurring, loadContext, scheduler
                 ),
                 convertToMethod,
-                scheduler,
+                scheduler.scheduler,
             ),
         )
 
