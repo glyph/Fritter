@@ -89,16 +89,14 @@ class AsyncioAsyncDriver:
         return self._loop.create_task(coroutine)
 
 
-def asyncioScheduler(
-    loop: AbstractEventLoop,
-    queue: Optional[
-        PriorityQueue[FutureCall[float, Callable[[], None]]]
-    ] = None,
+def scheduler(
+    loop: AbstractEventLoop | None = None,
+    queue: PriorityQueue[FutureCall[float, Callable[[], None]]] | None = None,
 ) -> SimpleScheduler:
     """
     Create a scheduler that uses Asyncio.
     """
     return Scheduler(
-        AsyncioTimeDriver(loop),
+        AsyncioTimeDriver(loop if loop is not None else get_event_loop()),
         queue if queue is not None else Heap(),
     )

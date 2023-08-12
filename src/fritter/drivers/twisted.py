@@ -75,15 +75,17 @@ class TwistedAsyncDriver:
         return Deferred.fromCoroutine(coroutine)
 
 
-def twistedScheduler(
-    reactor: IReactorTime,
-    queue: Optional[
-        PriorityQueue[FutureCall[float, Callable[[], None]]]
-    ] = None,
+def scheduler(
+    reactor: IReactorTime | None = None,
+    queue: PriorityQueue[FutureCall[float, Callable[[], None]]] | None = None,
 ) -> SimpleScheduler:
     """
     Create a scheduler that uses Twisted.
     """
+    if reactor is None:
+        from twisted.internet import reactor  # type:ignore[assignment]
+
+        assert reactor is not None
     return Scheduler(
         TwistedTimeDriver(reactor),
         queue if queue is not None else Heap(),

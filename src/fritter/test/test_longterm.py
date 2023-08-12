@@ -7,16 +7,13 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import aware
+from fritter.boundaries import TimeDriver
+from fritter.drivers.datetime import DateTimeDriver
+from fritter.scheduler import Scheduler
 
-from ..persistent.json import (
-    JSONableCallable,
-    JSONObject,
-    JSONRegistry,
-    jsonScheduler,
-)
-from ..repeat import daily
-from ..persistent.core import Persistence
 from ..drivers.memory import MemoryDriver
+from ..persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from ..repeat import daily
 
 
 @dataclass
@@ -60,7 +57,7 @@ class InstanceWithMethods:
     def fromJSON(
         cls,
         registry: JSONRegistry[RegInfo],
-        persistence: Persistence[JSONableCallable, JSONObject],
+        scheduler: JSONableScheduler,
         loadContext: RegInfo,
         json: JSONObject,
     ) -> InstanceWithMethods:
@@ -96,6 +93,10 @@ class InstanceWithMethods:
         )
 
 
+def jsonScheduler(driver: TimeDriver[float]) -> JSONableScheduler:
+    return Scheduler(DateTimeDriver(driver))
+
+
 class PersistentSchedulerTests(TestCase):
     def tearDown(self) -> None:
         del calls[:]
@@ -105,7 +106,7 @@ class PersistentSchedulerTests(TestCase):
         Test scheduling module-level functions and instance methods.
         """
         memoryDriver = MemoryDriver()
-        persistentScheduler = jsonScheduler(memoryDriver)
+        scheduler = jsonScheduler(memoryDriver)
         dt = aware(
             datetime(
                 2023,
@@ -132,14 +133,14 @@ class PersistentSchedulerTests(TestCase):
         )
         ri0 = RegInfo([])
         iwm = InstanceWithMethods("test_scheduleRunSaveRun value", ri0)
-        persistentScheduler.scheduler.callAt(dt, call1)
-        persistentScheduler.scheduler.callAt(dt, iwm.method1)
-        persistentScheduler.scheduler.callAt(dt2, call2)
-        persistentScheduler.scheduler.callAt(dt2, iwm.method2)
+        scheduler.callAt(dt, call1)
+        scheduler.callAt(dt, iwm.method1)
+        scheduler.callAt(dt2, call2)
+        scheduler.callAt(dt2, iwm.method2)
         memoryDriver.advance(dt.timestamp() + 1)
         self.assertEqual(calls, ["hello"])
         del calls[:]
-        saved = persistentScheduler.save()
+        saved = registry.save(scheduler)
         memory2 = MemoryDriver()
         ri = RegInfo([])
         registry.load(memory2, saved, ri)
@@ -156,7 +157,7 @@ class PersistentSchedulerTests(TestCase):
 
     def test_idling(self) -> None:
         memoryDriver = MemoryDriver()
-        persistentScheduler = jsonScheduler(memoryDriver)
+        scheduler = jsonScheduler(memoryDriver)
         dt = aware(
             datetime(
                 2023,
@@ -169,7 +170,7 @@ class PersistentSchedulerTests(TestCase):
             ),
             ZoneInfo,
         )
-        handle = persistentScheduler.scheduler.callAt(dt, call1)
+        handle = scheduler.callAt(dt, call1)
         self.assertEqual(memoryDriver.isScheduled(), True)
         handle.cancel()
         self.assertEqual(memoryDriver.isScheduled(), False)
@@ -196,8 +197,8 @@ class PersistentSchedulerTests(TestCase):
         )
         memoryDriver = MemoryDriver()
         memoryDriver.advance(dt.timestamp())
-        persistentScheduler = jsonScheduler(memoryDriver)
-        registry.repeating(dt, daily, repeating, persistentScheduler).repeat()
+        scheduler = jsonScheduler(memoryDriver)
+        registry.repeating(dt, daily, repeating, scheduler).repeat()
         self.assertEqual(calls, ["repeating 1"])
         del calls[:]
 
@@ -214,7 +215,7 @@ class PersistentSchedulerTests(TestCase):
         mem2.advance(dt.timestamp())
         mem2.advance(days(7))
         self.assertEqual(mem2.isScheduled(), False)
-        registry.load(mem2, loads(dumps(persistentScheduler.save())), newInfo)
+        registry.load(mem2, loads(dumps(registry.save(scheduler))), newInfo)
         self.assertEqual(mem2.isScheduled(), True)
         amount = mem2.advance()
         self.assertEqual(amount, 0.0)
@@ -235,16 +236,16 @@ class PersistentSchedulerTests(TestCase):
         )
         memoryDriver = MemoryDriver()
         memoryDriver.advance(dt.timestamp())
-        persistentScheduler = jsonScheduler(memoryDriver)
+        scheduler = jsonScheduler(memoryDriver)
         info = RegInfo([])
         method = InstanceWithMethods("sample", info).repeatence
         shared = InstanceWithMethods("shared", info)
-        registry.repeating(dt, daily, method, persistentScheduler).repeat()
+        registry.repeating(dt, daily, method, scheduler).repeat()
         registry.repeating(
-            dt, daily, shared.repeatence, persistentScheduler
+            dt, daily, shared.repeatence, scheduler
         ).repeat()
         registry.repeating(
-            dt, daily, shared.repeatence, persistentScheduler
+            dt, daily, shared.repeatence, scheduler
         ).repeat()
         self.assertEqual(
             info.calls,
@@ -275,7 +276,7 @@ class PersistentSchedulerTests(TestCase):
         mem2.advance(dt.timestamp())
         mem2.advance(days(7))
         self.assertEqual(mem2.isScheduled(), False)
-        persistent = dumps(persistentScheduler.save())
+        persistent = dumps(registry.save(scheduler))
         registry.load(mem2, loads(persistent), newInfo)
         loaded = loads(persistent)
         with self.assertRaises(KeyError):

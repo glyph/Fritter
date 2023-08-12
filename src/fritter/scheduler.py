@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from itertools import count
-from typing import Callable, Generic, TypeVar
+from typing import Callable, Generic, Iterator, TypeVar
 
 from .boundaries import PriorityComparable, PriorityQueue, TimeDriver
 from .heap import Heap
@@ -51,7 +51,7 @@ class Scheduler(Generic[WhenT, WhatT]):
     def now(self) -> WhenT:
         return self.driver.now()
 
-    def calls(self) -> Iterable[FutureCall[WhenT, WhatT]]:
+    def calls(self) -> Iterator[FutureCall[WhenT, WhatT]]:
         return iter(self._q)
 
     def callAt(self, when: WhenT, what: WhatT) -> CallHandle[WhenT, WhatT]:

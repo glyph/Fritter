@@ -16,13 +16,11 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
+from fritter.drivers.datetime import DateTimeDriver
+from fritter.scheduler import Scheduler
 
 from ..boundaries import RepeatingWork, TimeDriver
-from .core import (
-    Persistence,
-)
 from ..repeat import Repeating, RuleFunction, daily
-from ..scheduler import FutureCall
 
 T = TypeVar("T")
 LoadContext = TypeVar("LoadContext", contravariant=True)
@@ -69,13 +67,12 @@ if TYPE_CHECKING:
 JSONDeserializer = Callable[
     [
         LoadContext,
-        Persistence[JSONableCallable, JSONObject],
         JSONObject,
     ],
     JSONableCallable,
 ]
 TypeCodeLookup = Mapping[str, JSONDeserializer[LoadContext]]
-JSONScheduler = Persistence[JSONableCallable, JSONObject]
+JSONableScheduler = Scheduler[DateTime[ZoneInfo], JSONableCallable]
 
 
 class JSONableInstance(JSONable, Protocol[LoadContextInv]):
@@ -87,7 +84,7 @@ class JSONableInstance(JSONable, Protocol[LoadContextInv]):
     def fromJSON(
         cls: Type[JSONableSelfCo],
         registry: JSONRegistry[LoadContextInv],
-        persistence: Persistence[JSONableCallable, JSONObject],
+        scheduler: JSONableScheduler,
         loadContext: LoadContextInv,
         json: JSONObject,
     ) -> JSONableSelfCo:
@@ -109,7 +106,7 @@ class JSONableLoader(Protocol[LoadContextInv, JSONableSelfCo]):
     def fromJSON(
         self,
         registry: JSONRegistry[LoadContextInv],
-        persistence: Persistence[JSONableCallable, JSONObject],
+        scheduler: JSONableScheduler,
         loadContext: LoadContextInv,
         json: JSONObject,
     ) -> JSONableSelfCo:
@@ -121,44 +118,6 @@ def _whatJSON(what: JSONable) -> JSONObject:
         "type": what.typeCodeForJSON(),
         "data": what.asJSON(),
     }
-
-
-@dataclass
-class JSONSerializer:
-    """
-    Implementation of L{Serializer} protocol in terms of L{JSONableCallable}s.
-    """
-
-    _calls: list[JSONObject] = field(default_factory=list)
-
-    def add(
-        self, item: FutureCall[DateTime[ZoneInfo], JSONableCallable]
-    ) -> None:
-        self._calls.append(
-            {
-                "when": item.when.replace(tzinfo=None).isoformat(),
-                "tz": item.when.tzinfo.key,
-                "what": _whatJSON(item.what),
-                "called": item.called,
-                "canceled": item.canceled,
-            }
-        )
-
-    def finish(self) -> JSONObject:
-        """
-        Collect all the calls and save them into a JSON object.
-        """
-        return {"scheduledCalls": self._calls}
-
-
-def jsonScheduler(
-    runtimeDriver: TimeDriver[float],
-) -> Persistence[JSONableCallable, JSONObject]:
-    """
-    Create a new L{Persistence} using a given L{TimeDriver} that can
-    schedule C{float}s.
-    """
-    return Persistence(runtimeDriver, JSONSerializer)
 
 
 SomeCallable = TypeVar("SomeCallable", bound=Callable[..., Any])
@@ -301,9 +260,9 @@ class JSONRegistry(Generic[LoadContext]):
     def _loadOne(
         self,
         json: JSONObject,
+        scheduler: JSONableScheduler,
         which: SpecificTypeRegistration[JSONableType],
         ctx: LoadContext,
-        sched: JSONScheduler,
     ) -> JSONableType:
         # inverse of _whatJSON
         typeCode = json["type"]
@@ -320,7 +279,7 @@ class JSONRegistry(Generic[LoadContext]):
             # _instances live on SpecificTypeRegistration rather than be shared
             # between both repeating/non-repeating types
             result: JSONableType = getattr(
-                instanceType.fromJSON(self, sched, ctx, blob),
+                instanceType.fromJSON(self, scheduler, ctx, blob),
                 methodName,
             )
             return result
@@ -352,7 +311,7 @@ class JSONRegistry(Generic[LoadContext]):
         reference: DateTime[ZoneInfo],
         rule: RuleFunction[DateTime[ZoneInfo]],
         work: JSONableRepeating,
-        persistence: Persistence[JSONableCallable, JSONObject],
+        scheduler: JSONableScheduler,
     ) -> Repeating[DateTime[ZoneInfo], JSONableCallable, JSONableRepeating]:
         def convert(
             repeating: Repeating[
@@ -363,7 +322,7 @@ class JSONRegistry(Generic[LoadContext]):
         ) -> JSONableCallable:
             return self.converterMethod(RepeatenceConverter(self, repeating))
 
-        return Repeating(reference, rule, work, convert, persistence.scheduler)
+        return Repeating(reference, rule, work, convert, scheduler)
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
         return self._functions.add(SerializableFunction(cb, cb.__name__))
@@ -407,29 +366,41 @@ class JSONRegistry(Generic[LoadContext]):
         runtimeDriver: TimeDriver[float],
         serializedJSON: JSONObject,
         loadContext: LoadContext,
-    ) -> Persistence[JSONableCallable, JSONObject]:
+    ) -> JSONableScheduler:
         """
         Load a JSON object in the format serialized from
         L{JSONSerializer.finalize} and a runtime L{TimeDriver}C{[float]},
         returning a L{Persistence}.
         """
         loadedID = 0
-        new: Persistence[JSONableCallable, JSONObject] = Persistence(
-            runtimeDriver, JSONSerializer
-        )
+        new: JSONableScheduler = Scheduler(DateTimeDriver(runtimeDriver))
         for callJSON in serializedJSON["scheduledCalls"]:
             loadedID -= 1
             when = fromisoformat(callJSON["when"]).replace(
                 tzinfo=ZoneInfo(callJSON["tz"])
             )
             what = self._loadOne(
-                callJSON["what"],
-                self._functions,
-                loadContext,
-                new,
+                callJSON["what"], new, self._functions, loadContext
             )
-            new.scheduler.callAt(when, what)
+            new.callAt(when, what)
         return new
+
+    def save(self, scheduler: JSONableScheduler) -> JSONObject:
+        # n.b.: `self` not used yet here because we're not validating that all
+        # the serializable callables here are present in this specific
+        # registry, but that would be a good check to have.
+        return {
+            "scheduledCalls": [
+                {
+                    "when": item.when.replace(tzinfo=None).isoformat(),
+                    "tz": item.when.tzinfo.key,
+                    "what": _whatJSON(item.what),
+                    "called": item.called,
+                    "canceled": item.canceled,
+                }
+                for item in scheduler.calls()
+            ]
+        }
 
 
 @dataclass
@@ -447,7 +418,7 @@ class RepeatenceConverter(Generic[LoadContext]):
     def fromJSON(
         cls,
         registry: JSONRegistry[LoadContext],
-        persistence: Persistence[JSONableCallable, JSONObject],
+        scheduler: JSONableScheduler,
         loadContext: LoadContext,
         json: JSONObject,
     ) -> RepeatenceConverter[LoadContext]:
@@ -471,10 +442,10 @@ class RepeatenceConverter(Generic[LoadContext]):
                 fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"])),
                 ruleFunction,
                 registry._loadOne(
-                    what, registry._repeating, loadContext, persistence
+                    what, scheduler, registry._repeating, loadContext
                 ),
                 convertToMethod,
-                persistence.scheduler,
+                scheduler,
             ),
         )
 
