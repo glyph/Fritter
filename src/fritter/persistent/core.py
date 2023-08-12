@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Callable, Generic, Protocol, Type, TypeVar
+from typing import Callable, Generic, Protocol, TypeVar
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
@@ -17,37 +17,6 @@ from ..scheduler import FutureCall, Scheduler
 
 PersistentCallable = TypeVar("PersistentCallable", bound=Callable[[], None])
 FullSerialization = TypeVar("FullSerialization", covariant=True)
-
-
-@dataclass(frozen=True)
-class DateTimeDriver:
-    """
-    Driver based on aware datetimes.
-    """
-
-    driver: TimeDriver[float]
-    zone: ZoneInfo = ZoneInfo("Etc/UTC")
-
-    def unschedule(self) -> None:
-        """
-        Unschedule from underlying driver.
-        """
-        self.driver.unschedule()
-
-    def reschedule(
-        self, newTime: DateTime[ZoneInfo], work: Callable[[], None]
-    ) -> None:
-        """
-        Re-schedule to a new time.
-        """
-        self.driver.reschedule(newTime.timestamp(), work)
-
-    def now(self) -> DateTime[ZoneInfo]:
-        timestamp = self.driver.now()
-        return DateTime.fromtimestamp(timestamp, self.zone)
-
-
-_DriverTypeCheck: Type[TimeDriver[DateTime[ZoneInfo]]] = DateTimeDriver
 
 
 class Serializer(Protocol[PersistentCallable, FullSerialization]):

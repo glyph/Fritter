@@ -51,6 +51,9 @@ class Scheduler(Generic[WhenT, WhatT]):
     def now(self) -> WhenT:
         return self.driver.now()
 
+    def calls(self) -> Iterable[FutureCall[WhenT, WhatT]]:
+        return iter(self._q)
+
     def callAt(self, when: WhenT, what: WhatT) -> CallHandle[WhenT, WhatT]:
         call = FutureCall(when, what)
 

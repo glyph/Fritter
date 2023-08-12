@@ -3,6 +3,7 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
+    Iterator,
     Optional,
     Protocol,
     TypeVar,
@@ -45,6 +46,12 @@ class PriorityQueue(Protocol[T]):
     def remove(self, item: T) -> bool:
         """
         Remove an item and return whether it was removed or not.
+        """
+
+    def __iter__(self) -> Iterator[T]:
+        """
+        Iterate all of the values in the priority queue, in an unspecified
+        order.
         """
 
 

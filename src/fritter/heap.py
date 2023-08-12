@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from heapq import heappop, heappush
-from typing import Generic, List, Optional
+from typing import Generic, Iterator, List, Optional
 
-from .boundaries import T, PriorityQueue
+from .boundaries import PriorityQueue, T
 
 
 @dataclass
@@ -29,6 +29,9 @@ class Heap(Generic[T]):
             return False
         else:
             return True
+
+    def __iter__(self) -> Iterator[T]:
+        return iter(self._values)
 
 
 _HeapIsQueue: type[PriorityQueue[int]] = Heap[int]
