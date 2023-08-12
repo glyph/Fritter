@@ -44,7 +44,7 @@ class AsyncioAsyncDriver:
     Driver for asyncio.Future-flavored repeating scheduler.
     """
 
-    _loop: AbstractEventLoop
+    _loop: AbstractEventLoop = field(default_factory=get_event_loop)
 
     def newWithCancel(self, cancel: Callable[[], None]) -> Future[None]:
         """
