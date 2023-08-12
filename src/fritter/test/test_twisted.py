@@ -23,8 +23,8 @@ class TestAsyncDriver(SynchronousTestCase):
         driver = TwistedAsyncDriver()
         d = driver.newWithCancel(self.called)
         self.assertNoResult(d)
-        driver.complete(d)
-        self.successResultOf(d)
+        d.cancel()
+        self.failureResultOf(d)
 
     def test_runAsync(self) -> None:
         driver = TwistedAsyncDriver()
