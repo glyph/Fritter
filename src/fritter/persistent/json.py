@@ -1,4 +1,4 @@
-# -*- test-case-name: fritter.test.test_longterm -*-
+# -*- test-case-name: fritter.test.test_json -*-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -462,3 +462,9 @@ class RepeatenceConverter(Generic[LoadContext]):
 
     def repeatenceWrapper(self) -> None:
         self.repeating.repeat()
+
+__all__ = [
+    "JSONableScheduler",
+    "JSONObject",
+    "JSONRegistry",
+]
