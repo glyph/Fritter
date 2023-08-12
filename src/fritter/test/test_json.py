@@ -241,12 +241,8 @@ class PersistentSchedulerTests(TestCase):
         method = InstanceWithMethods("sample", info).repeatence
         shared = InstanceWithMethods("shared", info)
         registry.repeating(dt, daily, method, scheduler).repeat()
-        registry.repeating(
-            dt, daily, shared.repeatence, scheduler
-        ).repeat()
-        registry.repeating(
-            dt, daily, shared.repeatence, scheduler
-        ).repeat()
+        registry.repeating(dt, daily, shared.repeatence, scheduler).repeat()
+        registry.repeating(dt, daily, shared.repeatence, scheduler).repeat()
         self.assertEqual(
             info.calls,
             [

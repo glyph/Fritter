@@ -463,6 +463,7 @@ class RepeatenceConverter(Generic[LoadContext]):
     def repeatenceWrapper(self) -> None:
         self.repeating.repeat()
 
+
 __all__ = [
     "JSONableScheduler",
     "JSONObject",
