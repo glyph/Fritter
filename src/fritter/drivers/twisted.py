@@ -53,7 +53,9 @@ class TwistedAsyncDriver:
         return Deferred(lambda d: cancel())
 
     def complete(self, asyncObj: Deferred[None]) -> None:
-        "The asynchronous operation completed successfully."
+        """
+        The asynchronous operation completed successfully.
+        """
         asyncObj.callback(None)
 
     def unhandledError(
@@ -61,7 +63,9 @@ class TwistedAsyncDriver:
         applicationCode: RepeatingWork,
         inProgressObj: Optional[Deferred[None]],
     ) -> None:
-        "called in an exception scope when"
+        """
+        Application code has raised an exception that needs to be reported.
+        """
         if inProgressObj is not None:
             inProgressObj.errback()
         else:
