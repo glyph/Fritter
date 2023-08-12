@@ -59,7 +59,7 @@ class TestTimeDriver(SynchronousTestCase):
         clock = Clock()
         driver = TwistedTimeDriver(clock)
         clock.advance(1234)
-        self.assertEqual(driver.now(), 1234.)
+        self.assertEqual(driver.now(), 1234.0)
         self.assertEqual(clock.getDelayedCalls(), [])
 
     def test_schedule(self) -> None:
@@ -95,5 +95,5 @@ class TestTimeDriver(SynchronousTestCase):
         self.assertEqual(self.calls, 0)
         clock.advance(0.9)
         self.assertEqual(self.calls, 0)
-        driver.unschedule()     # no-op, no exception
+        driver.unschedule()  # no-op, no exception
         self.assertEqual(clock.getDelayedCalls(), [])
