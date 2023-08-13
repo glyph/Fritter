@@ -56,6 +56,7 @@ class AsyncDriverTests(TestCase):
         async def a() -> None:
             driver.complete(f)
             await f
+
         self.loop.run_until_complete(a())
         self.assertEqual(self.called, 0)
         self.assertIsNone(f.result())
