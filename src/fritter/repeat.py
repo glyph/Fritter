@@ -1,3 +1,4 @@
+# -*- test-case-name: fritter.test.test_repeat -*-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -52,8 +53,9 @@ class EverySecond:
     seconds: float
 
     def __call__(self, reference: float, current: float) -> tuple[int, float]:
-        count, remainder = divmod(reference - current, self.seconds)
-        return int(count), current + (self.seconds - remainder)
+        elapsed = current - reference
+        count, remainder = divmod(elapsed, self.seconds)
+        return int(count) + 1, current + (self.seconds - remainder)
 
 
 weekly: DTRule = EveryDelta(timedelta(weeks=1))
