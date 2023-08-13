@@ -91,14 +91,16 @@ class RepeatTestCase(TestCase):
                 await pending
 
         repeatCall = repeatAsync(
-                    lambda times: Deferred.fromCoroutine(step()),
-                    EverySecond(1),
-                    tad,
-                        Scheduler(mem),
-                )
+            lambda times: Deferred.fromCoroutine(step()),
+            EverySecond(1),
+            tad,
+            Scheduler(mem),
+        )
+
         async def run() -> None:
             with self.assertRaises(CancelledError):
                 await repeatCall
+
         tad.runAsync(run())
         self.assertTrue(mem.isScheduled())
         repeatCall.cancel()
