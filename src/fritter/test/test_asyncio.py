@@ -168,12 +168,13 @@ class TimeDriverTests(TestCase):
         self.assertEqual(self.called, 0)
         driver.unschedule()  # safe no-op
 
-
     def test_scheduler(self) -> None:
         sched = scheduler(AsyncioClock(clock := Clock()))
         stuff = []
+
         def hello() -> None:
             stuff.append("hello")
+
         sched.callAt(50, hello)
         self.assertEqual(stuff, [])
         clock.advance(60)
