@@ -79,6 +79,57 @@ class AsyncDriverTests(TestCase):
         with self.assertRaises(CancelledError):
             f.result()
 
+    def test_runAsync(self) -> None:
+        driver = AsyncioAsyncDriver(self.loop)
+
+        # Set up a bunch of futures to ensure tasks are run independently
+        # because runAsync doesn't return an awaitable.
+
+        f1 = driver.newWithCancel(self.call)
+        f2 = driver.newWithCancel(self.call)
+        f3 = driver.newWithCancel(self.call)
+        f4 = driver.newWithCancel(self.call)
+        f5 = driver.newWithCancel(self.call)
+        f6 = driver.newWithCancel(self.call)
+        e1 = driver.newWithCancel(self.call)
+        e2 = driver.newWithCancel(self.call)
+        concurrent = []
+
+        async def c1() -> None:
+            concurrent.append("c1")
+            await f1
+            f3.set_result(None)
+            await e1
+            concurrent.append("c3")
+            f5.set_result(None)
+
+        async def c2() -> None:
+            concurrent.append("c2")
+            await f2
+            f4.set_result(None)
+            await e2
+            concurrent.append("c4")
+            f6.set_result(None)
+
+        async def t() -> None:
+            f1.set_result(None)
+            f2.set_result(None)
+            await f3
+            await f4
+            self.assertEqual(concurrent, ["c1", "c2"])
+            e1.set_result(None)
+            e2.set_result(None)
+            await f5
+            await f6
+            self.assertEqual(concurrent, ["c1", "c2", "c3", "c4"])
+
+        driver.runAsync(c1())
+        driver.runAsync(c2())
+
+        self.loop.run_until_complete(t())
+        self.assertEqual(self.called, 0)
+
+
 
 class TimeDriverTests(TestCase):
     def setUp(self) -> None:
