@@ -3,7 +3,7 @@ from __future__ import annotations
 from twisted.internet.task import Clock
 from twisted.trial.unittest import SynchronousTestCase
 
-from ..drivers.twisted import TwistedAsyncDriver, TwistedTimeDriver
+from ..drivers.twisted import TwistedAsyncDriver, TwistedTimeDriver, scheduler
 
 
 class TestAsyncDriver(SynchronousTestCase):
@@ -98,3 +98,19 @@ class TestTimeDriver(SynchronousTestCase):
         self.assertEqual(self.calls, 0)
         driver.unschedule()  # no-op, no exception
         self.assertEqual(clock.getDelayedCalls(), [])
+
+    def test_schedulerDefault(self) -> None:
+        sched = scheduler()
+        self.assertIsInstance(sched.driver, TwistedTimeDriver)
+
+    def test_scheduler(self) -> None:
+        sched = scheduler(clock := Clock())
+        stuff = []
+
+        def hello() -> None:
+            stuff.append("hello")
+
+        sched.callAt(50, hello)
+        self.assertEqual(stuff, [])
+        clock.advance(60)
+        self.assertEqual(stuff, ["hello"])
