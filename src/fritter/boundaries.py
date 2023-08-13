@@ -103,12 +103,3 @@ class AsyncDriver(Protocol[AsyncType]):
         """
         Run the given coroutine.
         """
-
-    def unhandledError(
-        self,
-        applicationCode: RepeatingWork,
-        inProgressObj: Optional[AsyncType],
-    ) -> None:
-        """
-        called in an exception scope when
-        """

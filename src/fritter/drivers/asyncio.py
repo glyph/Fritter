@@ -84,25 +84,6 @@ class AsyncioAsyncDriver:
         "The asynchronous operation completed successfully."
         asyncObj.set_result(None)
 
-    def unhandledError(
-        self,
-        applicationCode: RepeatingWork,
-        inProgressObj: Optional[Future[None]],
-    ) -> None:
-        "called in an exception scope when"
-        t, v, tb = exc_info()
-        assert (
-            (t is not None) and (v is not None) and (tb is not None)
-        ), "Must be called from exception context"
-        if inProgressObj is not None:
-            inProgressObj.set_exception(v)
-        else:
-            logger.error(
-                "Unhandled error while doing %s",
-                applicationCode,
-                exc_info=(t, v, tb),
-            )
-
     def runAsync(
         self, coroutine: Coroutine[object, Future[None], object]
     ) -> Cancelable:

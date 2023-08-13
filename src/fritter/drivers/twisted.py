@@ -58,21 +58,6 @@ class TwistedAsyncDriver:
         """
         asyncObj.callback(None)
 
-    def unhandledError(
-        self,
-        applicationCode: RepeatingWork,
-        inProgressObj: Optional[Deferred[None]],
-    ) -> None:
-        """
-        Application code has raised an exception that needs to be reported.
-        """
-        if inProgressObj is not None:
-            inProgressObj.errback()
-        else:
-            log.failure(
-                "Unhandled error while doing {work}", work=applicationCode
-            )
-
     def runAsync(
         self, coroutine: Coroutine[Deferred[None], Any, None]
     ) -> Cancelable:
