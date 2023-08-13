@@ -87,3 +87,12 @@ class TimeDriverTests(TestCase):
         self.assertEqual(self.called, 0)
         clock.advance(4.0)
         self.assertEqual(self.called, 1)
+
+    def test_unschedule(self) -> None:
+        driver = AsyncioTimeDriver(AsyncioClock(clock := Clock()))
+        driver.reschedule(3.0, self.call)
+        self.assertEqual(self.called, 0)
+        driver.unschedule()
+        clock.advance(4.0)
+        self.assertEqual(self.called, 0)
+        driver.unschedule()     # safe no-op
