@@ -88,6 +88,11 @@ class TimeDriverTests(TestCase):
         clock.advance(4.0)
         self.assertEqual(self.called, 1)
 
+    def test_now(self) -> None:
+        driver = AsyncioTimeDriver(AsyncioClock(clock := Clock()))
+        clock.advance(7.2)
+        self.assertEqual(driver.now(), 7.2)
+
     def test_reschedule(self) -> None:
         driver = AsyncioTimeDriver(AsyncioClock(clock := Clock()))
         driver.reschedule(3.0, self.call)
