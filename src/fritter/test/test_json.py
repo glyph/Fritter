@@ -7,13 +7,13 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import aware
-from fritter.boundaries import TimeDriver
-from fritter.drivers.datetime import DateTimeDriver
-from fritter.scheduler import Scheduler
 
+from ..boundaries import TimeDriver
+from ..drivers.datetime import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..persistent.json import JSONableScheduler, JSONObject, JSONRegistry
 from ..repeat import daily
+from ..scheduler import Scheduler
 
 
 @dataclass

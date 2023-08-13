@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from asyncio.events import new_event_loop
 from asyncio.exceptions import CancelledError, InvalidStateError
 from contextvars import Context
@@ -5,11 +7,10 @@ from dataclasses import dataclass
 from typing import Callable
 from unittest import TestCase
 
-from fritter.boundaries import Cancelable
-from fritter.drivers.asyncio import AsyncioTimeDriver
 from twisted.internet.task import Clock
 
-from ..drivers.asyncio import AsyncioAsyncDriver
+from ..boundaries import Cancelable
+from ..drivers.asyncio import AsyncioTimeDriver, AsyncioAsyncDriver
 
 
 @dataclass

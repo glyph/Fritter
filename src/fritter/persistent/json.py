@@ -16,9 +16,9 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
-from fritter.drivers.datetime import DateTimeDriver
-from fritter.scheduler import Scheduler
 
+from ..drivers.datetime import DateTimeDriver
+from ..scheduler import Scheduler
 from ..boundaries import RepeatingWork, TimeDriver
 from ..repeat import Repeating, RuleFunction, daily
 

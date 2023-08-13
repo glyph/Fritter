@@ -1,8 +1,9 @@
-from fritter.drivers.twisted import TwistedTimeDriver
+from __future__ import annotations
+
 from twisted.internet.task import Clock
 from twisted.trial.unittest import SynchronousTestCase
 
-from ..drivers.twisted import TwistedAsyncDriver
+from ..drivers.twisted import TwistedAsyncDriver, TwistedTimeDriver
 
 
 class TestAsyncDriver(SynchronousTestCase):

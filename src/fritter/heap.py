@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from heapq import heappop, heappush
 from typing import Generic, Iterator, List, Optional
