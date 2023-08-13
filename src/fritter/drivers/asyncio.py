@@ -1,3 +1,4 @@
+# -*- test-case-name: fritter.test.test_asyncio -*-
 from __future__ import annotations
 
 from asyncio import get_event_loop
@@ -71,11 +72,10 @@ class AsyncioAsyncDriver:
         """
         f = Future[None](loop=self._loop)
 
+        @f.add_done_callback
         def done(future: Future[None]) -> None:
             if f.cancelled():
                 cancel()
-
-        f.add_done_callback(done)
 
         return f
 
