@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from fritter.drivers.memory import MemoryDriver
-from twisted.internet.defer import Deferred, succeed
+from twisted.internet.defer import Deferred, succeed, CancelledError
 
 from ..drivers.twisted import TwistedAsyncDriver
 from ..repeat import EverySecond, repeatAsync
@@ -76,3 +76,30 @@ class RepeatTestCase(TestCase):
             mem.advance()
         self.assertTrue(done)
         self.assertEqual(count, threshold)
+
+    def test_cancel(self) -> None:
+        tad = TwistedAsyncDriver()
+        mem = MemoryDriver()
+
+        def canceled(d: Deferred[None]) -> None:
+            return
+
+        pending: Deferred[None] = Deferred(canceled)
+
+        async def step() -> None:
+            with self.assertRaises(CancelledError):
+                await pending
+
+        repeatCall = repeatAsync(
+                    lambda times: Deferred.fromCoroutine(step()),
+                    EverySecond(1),
+                    tad,
+                        Scheduler(mem),
+                )
+        async def run() -> None:
+            with self.assertRaises(CancelledError):
+                await repeatCall
+        tad.runAsync(run())
+        self.assertTrue(mem.isScheduled())
+        repeatCall.cancel()
+        self.assertFalse(mem.isScheduled())
