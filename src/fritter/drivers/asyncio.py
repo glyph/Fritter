@@ -20,6 +20,7 @@ class LoopTimeInterface(Protocol):
     """
     Describe the portions of L{AbstractEventLoop} used by L{AsyncioTimeDriver}.
     """
+
     def call_at(
         self,
         when: float,

@@ -105,4 +105,4 @@ class TimeDriverTests(TestCase):
         driver.unschedule()
         clock.advance(4.0)
         self.assertEqual(self.called, 0)
-        driver.unschedule()     # safe no-op
+        driver.unschedule()  # safe no-op
