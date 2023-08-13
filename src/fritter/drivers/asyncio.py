@@ -6,10 +6,9 @@ from asyncio.futures import Future
 from contextvars import Context
 from dataclasses import dataclass, field
 from logging import getLogger
-from sys import exc_info
-from typing import Callable, Coroutine, Optional, Protocol
+from typing import Callable, Coroutine, Protocol
 
-from ..boundaries import Cancelable, PriorityQueue, RepeatingWork
+from ..boundaries import Cancelable, PriorityQueue
 from ..heap import Heap
 from ..scheduler import FutureCall, Scheduler, SimpleScheduler
 
