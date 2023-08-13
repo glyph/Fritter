@@ -51,12 +51,12 @@ class AsyncioAsyncDriver:
         Create a new future-ish object with the given callback to execute when
         canceled.
         """
-        f = Future[None]()
+        f = Future[None](loop=self._loop)
 
-        @f.add_done_callback
         def done(future: Future[None]) -> None:
             if f.cancelled():
                 cancel()
+        f.add_done_callback(done)
 
         return f
 
