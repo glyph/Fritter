@@ -90,7 +90,7 @@ class AsyncioAsyncDriver:
 
 
 def scheduler(
-    loop: AbstractEventLoop | None = None,
+    loop: LoopTimeInterface | None = None,
     queue: PriorityQueue[FutureCall[float, Callable[[], None]]] | None = None,
 ) -> SimpleScheduler:
     """
