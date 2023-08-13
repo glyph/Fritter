@@ -47,3 +47,32 @@ class RepeatTestCase(TestCase):
         del calls[:]
         event.callback(None)
         self.assertEqual(calls, ["after 2"])
+
+    def test_complete(self) -> None:
+        count = 0
+        threshold = 3
+
+        def step(steps: int) -> Deferred[None]:
+            nonlocal count
+            count += steps
+            return succeed(None)
+
+        def isDone() -> bool:
+            return count >= threshold
+
+        tad = TwistedAsyncDriver()
+        mem = MemoryDriver()
+        done = False
+
+        async def task() -> None:
+            nonlocal done
+            await repeatAsync(
+                step, EverySecond(1), tad, Scheduler(mem), isDone
+            )
+            done = True
+
+        tad.runAsync(task())
+        for ignored in range(threshold):
+            mem.advance()
+        self.assertTrue(done)
+        self.assertEqual(count, threshold)

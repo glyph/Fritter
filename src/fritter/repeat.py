@@ -71,6 +71,7 @@ def repeatAsync(
     rule: RuleFunction[WhenT],
     asyncDriver: AsyncDriver[AsyncType],
     scheduler: Scheduler[WhenT, AnyWhat],
+    isComplete: Callable[[], bool] = lambda: False,
 ) -> AsyncType:
     currentlyRunning: bool = False
     awaitingRepeatence: bool = False
@@ -79,15 +80,10 @@ def repeatAsync(
 
     def doRepeat() -> None:
         nonlocal pendingRepeat
-        pendingRepeat = repeating.repeat()
-
-    def stop() -> None:
-        if pendingRepeat is not None:
-            pendingRepeat.cancel()
-        if pendingAsync is not None:
-            pendingAsync.cancel()
-        if result is not None:
+        if isComplete():
             asyncDriver.complete(result)
+        else:
+            pendingRepeat = repeating.repeat()
 
     def someWork(steps: int) -> None:
         nonlocal pendingAsync
@@ -117,6 +113,13 @@ def repeatAsync(
     repeating = Repeating(
         now, rule, someWork, lambda _: repeatWhenDone, scheduler
     )
-    result = asyncDriver.newWithCancel(stop)
+
+    def cancel() -> None:
+        if pendingRepeat is not None:
+            pendingRepeat.cancel()
+        if pendingAsync is not None:
+            pendingAsync.cancel()
+
+    result = asyncDriver.newWithCancel(cancel)
     doRepeat()
     return result
