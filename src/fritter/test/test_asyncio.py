@@ -130,7 +130,6 @@ class AsyncDriverTests(TestCase):
         self.assertEqual(self.called, 0)
 
 
-
 class TimeDriverTests(TestCase):
     def setUp(self) -> None:
         self.called = 0
