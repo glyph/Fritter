@@ -100,7 +100,10 @@ def repeatAsync(
                     awaitingRepeatence = False
                     doRepeat()
 
-        pendingAsync = asyncDriver.runAsync(coro())
+        c = coro()
+        maybePendingAsync = asyncDriver.runAsync(c)
+        if currentlyRunning:
+            pendingAsync = maybePendingAsync
 
     def repeatWhenDone() -> None:
         nonlocal awaitingRepeatence
@@ -115,10 +118,12 @@ def repeatAsync(
     )
 
     def cancel() -> None:
+        nonlocal pendingAsync
         assert pendingRepeat is not None
         pendingRepeat.cancel()
         if pendingAsync is not None:
             pendingAsync.cancel()
+            pendingAsync = None
 
     result = asyncDriver.newWithCancel(cancel)
     doRepeat()
