@@ -1,7 +1,8 @@
+from typing import Any, Callable
 from unittest import TestCase
 
 from fritter.drivers.memory import MemoryDriver
-from twisted.internet.defer import Deferred, succeed, CancelledError
+from twisted.internet.defer import CancelledError, Deferred, succeed
 
 from ..drivers.twisted import TwistedAsyncDriver
 from ..repeat import EverySecond, repeatAsync
@@ -86,22 +87,35 @@ class RepeatTestCase(TestCase):
 
         pending: Deferred[None] = Deferred(canceled)
 
-        async def step() -> None:
+        async def asynchronously() -> None:
             with self.assertRaises(CancelledError):
                 await pending
 
-        repeatCall = repeatAsync(
-            lambda times: Deferred.fromCoroutine(step()),
-            EverySecond(1),
-            tad,
-            Scheduler(mem),
-        )
+        async def synchronously() -> None:
+            pass
 
-        async def run() -> None:
+        repeatCall: Deferred[None]
+
+        def go(how: Callable[[], Any]) -> None:
+            nonlocal repeatCall
+            repeatCall = repeatAsync(
+                lambda times: Deferred.fromCoroutine(how()),
+                EverySecond(1),
+                tad,
+                Scheduler(mem),
+            )
+
+        async def run(how: Callable[[], Any]) -> None:
+            go(how)
             with self.assertRaises(CancelledError):
                 await repeatCall
 
-        tad.runAsync(run())
+        tad.runAsync(run(asynchronously))
+        self.assertTrue(mem.isScheduled())
+        repeatCall.cancel()
+        self.assertFalse(mem.isScheduled())
+
+        tad.runAsync(run(synchronously))
         self.assertTrue(mem.isScheduled())
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())

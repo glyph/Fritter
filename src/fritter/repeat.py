@@ -115,8 +115,8 @@ def repeatAsync(
     )
 
     def cancel() -> None:
-        if pendingRepeat is not None:
-            pendingRepeat.cancel()
+        assert pendingRepeat is not None
+        pendingRepeat.cancel()
         if pendingAsync is not None:
             pendingAsync.cancel()
 
