@@ -1,4 +1,4 @@
-from asyncio.events import TimerHandle, new_event_loop
+from asyncio.events import new_event_loop
 from asyncio.exceptions import CancelledError, InvalidStateError
 from contextvars import Context
 from dataclasses import dataclass
