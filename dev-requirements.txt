@@ -4,26 +4,44 @@
 #
 #    pip-compile --no-emit-index-url dev-requirements.in
 #
+alabaster==0.7.13
+    # via sphinx
 attrs==23.1.0
     # via
     #   automat
     #   twisted
 automat==22.10.0
     # via twisted
+babel==2.12.1
+    # via sphinx
 black==23.7.0
     # via -r dev-requirements.in
+certifi==2023.7.22
+    # via requests
+charset-normalizer==3.2.0
+    # via requests
 click==8.1.6
     # via black
 constantly==15.1.0
     # via twisted
+docutils==0.20.1
+    # via sphinx
 flake8==6.1.0
     # via -r dev-requirements.in
 hyperlink==21.0.0
     # via twisted
 idna==3.4
-    # via hyperlink
+    # via
+    #   hyperlink
+    #   requests
+imagesize==1.4.1
+    # via sphinx
 incremental==22.10.0
     # via twisted
+jinja2==3.1.2
+    # via sphinx
+markupsafe==2.1.3
+    # via jinja2
 mccabe==0.7.0
     # via flake8
 mypy==1.4.1
@@ -35,7 +53,9 @@ mypy-extensions==1.0.0
 mypy-zope==1.0.0
     # via -r dev-requirements.in
 packaging==23.1
-    # via black
+    # via
+    #   black
+    #   sphinx
 pathspec==0.11.2
     # via black
 platformdirs==3.10.0
@@ -44,14 +64,42 @@ pycodestyle==2.11.0
     # via flake8
 pyflakes==3.1.0
     # via flake8
+pygments==2.16.1
+    # via sphinx
+requests==2.31.0
+    # via sphinx
 six==1.16.0
     # via automat
+snowballstemmer==2.2.0
+    # via sphinx
+sphinx==7.1.2
+    # via
+    #   -r dev-requirements.in
+    #   sphinxcontrib-applehelp
+    #   sphinxcontrib-devhelp
+    #   sphinxcontrib-htmlhelp
+    #   sphinxcontrib-qthelp
+    #   sphinxcontrib-serializinghtml
+sphinxcontrib-applehelp==1.0.7
+    # via sphinx
+sphinxcontrib-devhelp==1.0.5
+    # via sphinx
+sphinxcontrib-htmlhelp==2.0.4
+    # via sphinx
+sphinxcontrib-jsmath==1.0.1
+    # via sphinx
+sphinxcontrib-qthelp==1.0.6
+    # via sphinx
+sphinxcontrib-serializinghtml==1.1.8
+    # via sphinx
 twisted==22.10.0
     # via -r dev-requirements.in
 typing-extensions==4.7.1
     # via
     #   mypy
     #   twisted
+urllib3==2.0.4
+    # via requests
 zope-event==5.0
     # via zope-schema
 zope-interface==6.0
