@@ -10,7 +10,12 @@ Welcome to Fritter's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   introduction
+   quickstart
+   trees
+   repeat
+   civil
+   persistence
 
 Indices and tables
 ==================
