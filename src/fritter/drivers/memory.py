@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional, Tuple
 
+from math import nextafter, inf
+
 
 @dataclass
 class MemoryDriver:
@@ -10,7 +12,8 @@ class MemoryDriver:
     _scheduledWork: Optional[Tuple[float, Callable[[], None]]] = None
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
-        self._scheduledWork = desiredTime, work
+        minInterval = nextafter(self._currentTime, inf)
+        self._scheduledWork = max(minInterval, desiredTime), work
 
     def unschedule(self) -> None:
         self._scheduledWork = None

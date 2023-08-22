@@ -2,7 +2,7 @@ from typing import Callable, List, Tuple
 from unittest import TestCase
 
 from ..drivers.memory import MemoryDriver
-from ..tree import child, _ChildDriver
+from ..tree import branch, _BranchDriver
 from ..scheduler import SimpleScheduler
 
 
@@ -11,7 +11,7 @@ class RecursiveTest(TestCase):
         self, scaleFactor: float
     ) -> List[Tuple[float, float]]:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = child(scheduler1, scaleFactor)
+        recursive, scheduler2 = branch(scheduler1, scaleFactor)
         calls = []
         scheduler2.callAt(
             1.0,
@@ -30,7 +30,7 @@ class RecursiveTest(TestCase):
 
     def test_changeScaling(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = child(scheduler1, 2.0)
+        recursive, scheduler2 = branch(scheduler1, 2.0)
         calls = []
         scheduler2.callAt(
             1.0,
@@ -45,11 +45,11 @@ class RecursiveTest(TestCase):
         """
         Unscheduling when not scheduled is a no-op.
         """
-        _ChildDriver(SimpleScheduler(MemoryDriver())).unschedule()
+        _BranchDriver(SimpleScheduler(MemoryDriver())).unschedule()
 
     def test_unpausePauseUnpause(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = child(scheduler1, scaleFactor=2)
+        recursive, scheduler2 = branch(scheduler1, scaleFactor=2)
         recursive.pause()
         self.assertEqual(scheduler2.now(), 0.0)
         driver.advance(500)
@@ -65,7 +65,7 @@ class RecursiveTest(TestCase):
 
     def test_moveSooner(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = child(scheduler1)
+        recursive, scheduler2 = branch(scheduler1)
         calls: list[tuple[float, float]] = []
         recursive.unpause()
 
@@ -78,7 +78,7 @@ class RecursiveTest(TestCase):
 
     def test_pausing(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = child(scheduler1)
+        recursive, scheduler2 = branch(scheduler1)
         calls = []
         scheduler2.callAt(
             1.0,
@@ -108,7 +108,7 @@ class RecursiveTest(TestCase):
     def test_doubleUnpause(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
         scaleFactor = 2.0
-        recursive, scheduler2 = child(scheduler1, scaleFactor)
+        recursive, scheduler2 = branch(scheduler1, scaleFactor)
         recursive.pause()
         baseTime = 1000.0
         driver.advance(baseTime)
@@ -131,7 +131,7 @@ class RecursiveTest(TestCase):
 
     def test_idling(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = child(scheduler1)
+        recursive, scheduler2 = branch(scheduler1)
         calls: list[tuple[float, float]] = []
         recordTimestamp = timestampRecorder(calls, scheduler1, scheduler2)
         onlyCall = scheduler2.callAt(1.0, recordTimestamp)

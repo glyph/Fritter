@@ -279,8 +279,7 @@ class PersistentSchedulerTests(TestCase):
             # TODO: allow for better error handling that doesn't just blow up
             emptyRegistry.load(MemoryDriver(), loaded, newInfo)
         self.assertEqual(mem2.isScheduled(), True)
-        amount = mem2.advance()
-        self.assertEqual(amount, 0.0)
+        mem2.advance()
         self.assertEqual(
             newInfo.calls,
             [

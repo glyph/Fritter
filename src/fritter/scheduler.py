@@ -43,6 +43,7 @@ class CallHandle(Generic[WhenT, WhatT]):
 class Scheduler(Generic[WhenT, WhatT]):
     driver: TimeDriver[WhenT]
     _q: PriorityQueue[FutureCall[WhenT, WhatT]] = field(default_factory=Heap)
+    _maxWorkBatch: int = 0xFF
 
     def __post_init__(self) -> None:
         if self._q.peek() is not None:
@@ -78,13 +79,19 @@ class Scheduler(Generic[WhenT, WhatT]):
 
     def _advanceToNow(self) -> None:
         timestamp = self.driver.now()
-        while (each := self._q.peek()) is not None and each.when <= timestamp:
+        workPerformed = 0
+        while (
+            (each := self._q.peek()) is not None
+            and each.when <= timestamp
+            and workPerformed < self._maxWorkBatch
+        ):
             popped = self._q.get()
             assert popped is each
             # not sure if there's a more graceful way to put this
             # todo: failure handling
             each.called = True
             each.what()
+            workPerformed += 1
         upNext = self._q.peek()
         if upNext is not None:
             self.driver.reschedule(upNext.when, self._advanceToNow)
