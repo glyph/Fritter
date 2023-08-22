@@ -14,9 +14,11 @@ In an event-driven framework like `Asyncio
 This works fine, for some applications, but time is a deep and complex field,
 and you may encounter a variety of different problems as you interact with it.
 
+The Problems
+############
 
 Not Using A Framework
------------------------------------
+---------------------
 
 You might need to schedule such work when you're *not* using such a framework.
 How do you push that work off into the future, then?  You might need to use
@@ -25,7 +27,7 @@ some sort of external system such as `cron
 a totally separate script, which changes the way you need to interface with it.
 
 Saving Work For The Future
----------------------------------------
+--------------------------
 
 You may need the work to be *persistent*; it might be important to make sure
 this work happens at some point in the future, even if your program needs to
@@ -35,7 +37,7 @@ embed your code within a framework like `Celery <https://docs.celeryq.dev/>`_\
 queues before you can even define your functions.
 
 Maintaining Time-Accuracy For Repeating Tasks
--------------------------------------------------
+---------------------------------------------
 
 You might need the work to be *time-accurate* (or “soft real-time”).  If you're
 a game developer, you might be familiar with a concept like `deltaTime
@@ -113,7 +115,7 @@ can't help you there.
 In combining these things together, Fritter also provides some unique features.
 
 Type Safety
------------
+~~~~~~~~~~~
 
 Schedulers within Fritter are generic types on both *when* (what represents
 time) and *what* (what represents a callable).
@@ -128,7 +130,7 @@ have invented, if you want to work in terms of, for example, an ``int`` of
 microseconds rather than a ``float`` of seconds.
 
 Grouping Related Work Together
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You might also need groups of timers to happen on a *related* schedule.  For
 example, if you have a video game, all the timers comprising the game logic may
@@ -141,7 +143,7 @@ different frequency, but if they are paused they should be paused and resumed
 together.
 
 Putting The Name Together
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Now that you know what its purpose is, I can explain the name is meaningful:
 
