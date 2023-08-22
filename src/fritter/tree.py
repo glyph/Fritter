@@ -78,7 +78,7 @@ class _ChildDriver:
     """
     Amount to subtract from parent's timestamp to get to this driver's base
     relative timestamp - in parent's (unscaled, not local) time-scale.  When a
-    L{ChildDriver} is created, it has a default offset of 0, which means that
+    L{_ChildDriver} is created, it has a default offset of 0, which means that
     the moment '.start()' is called, that is time 0 in local time.
     """
 

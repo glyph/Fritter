@@ -16,6 +16,7 @@ Welcome to Fritter's documentation!
    repeat
    civil
    persistence
+   api/index
 
 Indices and tables
 ==================

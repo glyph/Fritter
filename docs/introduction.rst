@@ -83,8 +83,8 @@ In Python, there's a wonderful little utility for a very flexible array of
 civil intervals: dateutil's `relativedelta
 <https://dateutil.readthedocs.io/en/stable/relativedelta.html>`_\ .
 
-Fritter: A One Stop Clock
-=========================
+Fritter: A One Stop Clock Shop
+##############################
 
 You may have noticed that all the problems I mentioned above already have
 solutions: `cron <https://en.wikipedia.org/wiki/Cron>`_ for scheduling code
@@ -115,7 +115,7 @@ can't help you there.
 In combining these things together, Fritter also provides some unique features.
 
 Type Safety
-~~~~~~~~~~~
+-----------
 
 Schedulers within Fritter are generic types on both *when* (what represents
 time) and *what* (what represents a callable).
@@ -130,7 +130,7 @@ have invented, if you want to work in terms of, for example, an ``int`` of
 microseconds rather than a ``float`` of seconds.
 
 Grouping Related Work Together
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------
 
 You might also need groups of timers to happen on a *related* schedule.  For
 example, if you have a video game, all the timers comprising the game logic may
@@ -143,7 +143,7 @@ different frequency, but if they are paused they should be paused and resumed
 together.
 
 Putting The Name Together
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------
 
 Now that you know what its purpose is, I can explain the name is meaningful:
 

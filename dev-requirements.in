@@ -2,4 +2,4 @@ mypy_zope
 twisted
 black
 flake8
-sphinx
+-r docs/requirements.in

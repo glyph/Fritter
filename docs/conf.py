@@ -6,6 +6,10 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
+from pprint import pprint
+import subprocess
+
 project = 'Fritter'
 copyright = '2023, Glyph'
 author = 'Glyph'
@@ -13,7 +17,61 @@ author = 'Glyph'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+extensions = [
+    "sphinx.ext.intersphinx",
+    "pydoctor.sphinx_ext.build_apidocs",
+]
+
+import pathlib
+_project_root = pathlib.Path(__file__).parent.parent
+
+# -- Extension configuration ----------------------------------------------
+_git_reference = subprocess.run(
+    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+    text=True,
+    encoding="utf8",
+    capture_output=True,
+    check=True,
+).stdout
+
+
+print(f"== Environment dump for {_git_reference} ===")
+pprint(dict(os.environ))
+print("======")
+
+
+# Try to find URL fragment for the GitHub source page based on current
+# branch or tag.
+
+if _git_reference == "HEAD":
+    # It looks like the branch has no name.
+    # Fallback to commit ID.
+    _git_reference = subprocess.getoutput("git rev-parse HEAD")
+
+if os.environ.get("READTHEDOCS", "") == "True":
+    rtd_version = os.environ.get("READTHEDOCS_VERSION", "")
+    if "." in rtd_version:
+        # It looks like we have a tag build.
+        _git_reference = rtd_version
+
+_source_root = _project_root / "src"
+print("what?")
+print(_source_root)
+print(_project_root)
+
+pydoctor_args = [
+    # pydoctor should not fail the sphinx build, we have another tox environment for that.
+    f"--config={_project_root}/.pydoctor.cfg",
+    f"--html-viewsource-base=https://github.com/glyph/fritter/tree/{_git_reference}/src",
+    f"--project-base-dir={_source_root}",
+    "--html-output={outdir}/api",
+    str(_source_root / "fritter"),
+]
+pydoctor_url_path = "/en/{rtd_version}/api/"
+intersphinx_mapping = {
+    "py3": ("https://docs.python.org/3", None),
+    "zopeinterface": ("https://zopeinterface.readthedocs.io/en/latest", None),
+}
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
@@ -25,3 +83,4 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 html_theme = 'alabaster'
 html_static_path = ['_static']
+htmlhelp_basename = "Fritterdoc"

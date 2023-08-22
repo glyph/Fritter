@@ -18,8 +18,9 @@ logger = getLogger(__name__)
 
 class LoopTimeInterface(Protocol):
     """
-    Describe the portions of L{AbstractEventLoop} used by L{AsyncioTimeDriver}.
+    Describe the portions of C{AbstractEventLoop} used by L{AsyncioTimeDriver}.
     """
+    # TODO: fix code link
 
     def call_at(
         self,

@@ -42,8 +42,7 @@ class JSONable(Protocol):
 
 class JSONableCallable(JSONable, Protocol):
     """
-    Protocol definition of a serializable callable usable with
-    L{JSONSerializer}.
+    A callable that can be serialized as JSON.
     """
 
     def __call__(self) -> None:
@@ -368,9 +367,9 @@ class JSONRegistry(Generic[LoadContext]):
         loadContext: LoadContext,
     ) -> JSONableScheduler:
         """
-        Load a JSON object in the format serialized from
-        L{JSONSerializer.finalize} and a runtime L{TimeDriver}C{[float]},
-        returning a L{Persistence}.
+        Load a JSON object in the format serialized from L{JSONRegistry.save}
+        and a runtime L{TimeDriver}C{[float]}, returning a
+        L{JSONableScheduler}.
         """
         loadedID = 0
         new: JSONableScheduler = Scheduler(DateTimeDriver(runtimeDriver))
