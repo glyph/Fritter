@@ -44,6 +44,9 @@ class AsyncDriverTests(TestCase):
         self.called = 0
         self.loop = new_event_loop()
 
+    def tearDown(self) -> None:
+        self.loop.close()
+
     def call(self) -> None:
         self.called += 1
 
