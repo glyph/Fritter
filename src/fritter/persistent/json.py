@@ -234,6 +234,11 @@ class SpecificTypeRegistration(Generic[JSONableType]):
         return self.registered.get(typeCode, None)
 
 
+JSONRepeater = Repeater[
+    DateTime[ZoneInfo], JSONableCallable, JSONableRepeatable
+]
+
+
 @dataclass
 class JSONRegistry(Generic[LoadContext]):
     _functions: SpecificTypeRegistration[JSONableCallable] = field(
@@ -306,16 +311,15 @@ class JSONRegistry(Generic[LoadContext]):
         work: JSONableRepeatable,
         reference: DateTime[ZoneInfo] | None = None,
     ) -> None:
-        def convert(
-            repeater: Repeater[
-                DateTime[ZoneInfo],
-                JSONableCallable,
-                JSONableRepeatable,
-            ]
-        ) -> JSONableCallable:
-            return self._converterMethod(RepeatableConverter(self, repeater))
-
-        Repeater.new(scheduler, rule, work, convert, reference).repeat()
+        Repeater.new(
+            scheduler,
+            rule,
+            work,
+            lambda repeater: self._converterMethod(
+                RepeatableConverter(self, repeater)
+            ),
+            reference,
+        ).repeat()
 
     def byName(self, cb: Callable[[], None]) -> JSONableCallable:
         return self._functions.add(SerializableFunction(cb, cb.__name__))
@@ -399,9 +403,7 @@ class JSONRegistry(Generic[LoadContext]):
 @dataclass
 class RepeatableConverter(Generic[LoadContext]):
     jsonRegistry: JSONRegistry[LoadContext]
-    repeater: Repeater[
-        DateTime[ZoneInfo], JSONableCallable, JSONableRepeatable
-    ]
+    repeater: JSONRepeater
 
     @classmethod
     def typeCodeForJSON(self) -> str:
@@ -420,13 +422,7 @@ class RepeatableConverter(Generic[LoadContext]):
         ]
         what = json["callable"]
 
-        def convertToMethod(
-            it: Repeater[
-                DateTime[ZoneInfo],
-                JSONableCallable,
-                JSONableRepeatable,
-            ]
-        ) -> JSONableCallable:
+        def convertToMethod(it: JSONRepeater) -> JSONableCallable:
             return registry._converterMethod(RepeatableConverter(registry, it))
 
         return cls(
