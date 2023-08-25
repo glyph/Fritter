@@ -127,7 +127,12 @@ class Async(Generic[AsyncType]):
             self.asyncDriver.newWithCancel(reallyCancel),
         )
 
-        def someWork(steps: int, stopper: Cancellable) -> None:
+        def complete() -> None:
+            asyncStopper.asyncInProgress = None
+            if asyncStopper.timeInProgress is None:
+                repeater.repeat()
+
+        def kickoff(steps: int, stopper: Cancellable) -> None:
             asyncStopper.timeInProgress = stopper
 
             if asyncStopper.asyncInProgress is not None:
@@ -145,23 +150,16 @@ class Async(Generic[AsyncType]):
                     else:
                         complete()
 
-            def complete() -> None:
-                asyncStopper.asyncInProgress = None
-                if asyncStopper.timeInProgress is None:
-                    repeater.repeat()
-
             asyncStopper.asyncInProgress = self.asyncDriver.runAsync(coro())
             if completedSynchronously:
                 complete()
 
-        def maybeRepeat() -> None:
+        def whenReady() -> None:
             asyncStopper.timeInProgress = None
             if asyncStopper.asyncInProgress is None:
                 repeater.repeat()
 
-        repeater = Repeater.new(
-            scheduler, rule, someWork, lambda r: maybeRepeat
-        )
+        repeater = Repeater.new(scheduler, rule, kickoff, lambda r: whenReady)
         repeater.repeat()
 
         return asyncStopper.result
