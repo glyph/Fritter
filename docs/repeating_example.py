@@ -12,12 +12,6 @@ async def example() -> None:
 
     async def work(steps: int, stopper: Cancellable) -> None:
         nonlocal times
-        if not times:
-            from signal import SIGSTOP
-            from os import kill
-
-            print("stopping…")
-            kill(0, SIGSTOP)
         times += steps
         print(times, "time" + ("s" * bool(times)), d.now(), flush=True)
         if times > 3:
