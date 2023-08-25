@@ -51,10 +51,12 @@ F = TypeVar("F", bound=float)
 
 
 def add(someFloat: F, other: F) -> F:
-    return someFloat + other    # type:ignore[return-value]
+    return someFloat + other  # type:ignore[return-value]
+
 
 def subtract(someFloat: F, other: F) -> F:
-    return someFloat - other    # type:ignore[return-value]
+    return someFloat - other  # type:ignore[return-value]
+
 
 @dataclass
 class _BranchDriver:

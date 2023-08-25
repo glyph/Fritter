@@ -147,7 +147,7 @@ Putting The Name Together
 
 Now that you know what its purpose is, I can explain the name is meaningful:
 
-- Frame-Rate Independent: ``fritter.repeat.Repeating`` provides an integer
+- Frame-Rate Independent: ``fritter.repeat.Repeater`` provides an integer
   interval-count to its ``callable``, so it counts frames for you and allows
   you to easily discretize whatever work you're performing, assuming you can
   eventually catch up to real time.

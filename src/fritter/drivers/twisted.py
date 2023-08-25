@@ -7,7 +7,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 
-from ..boundaries import Cancelable, PriorityQueue
+from ..boundaries import Cancellable, PriorityQueue
 from ..heap import Heap
 from ..scheduler import FutureCall, Scheduler, SimpleScheduler
 
@@ -42,7 +42,7 @@ class TwistedTimeDriver:
 @dataclass
 class TwistedAsyncDriver:
     """
-    Driver for Deferred-flavored repeating scheduler.
+    Driver for Deferred-flavored awaitables.
     """
 
     def newWithCancel(self, cancel: Callable[[], None]) -> Deferred[None]:
@@ -60,7 +60,7 @@ class TwistedAsyncDriver:
 
     def runAsync(
         self, coroutine: Coroutine[Deferred[None], Any, None]
-    ) -> Cancelable:
+    ) -> Cancellable:
         return Deferred.fromCoroutine(coroutine)
 
 

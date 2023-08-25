@@ -78,4 +78,37 @@ work, we are now at 4.0 in the parent and 3.0 in the child.
 Scaling
 -------
 
-You can also cause time to run slower or faster.
+You can also cause time to run slower or faster, using the ``scaleFactor``
+attribute of the ``Group`` object.  Here's an example that starts a child
+scheduler at 3x faster than its parent, and increases its speed as it goes
+along.
+
+.. literalinclude:: tree_scaling_example.py
+
+As you run it, it looks like this:
+
+.. code-block::
+
+   parent
+   child
+   child
+   time: parent=0.3333333333333333 child=1.0000000000000002
+   child
+   time: parent=0.5833333333333333 child=2.000000000000001
+   child
+   time: parent=0.7833333333333332 child=3.0
+   child
+   time: parent=0.95 child=3.999999999999999
+   parent
+   time: parent=1.0 child=4.35
+   child
+   time: parent=1.08125 child=5.000000000000002
+   child
+   time: parent=1.192361111111111 child=5.999999999999998
+   child
+   time: parent=1.292361111111111 child=7.000000000000001
+   child
+   time: parent=1.383270202020202 child=7.999999999999998
+   child
+   time: parent=1.4666035353535354 child=9.000000000000002
+

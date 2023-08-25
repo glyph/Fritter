@@ -3,6 +3,7 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
+    Generator,
     Iterator,
     Optional,
     Protocol,
@@ -20,7 +21,21 @@ class PriorityComparable(Protocol):
 
 T = TypeVar("T", bound=PriorityComparable)
 T1 = TypeVar("T1", bound=PriorityComparable, contravariant=True)
-AsyncType = TypeVar("AsyncType", bound=Awaitable[Any])
+
+Yield = TypeVar("Yield", covariant=True)
+Send = TypeVar("Send", contravariant=True)
+Return = TypeVar("Return", covariant=True)
+
+
+class Awaitish(Protocol[Yield, Send, Return]):
+    def __await__(self) -> Generator[Yield, Send, Return]:
+        ...
+
+    def cancel(self) -> object:
+        ...
+
+
+AsyncType = TypeVar("AsyncType", bound=Awaitish[Any, Any, Any])
 
 
 class PriorityQueue(Protocol[T]):
@@ -66,22 +81,25 @@ class TimeDriver(Protocol[T]):
         ...
 
 
+class Cancellable(Protocol):
+    def cancel(self) -> object:
+        """
+        Cancel an operation in progress.
+        """
+
+
 class RepeatingWork(Protocol):
     """
     The signature of work that is repeated in a loop.
     """
 
-    def __call__(self, steps: int) -> None:
+    def __call__(self, steps: int, stopper: Cancellable) -> None:
         """
         @param steps: The number of steps which have passed since the previous
             invocation.
-        """
 
-
-class Cancelable(Protocol):
-    def cancel(self) -> object:
-        """
-        Stop the work.
+        @param stopper: An object that you can call cancel() on to stop the
+            repetition.
         """
 
 
@@ -99,7 +117,27 @@ class AsyncDriver(Protocol[AsyncType]):
 
     def runAsync(
         self, coroutine: Coroutine[AsyncType, Any, Any]
-    ) -> Cancelable:
+    ) -> Cancellable:
         """
         Run the given coroutine.
         """
+
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # ancillary explicit type checks
+    from asyncio import Future
+
+    from twisted.internet.defer import Deferred
+
+    fill: Any = object
+    f: Future[None] = fill
+    d: Deferred[None] = fill
+    awt: Awaitish[Any, Any, Any] = f
+
+    async def what() -> None:
+        ...
+
+    awt = d
+    c: Cancellable = d

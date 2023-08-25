@@ -1,4 +1,4 @@
 Repeating Work
 ================
 
-TODO: document ``fritter.repeat.Repeating``, async drivers, ``fritter.repeat.repeatAsync``.
+TODO: document ``fritter.repeat.Repeater``, async drivers, ``fritter.repeat.repeatAsync``.

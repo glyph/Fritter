@@ -3,36 +3,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Callable, Generic, TypeVar
+from typing import Any, Callable, Coroutine, Generic, TypeVar
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
 
+from fritter.boundaries import Cancellable
+
 from .boundaries import AsyncDriver, AsyncType, RepeatingWork
-from .scheduler import CallHandle, Scheduler, WhatT, WhenT
+from .scheduler import Scheduler, WhatT, WhenT
 
 RuleFunction = Callable[[WhenT, WhenT], tuple[int, WhenT]]
 RepeatingWhatT = TypeVar("RepeatingWhatT", bound=RepeatingWork)
 AnyWhat = Callable[[], None]
 DTZ = DateTime[ZoneInfo]
 DTRule = RuleFunction[DTZ]
-
-
-@dataclass
-class Repeating(Generic[WhenT, WhatT, RepeatingWhatT]):
-    reference: WhenT
-    rule: RuleFunction[WhenT]
-    callable: RepeatingWhatT
-    convert: Callable[[Repeating[WhenT, WhatT, RepeatingWhatT]], WhatT]
-    scheduler: Scheduler[WhenT, WhatT]
-
-    def repeat(self) -> CallHandle[WhenT, WhatT]:
-        callIncrement, self.reference = self.rule(
-            self.reference, self.scheduler.now()
-        )
-        callRepeat = self.convert(self)
-        self.callable(callIncrement)
-        return self.scheduler.callAt(self.reference, callRepeat)
 
 
 @dataclass(frozen=True)
@@ -66,65 +51,117 @@ _everyIsRuleFunction: Callable[[float], RuleFunction[float]]
 _everyIsRuleFunction = EverySecond
 
 
-def repeatAsync(
-    work: Callable[[int], AsyncType],
+@dataclass
+class Repeater(Generic[WhenT, WhatT, RepeatingWhatT]):
+    scheduler: Scheduler[WhenT, WhatT]
+    rule: RuleFunction[WhenT]
+    work: RepeatingWhatT
+    convert: Callable[[Repeater[WhenT, WhatT, RepeatingWhatT]], WhatT]
+    reference: WhenT
+
+    @classmethod
+    def new(
+        cls,
+        scheduler: Scheduler[WhenT, WhatT],
+        rule: RuleFunction[WhenT],
+        work: RepeatingWhatT,
+        convert: Callable[[Repeater[WhenT, WhatT, RepeatingWhatT]], WhatT],
+        reference: WhenT | None = None,
+    ) -> Repeater[WhenT, WhatT, RepeatingWhatT]:
+        if reference is None:
+            reference = scheduler.now()
+        return cls(scheduler, rule, work, convert, reference)
+
+    def repeat(self) -> None:
+        now = self.scheduler.now()
+        callIncrement, self.reference = self.rule(self.reference, now)
+        callRepeat = self.convert(self)
+        self.work(
+            callIncrement, self.scheduler.callAt(self.reference, callRepeat)
+        )
+
+
+def repeatedly(
+    scheduler: Scheduler[WhenT, Callable[[], None]],
+    work: RepeatingWork,
     rule: RuleFunction[WhenT],
-    asyncDriver: AsyncDriver[AsyncType],
-    scheduler: Scheduler[WhenT, AnyWhat],
-    isComplete: Callable[[], bool] = lambda: False,
-) -> AsyncType:
-    currentlyRunning: bool = False
-    awaitingRepeatence: bool = False
-    pendingRepeat = None
-    pendingAsync = None
+) -> None:
+    Repeater.new(scheduler, rule, work, lambda r: r.repeat).repeat()
 
-    def doRepeat() -> None:
-        nonlocal pendingRepeat
-        if isComplete():
-            asyncDriver.complete(result)
-        else:
-            pendingRepeat = repeating.repeat()
 
-    def someWork(steps: int) -> None:
-        nonlocal pendingAsync
+@dataclass
+class AsyncStopper(Generic[AsyncType]):
+    driver: AsyncDriver[AsyncType]
+    result: AsyncType
+    timeInProgress: Cancellable | None = None
+    asyncInProgress: Cancellable | None = None
+    shouldComplete: bool = True
 
-        async def coro() -> None:
-            nonlocal currentlyRunning, awaitingRepeatence, pendingAsync
-            currentlyRunning = True
-            try:
-                await work(steps)
-            finally:
-                pendingAsync = None
-                currentlyRunning = False
-                if awaitingRepeatence:
-                    awaitingRepeatence = False
-                    doRepeat()
+    def cancel(self) -> None:
+        if self.timeInProgress is not None:
+            self.timeInProgress.cancel()
+        if self.asyncInProgress is not None:
+            self.asyncInProgress.cancel()
+        if self.shouldComplete:
+            self.driver.complete(self.result)
 
-        c = coro()
-        maybePendingAsync = asyncDriver.runAsync(c)
-        if currentlyRunning:
-            pendingAsync = maybePendingAsync
 
-    def repeatWhenDone() -> None:
-        nonlocal awaitingRepeatence
-        if currentlyRunning:
-            awaitingRepeatence = True
-        else:
-            doRepeat()
+@dataclass
+class Async(Generic[AsyncType]):
+    asyncDriver: AsyncDriver[AsyncType]
 
-    now = scheduler.driver.now()
-    repeating = Repeating(
-        now, rule, someWork, lambda _: repeatWhenDone, scheduler
-    )
+    def repeatedly(
+        self,
+        scheduler: Scheduler[WhenT, AnyWhat],
+        rule: RuleFunction[WhenT],
+        work: Callable[
+            [int, Cancellable], AsyncType | Coroutine[AsyncType, Any, Any]
+        ],
+    ) -> AsyncType:
+        def reallyCancel() -> None:
+            asyncStopper.shouldComplete = False
+            asyncStopper.cancel()
 
-    def cancel() -> None:
-        nonlocal pendingAsync
-        assert pendingRepeat is not None
-        pendingRepeat.cancel()
-        if pendingAsync is not None:
-            pendingAsync.cancel()
-            pendingAsync = None
+        asyncStopper: AsyncStopper[AsyncType] = AsyncStopper(
+            self.asyncDriver,
+            self.asyncDriver.newWithCancel(reallyCancel),
+        )
 
-    result = asyncDriver.newWithCancel(cancel)
-    doRepeat()
-    return result
+        def someWork(steps: int, stopper: Cancellable) -> None:
+            asyncStopper.timeInProgress = stopper
+
+            if asyncStopper.asyncInProgress is not None:
+                return
+
+            completedSynchronously: bool = False
+
+            async def coro() -> None:
+                nonlocal completedSynchronously
+                try:
+                    await work(steps, asyncStopper)
+                finally:
+                    if asyncStopper.asyncInProgress is None:
+                        completedSynchronously = True
+                    else:
+                        complete()
+
+            def complete() -> None:
+                asyncStopper.asyncInProgress = None
+                if asyncStopper.timeInProgress is None:
+                    repeater.repeat()
+
+            asyncStopper.asyncInProgress = self.asyncDriver.runAsync(coro())
+            if completedSynchronously:
+                complete()
+
+        def maybeRepeat() -> None:
+            asyncStopper.timeInProgress = None
+            if asyncStopper.asyncInProgress is None:
+                repeater.repeat()
+
+        repeater = Repeater.new(
+            scheduler, rule, someWork, lambda r: maybeRepeat
+        )
+        repeater.repeat()
+
+        return asyncStopper.result

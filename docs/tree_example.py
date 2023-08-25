@@ -9,12 +9,15 @@ parent = SimpleScheduler(driver)
 group, child = branch(parent)
 # end setup
 
+
 # showfunc
 def show(name: str) -> Callable[[], None]:
     def _() -> None:
         print(f"{name} parent={parent.now()} child={child.now()}")
 
     return _
+
+
 # end showfunc
 
 

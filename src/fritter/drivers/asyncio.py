@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Callable, Coroutine, Protocol
 
-from ..boundaries import Cancelable, PriorityQueue
+from ..boundaries import Cancellable, PriorityQueue
 from ..heap import Heap
 from ..scheduler import FutureCall, Scheduler, SimpleScheduler
 
@@ -20,6 +20,7 @@ class LoopTimeInterface(Protocol):
     """
     Describe the portions of C{AbstractEventLoop} used by L{AsyncioTimeDriver}.
     """
+
     # TODO: fix code link
 
     def call_at(
@@ -28,7 +29,7 @@ class LoopTimeInterface(Protocol):
         callback: Callable[[], None],
         *args: object,
         context: Context | None = None,
-    ) -> Cancelable:
+    ) -> Cancellable:
         ...
 
     def time(self) -> float:
@@ -38,7 +39,7 @@ class LoopTimeInterface(Protocol):
 @dataclass
 class AsyncioTimeDriver:
     _loop: LoopTimeInterface = field(default_factory=get_event_loop)
-    _call: Cancelable | None = None
+    _call: Cancellable | None = None
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
         def _() -> None:
@@ -61,7 +62,7 @@ class AsyncioTimeDriver:
 @dataclass
 class AsyncioAsyncDriver:
     """
-    Driver for asyncio.Future-flavored repeating scheduler.
+    Driver for asyncio.Future-flavored awaitables.
     """
 
     _loop: AbstractEventLoop = field(default_factory=get_event_loop)
@@ -86,7 +87,7 @@ class AsyncioAsyncDriver:
 
     def runAsync(
         self, coroutine: Coroutine[object, Future[None], object]
-    ) -> Cancelable:
+    ) -> Cancellable:
         return self._loop.create_task(coroutine)
 
 

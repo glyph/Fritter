@@ -1,11 +1,12 @@
 from typing import Any, Callable
 from unittest import TestCase
 
-from fritter.drivers.memory import MemoryDriver
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
+from ..boundaries import Cancellable
+from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
-from ..repeat import EverySecond, repeatAsync
+from ..repeat import EverySecond, Async
 from ..scheduler import Scheduler
 
 
@@ -25,11 +26,10 @@ class RepeatTestCase(TestCase):
             calls.append(f"after {count}")
             count += 1
 
-        repeatAsync(
-            lambda times: Deferred.fromCoroutine(tick(times)),
-            EverySecond(15),
-            tad,
+        Async(tad).repeatedly(
             Scheduler(mem),
+            EverySecond(15),
+            lambda times, stopper: tick(times),
         )
 
         self.assertEqual(calls, ["before 0 (1)"])
@@ -53,13 +53,12 @@ class RepeatTestCase(TestCase):
         count = 0
         threshold = 3
 
-        def step(steps: int) -> Deferred[None]:
+        def step(steps: int, stopper: Cancellable) -> Deferred[None]:
             nonlocal count
             count += steps
+            if count >= threshold:
+                stopper.cancel()
             return succeed(None)
-
-        def isDone() -> bool:
-            return count >= threshold
 
         tad = TwistedAsyncDriver()
         mem = MemoryDriver()
@@ -67,9 +66,7 @@ class RepeatTestCase(TestCase):
 
         async def task() -> None:
             nonlocal done
-            await repeatAsync(
-                step, EverySecond(1), tad, Scheduler(mem), isDone
-            )
+            await Async(tad).repeatedly(Scheduler(mem), EverySecond(1), step)
             done = True
 
         tad.runAsync(task())
@@ -98,11 +95,10 @@ class RepeatTestCase(TestCase):
 
         def go(how: Callable[[], Any]) -> None:
             nonlocal repeatCall
-            repeatCall = repeatAsync(
-                lambda times: Deferred.fromCoroutine(how()),
-                EverySecond(1),
-                tad,
+            repeatCall = Async(tad).repeatedly(
                 Scheduler(mem),
+                EverySecond(1),
+                lambda times, stopper: how(),
             )
 
         async def run(how: Callable[[], Any]) -> None:

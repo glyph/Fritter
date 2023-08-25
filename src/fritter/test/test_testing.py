@@ -21,10 +21,12 @@ class MemoryDriverTests(TestCase):
     def test_noBackwards(self) -> None:
         driver = MemoryDriver()
         count = 0
+
         def work() -> None:
             nonlocal count
             count += 1
             driver.reschedule(0, work)
+
         driver.reschedule(0, work)
         driver.advance()
         self.assertEqual(count, 1)

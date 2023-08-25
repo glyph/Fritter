@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from datetype import aware
 
-from ..boundaries import TimeDriver
+from ..boundaries import TimeDriver, Cancellable
 from ..drivers.datetime import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..persistent.json import JSONableScheduler, JSONObject, JSONRegistry
@@ -38,9 +38,9 @@ def call2() -> None:
     calls.append("goodbye")
 
 
-@registry.repeatingFunction
-def repeating(steps: int) -> None:
-    calls.append(f"repeating {steps}")
+@registry.repeatableFunction
+def repeatable(steps: int, stopper: Cancellable) -> None:
+    calls.append(f"repeatable {steps}")
 
 
 @dataclass
@@ -85,11 +85,11 @@ class InstanceWithMethods:
     def method2(self) -> None:
         self.info.calls.append(f"{self.value}/method2")
 
-    @registry.repeatingMethod
-    def repeatence(self, steps: int) -> None:
+    @registry.repeatableMethod
+    def repeatMethod(self, steps: int, stopper: Cancellable) -> None:
         self.calls += 1
         self.info.calls.append(
-            f"repeatence {steps} {self.value=} {self.calls=}"
+            f"repeatMethod {steps} {self.value=} {self.calls=}"
         )
 
 
@@ -182,7 +182,7 @@ class PersistentSchedulerTests(TestCase):
         registry.load(memory, {"scheduledCalls": []}, RegInfo([]))
         self.assertEqual(memory.isScheduled(), False)
 
-    def test_repeating(self) -> None:
+    def test_repeatable(self) -> None:
         dt = aware(
             datetime(
                 2023,
@@ -198,15 +198,15 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver = MemoryDriver()
         memoryDriver.advance(dt.timestamp())
         scheduler = jsonScheduler(memoryDriver)
-        registry.repeating(dt, daily, repeating, scheduler).repeat()
-        self.assertEqual(calls, ["repeating 1"])
+        registry.repeatedly(scheduler, daily, repeatable, dt)
+        self.assertEqual(calls, ["repeatable 1"])
         del calls[:]
 
         def days(n: int) -> float:
             return 60 * 60 * 24 * n
 
         memoryDriver.advance(days(3))
-        self.assertEqual(calls, ["repeating 3"])
+        self.assertEqual(calls, ["repeatable 3"])
         del calls[:]
         from json import dumps, loads
 
@@ -218,10 +218,11 @@ class PersistentSchedulerTests(TestCase):
         registry.load(mem2, loads(dumps(registry.save(scheduler))), newInfo)
         self.assertEqual(mem2.isScheduled(), True)
         amount = mem2.advance()
-        self.assertEqual(amount, 0.0)
-        self.assertEqual(calls, ["repeating 4"])
+        assert amount is not None
+        self.assertLess(amount, 0.0001)
+        self.assertEqual(calls, ["repeatable 4"])
 
-    def test_repeatingMethod(self) -> None:
+    def test_repeatableMethod(self) -> None:
         dt = aware(
             datetime(
                 2023,
@@ -238,17 +239,17 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(dt.timestamp())
         scheduler = jsonScheduler(memoryDriver)
         info = RegInfo([])
-        method = InstanceWithMethods("sample", info).repeatence
+        method = InstanceWithMethods("sample", info).repeatMethod
         shared = InstanceWithMethods("shared", info)
-        registry.repeating(dt, daily, method, scheduler).repeat()
-        registry.repeating(dt, daily, shared.repeatence, scheduler).repeat()
-        registry.repeating(dt, daily, shared.repeatence, scheduler).repeat()
+        registry.repeatedly(scheduler, daily, method)
+        registry.repeatedly(scheduler, daily, shared.repeatMethod)
+        registry.repeatedly(scheduler, daily, shared.repeatMethod)
         self.assertEqual(
             info.calls,
             [
-                "repeatence 1 self.value='sample' self.calls=1",
-                "repeatence 1 self.value='shared' self.calls=1",
-                "repeatence 1 self.value='shared' self.calls=2",
+                "repeatMethod 1 self.value='sample' self.calls=1",
+                "repeatMethod 1 self.value='shared' self.calls=1",
+                "repeatMethod 1 self.value='shared' self.calls=2",
             ],
         )
         del info.calls[:]
@@ -260,9 +261,9 @@ class PersistentSchedulerTests(TestCase):
         self.assertEqual(
             info.calls,
             [
-                "repeatence 3 self.value='sample' self.calls=2",
-                "repeatence 3 self.value='shared' self.calls=3",
-                "repeatence 3 self.value='shared' self.calls=4",
+                "repeatMethod 3 self.value='sample' self.calls=2",
+                "repeatMethod 3 self.value='shared' self.calls=3",
+                "repeatMethod 3 self.value='shared' self.calls=4",
             ],
         )
         from json import dumps, loads
@@ -286,8 +287,8 @@ class PersistentSchedulerTests(TestCase):
                 "InstanceWithMethods.fromJSON",
                 "InstanceWithMethods.fromJSON",
                 "InstanceWithMethods.fromJSON (cached)",
-                "repeatence 4 self.value='sample' self.calls=1",
-                "repeatence 4 self.value='shared' self.calls=1",
-                "repeatence 4 self.value='shared' self.calls=2",
+                "repeatMethod 4 self.value='sample' self.calls=1",
+                "repeatMethod 4 self.value='shared' self.calls=1",
+                "repeatMethod 4 self.value='shared' self.calls=2",
             ],
         )

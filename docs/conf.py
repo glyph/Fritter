@@ -10,9 +10,9 @@ import os
 from pprint import pprint
 import subprocess
 
-project = 'Fritter'
-copyright = '2023, Glyph'
-author = 'Glyph'
+project = "Fritter"
+copyright = "2023, Glyph"
+author = "Glyph"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -23,6 +23,7 @@ extensions = [
 ]
 
 import pathlib
+
 _project_root = pathlib.Path(__file__).parent.parent
 
 # -- Extension configuration ----------------------------------------------
@@ -73,14 +74,13 @@ intersphinx_mapping = {
     "zopeinterface": ("https://zopeinterface.readthedocs.io/en/latest", None),
 }
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
-html_static_path = ['_static']
+html_theme = "alabaster"
+html_static_path = ["_static"]
 htmlhelp_basename = "Fritterdoc"
