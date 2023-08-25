@@ -1,6 +1,5 @@
 from typing import (
     Any,
-    Awaitable,
     Callable,
     Coroutine,
     Generator,
@@ -121,23 +120,3 @@ class AsyncDriver(Protocol[AsyncType]):
         """
         Run the given coroutine.
         """
-
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    # ancillary explicit type checks
-    from asyncio import Future
-
-    from twisted.internet.defer import Deferred
-
-    fill: Any = object
-    f: Future[None] = fill
-    d: Deferred[None] = fill
-    awt: Awaitish[Any, Any, Any] = f
-
-    async def what() -> None:
-        ...
-
-    awt = d
-    c: Cancellable = d
