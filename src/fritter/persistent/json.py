@@ -304,6 +304,11 @@ class JSONRegistry(Generic[LoadContext]):
         descriptor.__set_name__(RepeatableConverter, "_performRepeat")
         self._converterMethod = descriptor.__get__
 
+    def _repeaterConvert(
+        self, repeater: JSONRepeater
+    ) -> JSONableBoundMethod[RepeatableConverter[LoadContext]]:
+        return self._converterMethod(RepeatableConverter(self, repeater))
+
     def repeatedly(
         self,
         scheduler: JSONableScheduler,
@@ -315,9 +320,7 @@ class JSONRegistry(Generic[LoadContext]):
             scheduler,
             rule,
             work,
-            lambda repeater: self._converterMethod(
-                RepeatableConverter(self, repeater)
-            ),
+            self._repeaterConvert,
             reference,
         ).repeat()
 
@@ -417,26 +420,16 @@ class RepeatableConverter(Generic[LoadContext]):
         loadContext: LoadContext,
         json: JSONObject,
     ) -> RepeatableConverter[LoadContext]:
-        ruleFunction = {"daily": daily}[  # , "dailyWithSkips": dailyWithSkips
+        rule = {"daily": daily}[  # , "dailyWithSkips": dailyWithSkips
             json["rule"]
         ]
         what = json["callable"]
-
-        def convertToMethod(it: JSONRepeater) -> JSONableCallable:
-            return registry._converterMethod(RepeatableConverter(registry, it))
-
-        return cls(
-            registry,
-            Repeater(
-                scheduler,
-                ruleFunction,
-                registry._loadOne(
-                    what, scheduler, registry._repeatable, loadContext
-                ),
-                convertToMethod,
-                fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"])),
-            ),
+        one = registry._loadOne(
+            what, scheduler, registry._repeatable, loadContext
         )
+        ref = fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"]))
+        rep = Repeater(scheduler, rule, one, registry._repeaterConvert, ref)
+        return cls(registry, rep)
 
     def asJSON(self) -> dict[str, object]:
         when = self.repeater.reference
