@@ -28,17 +28,17 @@ emptyRegistry = JSONRegistry[RegInfo]()
 calls = []
 
 
-@registry.byName
+@registry.function
 def call1() -> None:
     calls.append("hello")
 
 
-@registry.byName
+@registry.function
 def call2() -> None:
     calls.append("goodbye")
 
 
-@registry.repeatableFunction
+@registry.repeatFunction
 def repeatable(steps: int, stopper: Cancellable) -> None:
     calls.append(f"repeatable {steps}")
 
@@ -77,15 +77,15 @@ class InstanceWithMethods:
             "identity": id(self),
         }
 
-    @registry.asMethod
+    @registry.method
     def method1(self) -> None:
         self.info.calls.append(f"{self.value}/method1")
 
-    @registry.asMethod
+    @registry.method
     def method2(self) -> None:
         self.info.calls.append(f"{self.value}/method2")
 
-    @registry.repeatableMethod
+    @registry.repeatMethod
     def repeatMethod(self, steps: int, stopper: Cancellable) -> None:
         self.calls += 1
         self.info.calls.append(

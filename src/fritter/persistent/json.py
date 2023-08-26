@@ -163,7 +163,7 @@ class JSONableMethodDescriptor(Generic[JSONableSelf, LoadContext]):
     def __set_name__(
         self, cls: Type[JSONableInstance[LoadContext]], name: str
     ) -> None:
-        self.registry.registerType(cls)
+        self.registry._registerJSONableType(cls)
 
     def __get__(
         self, instance: JSONableSelf, owner: object = None
@@ -197,7 +197,7 @@ class JSONableRepeatableDescriptor(Generic[JSONableSelf, LoadContext]):
     def __set_name__(
         self, cls: Type[JSONableInstance[LoadContext]], name: str
     ) -> None:
-        self.registry.registerType(cls)
+        self.registry._registerJSONableType(cls)
 
     def __get__(
         self, instance: JSONableSelf, owner: object = None
@@ -208,9 +208,9 @@ class JSONableRepeatableDescriptor(Generic[JSONableSelf, LoadContext]):
 class JSONableMethodBinder(Protocol[LoadContextInv]):
     def __call__(
         self,
-        instance: RepeatableConverter[LoadContextInv],
+        instance: JSONableRepeaterWrapper[LoadContextInv],
         owner: object = None,
-    ) -> JSONableBoundMethod[RepeatableConverter[LoadContextInv]]:
+    ) -> JSONableBoundMethod[JSONableRepeaterWrapper[LoadContextInv]]:
         ...
 
 
@@ -241,6 +241,17 @@ JSONRepeater = Repeater[
 
 @dataclass
 class JSONRegistry(Generic[LoadContext]):
+    """
+    A L{JSONRegistry} maintains a set of functions and methods (and the classes
+    those methods are defined on) that can scheduled against a L{Scheduler} and
+    then persisted into a JSON blob to reconstitute that scheduler later.
+
+    Use a L{JSONRegistry} by instantiatint it at module scope and then using
+    its methods as decorators on functions and methods.
+
+    """
+    # TODO: implement merging multiple registries together so that objects from
+    # different libraries can live in the same blob
     _functions: SpecificTypeRegistration[JSONableCallable] = field(
         default_factory=SpecificTypeRegistration
     )
@@ -253,7 +264,9 @@ class JSONRegistry(Generic[LoadContext]):
 
     # Can't store the descriptor directly due to
     # https://github.com/python/mypy/issues/15822
-    _converterMethod: JSONableMethodBinder[LoadContext] = field(init=False)
+    _bindRepeaterConversionMethod: JSONableMethodBinder[LoadContext] = field(
+        init=False
+    )
 
     def _loadOne(
         self,
@@ -293,21 +306,26 @@ class JSONRegistry(Generic[LoadContext]):
 
     def __post_init__(self) -> None:
         # TODO: something about bound methods of generics (specifically
-        # RepeatableConverter[LoadContext]._performRepeat) breaks type
+        # JSONableRepeaterWrapper[LoadContext].repeat) breaks type
         # inference here so we need an explicit declaration, should report this
         # upstream.
         descriptor: JSONableMethodDescriptor[
-            RepeatableConverter[LoadContext], LoadContext
-        ] = self.asMethod(RepeatableConverter._performRepeat)
+            JSONableRepeaterWrapper[LoadContext], LoadContext
+        ] = self.method(JSONableRepeaterWrapper.repeat)
         # this is happening after the fact, not during a class definition, so
         # we need to take care of the __set_name__ step manually.
-        descriptor.__set_name__(RepeatableConverter, "_performRepeat")
-        self._converterMethod = descriptor.__get__
+        descriptor.__set_name__(
+            JSONableRepeaterWrapper, JSONableRepeaterWrapper.repeat.__name__
+        )
+        self._bindRepeaterConversionMethod = descriptor.__get__
 
-    def _repeaterConvert(
+    def _repeaterToJSONable(
         self, repeater: JSONRepeater
-    ) -> JSONableBoundMethod[RepeatableConverter[LoadContext]]:
-        return self._converterMethod(RepeatableConverter(self, repeater))
+    ) -> JSONableBoundMethod[JSONableRepeaterWrapper[LoadContext]]:
+        """
+        Convert the given L{JSONRepeater} into a method that can be serialized.
+        """
+        return self._bindRepeaterConversionMethod(JSONableRepeaterWrapper(self, repeater))
 
     def repeatedly(
         self,
@@ -317,48 +335,74 @@ class JSONRegistry(Generic[LoadContext]):
         reference: DateTime[ZoneInfo] | None = None,
     ) -> None:
         Repeater.new(
-            scheduler,
-            rule,
-            work,
-            self._repeaterConvert,
-            reference,
+            scheduler, rule, work, self._repeaterToJSONable, reference
         ).repeat()
 
-    def byName(self, cb: Callable[[], None]) -> JSONableCallable:
-        return self._functions.add(SerializableFunction(cb, cb.__name__))
+    def function(self, cb: Callable[[], None]) -> JSONableCallable:
+        """
+        Mark the given 0-argument, None-returning, top-level function as
+        possible to serialize within this registry.  It will be serialized by
+        its fully-qualified Python name.
 
-    def asMethod(
+        Use like so::
+
+            registry = JSONRegistry[...]()
+
+            @registry.serializedFunction
+        """
+        return self._functions.add(SerializableFunction(cb, cb.__qualname__))
+
+    def method(
         self, method: Callable[[JSONableSelf], None]
     ) -> JSONableMethodDescriptor[JSONableSelf, LoadContext]:
-        wrapped = JSONableMethodDescriptor[JSONableSelf, LoadContext](
-            self, method
-        )
-
+        """
+        Mark the given method, defined at class scope in a class complying with
+        the L{JSONableInstance} protocol, as possible to serialize within this registry.
+        """
         # I want to stipulate that the method I am taking here must have a
         # 'self' parameter whose type is *at least* as strict as
         # JSONableInstance[LoadContext] but may be stricter than that.
         # However, this would require higher-kinded typevars, in order to make
         # JSONableSelf bounded by JSONableInstance[LoadContext] rather than
         # JSONableInstance[Any]: https://github.com/python/typing/issues/548
+        return JSONableMethodDescriptor(self, method)
 
-        return wrapped
+    def repeatFunction(self, cb: RepeatingWork) -> JSONableRepeatable:
+        """
+        Mark the given function that matches the signature of L{RepeatingWork},
+        i.e. one which takes a number of steps and a L{Cancellable} to cancel
+        its own repetition, as looked up via its C{__qualname__} attribute.
 
-    def repeatableFunction(self, cb: RepeatingWork) -> JSONableRepeatable:
+        @return: a function that mimics the signature of the original function,
+            but also conforms to the L{JSONable} protocol.
+        """
         return self._repeatable.add(
-            SerializableFunction(cb, getattr(cb, "__name__"))
+            SerializableFunction(cb, getattr(cb, "__qualname__"))
         )
 
-    def repeatableMethod(
+    def repeatMethod(
         self, repeatable: Callable[[JSONableSelf, int, Cancellable], None]
     ) -> JSONableRepeatableDescriptor[JSONableSelf, LoadContext]:
-        wrapped = JSONableRepeatableDescriptor[JSONableSelf, LoadContext](
-            self, repeatable
-        )
-        return wrapped
+        """
+        Mark the given method that matches the signature of L{RepeatingWork},
+        i.e. one which takes a number of steps and a L{Cancellable} to cancel
+        its own repetition, as looked up via its C{__qualname__} attribute.
 
-    def registerType(self, cls: Type[JSONableInstance[LoadContext]]) -> None:
-        # TODO: honor method name, keep a record of which ones are allowed for
-        # this type
+        @note: The registration occurs when the class is defined, specifically
+            in the C{__set_name__} hook in the returned descriptor, so if you
+            are calling this in an esoteric context outside a normal class
+            definition, be sure to invoke that hook as well.
+
+        @return: a descriptor that mimics the signature of the original method.
+        """
+        return JSONableRepeatableDescriptor(self, repeatable)
+
+    def _registerJSONableType(self, cls: Type[JSONableInstance[LoadContext]]) -> None:
+        """
+        Mark the given class as serializable via this registry, keyed by its
+        L{JSONable.typeCodeForJSON} method.  Used internally as supporting
+        L{JSONRegistry.repeatMethod} L{JSONRegistry.serializableMethod}
+        """
         self._instances.add(cls)
 
     def load(
@@ -386,7 +430,11 @@ class JSONRegistry(Generic[LoadContext]):
         return new
 
     def save(self, scheduler: JSONableScheduler) -> JSONObject:
-        # n.b.: `self` not used yet here because we're not validating that all
+        """
+        Serialize the given L{JSONableScheduler} to a single L{JSONObject}
+        which can be passed to L{json.dumps} or L{json.loads}.
+        """
+        # TODO: `self` not used yet here because we're not validating that all
         # the serializable callables here are present in this specific
         # registry, but that would be a good check to have.
         return {
@@ -404,13 +452,13 @@ class JSONRegistry(Generic[LoadContext]):
 
 
 @dataclass
-class RepeatableConverter(Generic[LoadContext]):
+class JSONableRepeaterWrapper(Generic[LoadContext]):
     jsonRegistry: JSONRegistry[LoadContext]
     repeater: JSONRepeater
 
     @classmethod
-    def typeCodeForJSON(self) -> str:
-        return "repeatence"
+    def typeCodeForJSON(cls) -> str:
+        return cls.__qualname__
 
     @classmethod
     def fromJSON(
@@ -419,7 +467,7 @@ class RepeatableConverter(Generic[LoadContext]):
         scheduler: JSONableScheduler,
         loadContext: LoadContext,
         json: JSONObject,
-    ) -> RepeatableConverter[LoadContext]:
+    ) -> JSONableRepeaterWrapper[LoadContext]:
         rule = {"daily": daily}[  # , "dailyWithSkips": dailyWithSkips
             json["rule"]
         ]
@@ -428,7 +476,7 @@ class RepeatableConverter(Generic[LoadContext]):
             what, scheduler, registry._repeatable, loadContext
         )
         ref = fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"]))
-        rep = Repeater(scheduler, rule, one, registry._repeaterConvert, ref)
+        rep = Repeater(scheduler, rule, one, registry._repeaterToJSONable, ref)
         return cls(registry, rep)
 
     def asJSON(self) -> dict[str, object]:
@@ -442,7 +490,7 @@ class RepeatableConverter(Generic[LoadContext]):
             # "scheduler": is what's doing the serializing
         }
 
-    def _performRepeat(self) -> None:
+    def repeat(self) -> None:
         self.repeater.repeat()
 
 
