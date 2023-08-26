@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 from unittest import TestCase
 from zoneinfo import ZoneInfo
+from json import dumps, loads
 
 from datetype import aware
 
@@ -208,7 +209,6 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(days(3))
         self.assertEqual(calls, ["repeatable 3"])
         del calls[:]
-        from json import dumps, loads
 
         newInfo = RegInfo([])
         mem2 = MemoryDriver()
@@ -266,7 +266,6 @@ class PersistentSchedulerTests(TestCase):
                 "repeatMethod 3 self.value='shared' self.calls=4",
             ],
         )
-        from json import dumps, loads
 
         newInfo = RegInfo([])
         mem2 = MemoryDriver()
