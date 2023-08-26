@@ -94,8 +94,8 @@ class Scheduler(Generic[WhenT, WhatT]):
         Call C{what} at the time C{when} according to the L{TimeDriver}
         associated with this L{Scheduler}.
 
-        @return: a L{CallHandle} that allows for cancellation of the pending
-            call.
+        @return: a L{FutureCall} that describes the pending call and allows for
+            cancelling it.
         """
         self.counter += 1
 
