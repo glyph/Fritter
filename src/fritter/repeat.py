@@ -126,6 +126,7 @@ class Async(Generic[AsyncType]):
     @ivar asyncDriver: The driver that supplies awaitables for this L{Async} to
         return.
     """
+
     asyncDriver: AsyncDriver[AsyncType]
 
     def repeatedly(

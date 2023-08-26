@@ -17,6 +17,7 @@ class Heap(Generic[Prioritized]):
     """
     A simple implementation of a priority queue.
     """
+
     _values: List[Prioritized] = field(default_factory=list)
 
     def add(self, item: Prioritized) -> None:

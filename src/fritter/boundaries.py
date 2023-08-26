@@ -22,6 +22,7 @@ class PriorityComparable(Protocol):
     Protocol describing an object that can be compared for the purposes of a
     L{PriorityQueue}.
     """
+
     def __lt__(self, other: Any) -> bool:
         """
         Is C{self} lower priority than C{other}?
@@ -101,7 +102,10 @@ class TimeDriver(Protocol[Prioritized]):
     Driver interface that allows Fritter to schedule objects onto a third party
     library.
     """
-    def reschedule(self, newTime: Prioritized, work: Callable[[], None]) -> None:
+
+    def reschedule(
+        self, newTime: Prioritized, work: Callable[[], None]
+    ) -> None:
         """
         Schedule C{work} to occur at C{newTime}, removing any previous C{work}
         scheduled by prior calls to C{reschedule}.
