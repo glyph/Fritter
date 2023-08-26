@@ -6,9 +6,10 @@ Groups of timers that may be paused, resumed, or time-scaled together.
 
 from __future__ import annotations
 from dataclasses import dataclass
+from .scheduler import FutureCall
 from typing import Callable, NewType, Optional, Protocol, Tuple, TypeVar
 
-from .scheduler import CallHandle, Scheduler
+from .scheduler import Scheduler
 
 BranchTime = NewType("BranchTime", float)
 TrunkTime = NewType("TrunkTime", float)
@@ -89,7 +90,7 @@ class _BranchDriver:
     X)} will run C{X} when the trunk's current timestamp is 1.5.
     """
 
-    _call: Optional[CallHandle[TrunkTime, Callable[[], None]]] = None
+    _call: Optional[FutureCall[TrunkTime, Callable[[], None]]] = None
 
     _offset: TrunkTime = TrunkTime(0.0)
     """
