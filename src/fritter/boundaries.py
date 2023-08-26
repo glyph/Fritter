@@ -53,16 +53,24 @@ Return TypeVar for generators and coroutines.
 """
 
 
-class Awaitish(Protocol[Yield, Send, Return]):
+class CancellableAwaitable(Protocol[Yield, Send, Return]):
+    """
+    An object which can be both awaited and canceled.
+    """
+
     def __await__(self) -> Generator[Yield, Send, Return]:
-        ...
+        """
+        This object may be awaited.
+        """
 
     def cancel(self) -> object:
-        ...
+        """
+        This object may be canceled.
+        """
 
 
-AsyncType = TypeVar("AsyncType", bound=Awaitish[Any, Any, Any])
-
+AsyncType = TypeVar("AsyncType", bound=CancellableAwaitable[Any, Any, Any])
+"TypeVar bound to a L{CancellableAwaitable}"
 
 class PriorityQueue(Protocol[Prioritized]):
     """
