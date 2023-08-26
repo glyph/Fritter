@@ -46,7 +46,8 @@ from ..scheduler import Scheduler
 LoadContext = TypeVar("LoadContext", contravariant=True)
 """
 Each L{JSONRegistry} has its own special object passed along to
-L{JSONableInstance.fromJSON}, which can be any object. This TypeVar describes its type.
+L{JSONableInstance.fromJSON}, which can be any object.  This TypeVar describes
+its type.
 """
 LoadContextInv = TypeVar("LoadContextInv")
 """
