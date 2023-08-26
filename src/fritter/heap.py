@@ -15,7 +15,8 @@ from .boundaries import PriorityQueue, Prioritized
 @dataclass
 class Heap(Generic[Prioritized]):
     """
-    A simple implementation of a priority queue.
+    A simple implementation of a priority queue using the standard library's
+    L{heappop} and L{heappush} functions.
     """
 
     _values: List[Prioritized] = field(default_factory=list)
