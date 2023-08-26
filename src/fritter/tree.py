@@ -11,8 +11,8 @@ from typing import Callable, NewType, Optional, Protocol, Tuple, TypeVar
 
 from .scheduler import Scheduler
 
-BranchTime = NewType("BranchTime", float)
-TrunkTime = NewType("TrunkTime", float)
+_BranchTime = NewType("_BranchTime", float)
+_TrunkTime = NewType("_TrunkTime", float)
 
 
 class Group(Protocol):
@@ -54,19 +54,23 @@ def branch(
     return driver, branchScheduler
 
 
-F = TypeVar("F", bound=float)
+_F = TypeVar("_F", bound=float)
 
 
-def add(someFloat: F, other: F) -> F:
+def _add(someFloat: _F, other: _F) -> _F:
     return someFloat + other  # type:ignore[return-value]
 
 
-def subtract(someFloat: F, other: F) -> F:
+def _subtract(someFloat: _F, other: _F) -> _F:
     return someFloat - other  # type:ignore[return-value]
 
 
 @dataclass
 class _BranchDriver:
+    """
+    Implementation of L{TimeDriver} for L{Scheduler} that is stacked on top of
+    another L{Scheduler}.
+    """
     trunk: Scheduler[float, Callable[[], None]]
     """
     The scheduler that this driver is a branch of.
@@ -90,9 +94,9 @@ class _BranchDriver:
     X)} will run C{X} when the trunk's current timestamp is 1.5.
     """
 
-    _call: Optional[FutureCall[TrunkTime, Callable[[], None]]] = None
+    _call: Optional[FutureCall[_TrunkTime, Callable[[], None]]] = None
 
-    _offset: TrunkTime = TrunkTime(0.0)
+    _offset: _TrunkTime = _TrunkTime(0.0)
     """
     Amount to subtract from trunk's timestamp to get to this driver's base
     relative timestamp - in trunk's (unscaled, not branch) time-scale.  When a
@@ -101,31 +105,31 @@ class _BranchDriver:
     """
 
     _running: bool = False
-    _pauseTime: BranchTime = BranchTime(0.0)
+    _pauseTime: _BranchTime = _BranchTime(0.0)
     """
     Timestamp at which we were last paused.
     """
-    _fudge: BranchTime = BranchTime(0.0)
+    _fudge: _BranchTime = _BranchTime(0.0)
 
     _scheduleWhenStarted: Optional[
-        Tuple[BranchTime, Callable[[], None]]
+        Tuple[_BranchTime, Callable[[], None]]
     ] = None
 
-    def _branchToTrunk(self, branchTime: BranchTime) -> TrunkTime:
-        return TrunkTime((branchTime / self._scaleFactor) + self._offset)
+    def _branchToTrunk(self, branchTime: _BranchTime) -> _TrunkTime:
+        return _TrunkTime((branchTime / self._scaleFactor) + self._offset)
 
-    def _trunkToBranch(self, trunkTime: TrunkTime) -> BranchTime:
-        return BranchTime((trunkTime - self._offset) * self._scaleFactor)
+    def _trunkToBranch(self, trunkTime: _TrunkTime) -> _BranchTime:
+        return _BranchTime((trunkTime - self._offset) * self._scaleFactor)
 
     @property
-    def _trunk(self) -> Scheduler[TrunkTime, Callable[[], None]]:
+    def _trunk(self) -> Scheduler[_TrunkTime, Callable[[], None]]:
         return self.trunk  # type:ignore[return-value]
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
-        self._reschedule(BranchTime(desiredTime), work)
+        self._reschedule(_BranchTime(desiredTime), work)
 
     def _reschedule(
-        self, desiredTime: BranchTime, work: Callable[[], None]
+        self, desiredTime: _BranchTime, work: Callable[[], None]
     ) -> None:
         assert (
             self._call is None or self._running
@@ -138,8 +142,8 @@ class _BranchDriver:
             self._call.cancel()
 
         trunkTimestamp = self._branchToTrunk(desiredTime)
-        roundTripped: BranchTime = self._trunkToBranch(trunkTimestamp)
-        self._fudge = subtract(desiredTime, roundTripped)
+        roundTripped: _BranchTime = self._trunkToBranch(trunkTimestamp)
+        self._fudge = _subtract(desiredTime, roundTripped)
 
         def clearAndRun() -> None:
             self._scheduleWhenStarted = None
@@ -157,9 +161,9 @@ class _BranchDriver:
     def now(self) -> float:
         return self._now()
 
-    def _now(self) -> BranchTime:
+    def _now(self) -> _BranchTime:
         if self._running:
-            return add(self._trunkToBranch(self._trunk.now()), self._fudge)
+            return _add(self._trunkToBranch(self._trunk.now()), self._fudge)
         else:
             return self._pauseTime
 
@@ -170,13 +174,13 @@ class _BranchDriver:
             return
         # shift forward the offset to skip over the time during which we were
         # paused.
-        trunkTime: TrunkTime = self._trunk.now()
-        trunkDelta: TrunkTime = TrunkTime(self._pauseTime / self._scaleFactor)
+        trunkTime: _TrunkTime = self._trunk.now()
+        trunkDelta: _TrunkTime = _TrunkTime(self._pauseTime / self._scaleFactor)
 
         # We need to cast to the NewType again here because the results of
         # NewType arithmetic are the base types.
-        self._offset = TrunkTime(trunkTime - trunkDelta)
-        self._pauseTime = BranchTime(0.0)
+        self._offset = _TrunkTime(trunkTime - trunkDelta)
+        self._pauseTime = _BranchTime(0.0)
         self._running = True
         scheduleWhenStarted = self._scheduleWhenStarted
         if scheduleWhenStarted is not None:
