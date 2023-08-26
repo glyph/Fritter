@@ -72,6 +72,7 @@ pydoctor_url_path = "/en/{rtd_version}/api/"
 intersphinx_mapping = {
     "py3": ("https://docs.python.org/3", None),
     "zopeinterface": ("https://zopeinterface.readthedocs.io/en/latest", None),
+    "twisted": ("https://docs.twisted.org/en/twisted-22.1.0/api", None),
 }
 
 templates_path = ["_templates"]
