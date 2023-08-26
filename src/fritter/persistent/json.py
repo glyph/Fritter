@@ -250,6 +250,7 @@ class JSONRegistry(Generic[LoadContext]):
     its methods as decorators on functions and methods.
 
     """
+
     # TODO: implement merging multiple registries together so that objects from
     # different libraries can live in the same blob
     _functions: SpecificTypeRegistration[JSONableCallable] = field(
@@ -325,7 +326,9 @@ class JSONRegistry(Generic[LoadContext]):
         """
         Convert the given L{JSONRepeater} into a method that can be serialized.
         """
-        return self._bindRepeaterConversionMethod(JSONableRepeaterWrapper(self, repeater))
+        return self._bindRepeaterConversionMethod(
+            JSONableRepeaterWrapper(self, repeater)
+        )
 
     def repeatedly(
         self,
@@ -397,7 +400,9 @@ class JSONRegistry(Generic[LoadContext]):
         """
         return JSONableRepeatableDescriptor(self, repeatable)
 
-    def _registerJSONableType(self, cls: Type[JSONableInstance[LoadContext]]) -> None:
+    def _registerJSONableType(
+        self, cls: Type[JSONableInstance[LoadContext]]
+    ) -> None:
         """
         Mark the given class as serializable via this registry, keyed by its
         L{JSONable.typeCodeForJSON} method.  Used internally as supporting
