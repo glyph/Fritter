@@ -360,7 +360,8 @@ class JSONRegistry(Generic[LoadContext]):
     ) -> JSONableMethodDescriptor[JSONableSelf, LoadContext]:
         """
         Mark the given method, defined at class scope in a class complying with
-        the L{JSONableInstance} protocol, as possible to serialize within this registry.
+        the L{JSONableInstance} protocol, as possible to serialize within this
+        registry.
         """
         # I want to stipulate that the method I am taking here must have a
         # 'self' parameter whose type is *at least* as strict as
