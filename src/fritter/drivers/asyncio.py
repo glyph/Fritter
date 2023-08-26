@@ -1,19 +1,21 @@
 # -*- test-case-name: fritter.test.test_asyncio -*-
+
+"""
+Implementation of L{TimeDriver} and L{AsyncDriver} for L{asyncio}.
+"""
+
 from __future__ import annotations
 
 from asyncio import get_event_loop
 from asyncio.events import AbstractEventLoop
-from asyncio.futures import Future
+from asyncio import Future
 from contextvars import Context
 from dataclasses import dataclass, field
-from logging import getLogger
 from typing import Callable, Coroutine, Protocol
 
 from ..boundaries import Cancellable, PriorityQueue
 from ..heap import Heap
 from ..scheduler import FutureCall, Scheduler, SimpleScheduler
-
-logger = getLogger(__name__)
 
 
 class LoopTimeInterface(Protocol):
@@ -38,10 +40,16 @@ class LoopTimeInterface(Protocol):
 
 @dataclass
 class AsyncioTimeDriver:
+    """
+    An implementation of L{TimeDriver} using an L{asyncio} event loop.
+    """
+
     _loop: LoopTimeInterface = field(default_factory=get_event_loop)
     _call: Cancellable | None = None
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
+        "@see: L{TimeDriver.reschedule}"
+
         def _() -> None:
             self._call = None
             work()
@@ -51,25 +59,31 @@ class AsyncioTimeDriver:
         self._call = self._loop.call_at(max(0, desiredTime), _)
 
     def unschedule(self) -> None:
+        "@see: L{TimeDriver.unschedule}"
         if self._call is not None:
             self._call.cancel()
             self._call = None
 
     def now(self) -> float:
+        "@see: L{TimeDriver.now}"
         return self._loop.time()
 
 
 @dataclass
 class AsyncioAsyncDriver:
     """
-    Driver for asyncio.Future-flavored awaitables.
+    Driver for L{Future}-flavored awaitables.
+
+    @see: L{fritter.repeat.Async}
+
+    @see: L{TimeDriver}
     """
 
     _loop: AbstractEventLoop = field(default_factory=get_event_loop)
 
     def newWithCancel(self, cancel: Callable[[], None]) -> Future[None]:
         """
-        Create a new future-ish object with the given callback to execute when
+        Create a new L{Future} with the given callback to execute when
         canceled.
         """
         f = Future[None](loop=self._loop)
@@ -88,6 +102,9 @@ class AsyncioAsyncDriver:
     def runAsync(
         self, coroutine: Coroutine[object, Future[None], object]
     ) -> Cancellable:
+        """
+        Run the given task on the event loop with L{asyncio.create_task}.
+        """
         return self._loop.create_task(coroutine)
 
 

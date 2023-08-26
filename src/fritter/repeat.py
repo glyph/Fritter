@@ -108,6 +108,24 @@ class AsyncStopper(Generic[AsyncType]):
 
 @dataclass
 class Async(Generic[AsyncType]):
+    """
+    An L{Async} wraps an L{AsyncDriver} and provides an implementation of
+    L{repeatedly} which:
+
+        1. C{await}s each result from its async C{work} callable, so that no
+           overlapping work will be performed if an asynchronous operation
+           takes longer than the repetition interval,
+
+        2. returns an awaitable that fires when C{stopper.cancel()} has been
+           called on the C{stopper} provided to that callable, and
+
+        3. provides a C{.cancel()} implementation on that returned awaitable
+           which stops any in-progress async work and raises the appropriate
+           cancellation error for your framework back to the caller.
+
+    @ivar asyncDriver: The driver that supplies awaitables for this L{Async} to
+        return.
+    """
     asyncDriver: AsyncDriver[AsyncType]
 
     def repeatedly(
