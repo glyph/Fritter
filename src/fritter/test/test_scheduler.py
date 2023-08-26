@@ -28,7 +28,7 @@ class SchedulerTests(TestCase):
         self.assertEqual(0, called)
         driver.advance(2.0)
         self.assertEqual(1, called)
-        self.assertEqual(handle.call.called, True)
+        self.assertEqual(handle.called, True)
         handle.cancel()  # no-op
 
     def test_moveSooner(self) -> None:
@@ -90,7 +90,7 @@ class SchedulerTests(TestCase):
 
     def test_queueMustBeEmpty(self) -> None:
         driver = MemoryDriver()
-        q = Heap([FutureCall(1.0, noop)])
+        q = Heap([FutureCall(1.0, noop, 1, False, False, lambda: None)])
         with self.assertRaises(ValueError):
             SimpleScheduler(driver, q)
 
