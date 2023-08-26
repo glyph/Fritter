@@ -1,3 +1,7 @@
+"""
+Implementation of L{TimeDriver} and L{AsyncDriver} in terms of U{Twisted
+<https://twisted.org/>}'s APIs, L{IReactorTime} and L{Deferred}.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
