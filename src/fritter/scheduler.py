@@ -10,6 +10,7 @@ from .heap import Heap
 WhenT = TypeVar("WhenT", bound=PriorityComparable)
 WhatT = TypeVar("WhatT", bound=Callable[[], None])
 
+
 @dataclass(eq=True, order=True)
 class FutureCall(Generic[WhenT, WhatT]):
     """
@@ -21,6 +22,7 @@ class FutureCall(Generic[WhenT, WhatT]):
 
     @ivar id: An ID, unique to the scheduler for identifying this call.
     """
+
     when: WhenT = field(compare=True)
     what: WhatT = field(compare=False)
     id: int = field(compare=True)
@@ -39,7 +41,6 @@ class FutureCall(Generic[WhenT, WhatT]):
         self._canceller(self)
 
 
-
 @dataclass
 class Scheduler(Generic[WhenT, WhatT]):
     """
@@ -49,6 +50,7 @@ class Scheduler(Generic[WhenT, WhatT]):
 
     @ivar driver: The L{TimeDriver} that this L{Scheduler} will use.
     """
+
     driver: TimeDriver[WhenT]
     _q: PriorityQueue[FutureCall[WhenT, WhatT]] = field(default_factory=Heap)
     _maxWorkBatch: int = 0xFF
@@ -122,7 +124,6 @@ class Scheduler(Generic[WhenT, WhatT]):
         if previously is None or previously.when != currently.when:
             self.driver.reschedule(currently.when, advanceToNow)
         return call
-
 
 
 SimpleScheduler = Scheduler[float, Callable[[], None]]
