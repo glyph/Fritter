@@ -407,7 +407,7 @@ class JSONRegistry(Generic[LoadContext]):
         """
         Mark the given class as serializable via this registry, keyed by its
         L{JSONable.typeCodeForJSON} method.  Used internally as supporting
-        L{JSONRegistry.repeatMethod} L{JSONRegistry.serializableMethod}
+        L{JSONRegistry.method} and L{JSONRegistry.repeatMethod}.
         """
         self._instances.add(cls)
 
