@@ -23,27 +23,32 @@ from ..boundaries import TimeDriver
 @dataclass(frozen=True)
 class DateTimeDriver:
     """
-    Driver based on aware datetimes.
+    Driver based on ZoneInfo-aware datetimes.
+
+    @ivar driver: the L{TimeDriver} that this L{DateTimeDriver} is layered on
+        top of, one which represents time as a POSIX timestamp as a L{float}.
+
+    @ivar zone: the default timezone of this L{DateTimeDriver}, the one which
+        will be used for results from L{now() <DateTimeDriver.now>}.  Note that
+        L{reschedule(...) <DateTimeDriver.reschedule>} will still take inputs
+        in any zone; this is just the default zone for outputs.
     """
 
     driver: TimeDriver[float]
     zone: ZoneInfo = ZoneInfo("Etc/UTC")
 
     def unschedule(self) -> None:
-        """
-        Unschedule from underlying driver.
-        """
+        "Implementation of L{TimeDriver.unschedule}"
         self.driver.unschedule()
 
     def reschedule(
         self, newTime: DateTime[ZoneInfo], work: Callable[[], None]
     ) -> None:
-        """
-        Re-schedule to a new time.
-        """
+        "Implementation of L{TimeDriver.reschedule}"
         self.driver.reschedule(newTime.timestamp(), work)
 
     def now(self) -> DateTime[ZoneInfo]:
+        "Implementation of L{TimeDriver.now}"
         timestamp = self.driver.now()
         return DateTime.fromtimestamp(timestamp, self.zone)
 

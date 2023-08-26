@@ -14,7 +14,15 @@ from .boundaries import PriorityComparable, PriorityQueue, TimeDriver
 from .heap import Heap
 
 WhenT = TypeVar("WhenT", bound=PriorityComparable)
+"""
+TypeVar for representing a time at which something can occur; a temporal
+coordinate in a timekeeping system.
+"""
 WhatT = TypeVar("WhatT", bound=Callable[[], None])
+"""
+TypeVar for representing a unit of work that can take place within the context
+of a L{Scheduler}.
+"""
 
 
 @dataclass(eq=True, order=True)
@@ -142,6 +150,11 @@ class Scheduler(Generic[WhenT, WhatT]):
 
 
 SimpleScheduler = Scheduler[float, Callable[[], None]]
+"""
+A L{SimpleScheduler} is a L{Scheduler} with a configuration familiar to most
+timekeeping systems in Python: time is a L{float} and work to be performed is
+any 0-argument callable which returns C{None}.
+"""
 
 __all__ = [
     "Scheduler",
