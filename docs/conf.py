@@ -62,6 +62,11 @@ print(_project_root)
 
 pydoctor_args = [
     # pydoctor should not fail the sphinx build, we have another tox environment for that.
+    "--intersphinx=https://docs.twisted.org/en/twisted-22.1.0/api/objects.inv",
+    "--intersphinx=https://docs.python.org/3/objects.inv",
+    "--intersphinx=https://zopeinterface.readthedocs.io/en/latest/objects.inv",
+    # TODO: not sure why I have to specify these all twice.
+
     f"--config={_project_root}/.pydoctor.cfg",
     f"--html-viewsource-base=https://github.com/glyph/fritter/tree/{_git_reference}/src",
     f"--project-base-dir={_source_root}",
