@@ -71,6 +71,7 @@ class _BranchDriver:
     Implementation of L{TimeDriver} for L{Scheduler} that is stacked on top of
     another L{Scheduler}.
     """
+
     trunk: Scheduler[float, Callable[[], None]]
     """
     The scheduler that this driver is a branch of.
@@ -175,7 +176,9 @@ class _BranchDriver:
         # shift forward the offset to skip over the time during which we were
         # paused.
         trunkTime: _TrunkTime = self._trunk.now()
-        trunkDelta: _TrunkTime = _TrunkTime(self._pauseTime / self._scaleFactor)
+        trunkDelta: _TrunkTime = _TrunkTime(
+            self._pauseTime / self._scaleFactor
+        )
 
         # We need to cast to the NewType again here because the results of
         # NewType arithmetic are the base types.

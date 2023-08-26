@@ -11,12 +11,14 @@ from math import nextafter, inf
 
 from ..boundaries import TimeDriver
 
+
 @dataclass
 class MemoryDriver:
     """
     In-memory L{TimeDriver} that only moves when L{advance
     <MemoryDriver.advance>} is called.
     """
+
     _currentTime: float = 0.0
     _scheduledWork: Optional[Tuple[float, Callable[[], None]]] = None
 
@@ -77,5 +79,6 @@ class MemoryDriver:
         Does this driver currently have work scheduled with it?
         """
         return self._scheduledWork is not None
+
 
 _DriverTypeCheck: type[TimeDriver[float]] = MemoryDriver

@@ -6,14 +6,13 @@ Implementation of L{TimeDriver} and L{AsyncDriver} for L{asyncio}.
 
 from __future__ import annotations
 
-from asyncio import get_event_loop
+from asyncio import Future, get_event_loop
 from asyncio.events import AbstractEventLoop
-from asyncio import Future
 from contextvars import Context
 from dataclasses import dataclass, field
-from typing import Callable, Coroutine, Protocol
+from typing import Any, Callable, Coroutine, Protocol
 
-from ..boundaries import Cancellable, PriorityQueue
+from ..boundaries import AsyncDriver, Cancellable, PriorityQueue, TimeDriver
 from ..heap import Heap
 from ..scheduler import FutureCall, Scheduler, SimpleScheduler
 
@@ -69,6 +68,9 @@ class AsyncioTimeDriver:
         return self._loop.time()
 
 
+_TimeDriverCheck: type[TimeDriver[float]] = AsyncioTimeDriver
+
+
 @dataclass
 class AsyncioAsyncDriver:
     """
@@ -100,12 +102,15 @@ class AsyncioAsyncDriver:
         asyncObj.set_result(None)
 
     def runAsync(
-        self, coroutine: Coroutine[object, Future[None], object]
-    ) -> Cancellable:
+        self, coroutine: Coroutine[Future[None], Any, Any]
+    ) -> Future[None]:
         """
         Run the given task on the event loop with L{asyncio.create_task}.
         """
         return self._loop.create_task(coroutine)
+
+
+_AsyncioDriverCheck: type[AsyncDriver[Future[None]]] = AsyncioAsyncDriver
 
 
 def scheduler(

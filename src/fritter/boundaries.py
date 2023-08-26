@@ -72,6 +72,7 @@ class CancellableAwaitable(Protocol[Yield, Send, Return]):
 AsyncType = TypeVar("AsyncType", bound=CancellableAwaitable[Any, Any, Any])
 "TypeVar bound to a L{CancellableAwaitable}"
 
+
 class PriorityQueue(Protocol[Prioritized]):
     """
     High-level specification of a priority queue.
@@ -178,9 +179,7 @@ class AsyncDriver(Protocol[AsyncType]):
         completed successfully; un-suspend any coroutine awaiting it.
         """
 
-    def runAsync(
-        self, coroutine: Coroutine[AsyncType, Any, Any]
-    ) -> Cancellable:
+    def runAsync(self, coroutine: Coroutine[AsyncType, Any, Any]) -> AsyncType:
         """
         Run the given coroutine which awaits upon L{AsyncType}.
 

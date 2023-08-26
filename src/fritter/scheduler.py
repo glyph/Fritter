@@ -34,7 +34,9 @@ class FutureCall(Generic[WhenT, WhatT]):
     id: int = field(compare=True)
     called: bool = field(compare=False)
     canceled: bool = field(compare=False)
-    _canceller: Callable[[FutureCall[WhenT, WhatT]], None] = field(compare=False)
+    _canceller: Callable[[FutureCall[WhenT, WhatT]], None] = field(
+        compare=False
+    )
 
     def cancel(self) -> None:
         """

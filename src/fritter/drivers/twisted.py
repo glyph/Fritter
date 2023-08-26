@@ -11,7 +11,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 
-from ..boundaries import Cancellable, PriorityQueue
+from ..boundaries import PriorityQueue, TimeDriver, AsyncDriver
 from ..heap import Heap
 from ..scheduler import FutureCall, Scheduler, SimpleScheduler
 
@@ -43,6 +43,9 @@ class TwistedTimeDriver:
         return self._reactor.seconds()
 
 
+_TimeDriverCheck: type[TimeDriver[float]] = TwistedTimeDriver
+
+
 @dataclass
 class TwistedAsyncDriver:
     """
@@ -63,9 +66,12 @@ class TwistedAsyncDriver:
         asyncObj.callback(None)
 
     def runAsync(
-        self, coroutine: Coroutine[Deferred[None], Any, None]
-    ) -> Cancellable:
+        self, coroutine: Coroutine[Deferred[None], Any, Any]
+    ) -> Deferred[None]:
         return Deferred.fromCoroutine(coroutine)
+
+
+_AsyncDriverCheck: type[AsyncDriver[Deferred[None]]] = TwistedAsyncDriver
 
 
 def scheduler(
