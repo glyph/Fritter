@@ -422,7 +422,10 @@ class JSONRegistry(Generic[LoadContext]):
         and a runtime L{TimeDriver}C{[float]}, returning a
         L{JSONableScheduler}.
         """
-        new: JSONableScheduler = Scheduler(DateTimeDriver(runtimeDriver))
+        new: JSONableScheduler = Scheduler(
+            DateTimeDriver(runtimeDriver),
+            counter=int(serializedJSON.get("counter", "0")),
+        )
         for callJSON in serializedJSON["scheduledCalls"]:
             when = fromisoformat(callJSON["when"]).replace(
                 tzinfo=ZoneInfo(callJSON["tz"])
@@ -451,7 +454,8 @@ class JSONRegistry(Generic[LoadContext]):
                     "canceled": item.canceled,
                 }
                 for item in scheduler.calls()
-            ]
+            ],
+            "counter": str(scheduler.counter),
         }
 
 

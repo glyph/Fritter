@@ -1,4 +1,10 @@
 # -*- test-case-name: fritter.test.test_scheduler -*-
+"""
+A L{Scheduler} is the core interface of Fritter; a collection of timed calls
+scheduled by L{callAt <Scheduler.callAt>} connected to a L{TimeDriver} that
+causes them to actually be called.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -28,9 +34,14 @@ class FutureCall(Generic[WhenT, WhatT]):
     id: int = field(compare=True)
     called: bool = field(compare=False)
     canceled: bool = field(compare=False)
-    _canceller: Callable[[FutureCall[WhenT, WhatT]], None]
+    _canceller: Callable[[FutureCall[WhenT, WhatT]], None] = field(compare=False)
 
     def cancel(self) -> None:
+        """
+        Cancel this L{FutureCall}, making it so that it will not be invoked in
+        the future.  If the work described by C{when} has already been called,
+        or this call has already been cancelled, do nothing.
+        """
         if self.called:
             # nope
             return
@@ -49,12 +60,14 @@ class Scheduler(Generic[WhenT, WhatT]):
     (C{WhenT}, which much be sortable as a L{PriorityComparable}).
 
     @ivar driver: The L{TimeDriver} that this L{Scheduler} will use.
+
+    @ivar counter: The value for the next ID.
     """
 
     driver: TimeDriver[WhenT]
     _q: PriorityQueue[FutureCall[WhenT, WhatT]] = field(default_factory=Heap)
-    _maxWorkBatch: int = 0xFF
     counter: int = 0
+    _maxWorkBatch: int = 0xFF
 
     def __post_init__(self) -> None:
         """
@@ -127,3 +140,11 @@ class Scheduler(Generic[WhenT, WhatT]):
 
 
 SimpleScheduler = Scheduler[float, Callable[[], None]]
+
+__all__ = [
+    "Scheduler",
+    "FutureCall",
+    "SimpleScheduler",
+    "WhenT",
+    "WhatT",
+]

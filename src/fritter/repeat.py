@@ -1,4 +1,7 @@
 # -*- test-case-name: fritter.test.test_repeat -*-
+"""
+Repeated invocations of code.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
