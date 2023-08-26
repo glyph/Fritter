@@ -1,30 +1,42 @@
+"""
+Implementation of L{PriorityQueue} in terms of the standard library's
+L{heappop} and L{heappush} functions.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from heapq import heappop, heappush
 from typing import Generic, Iterator, List, Optional
 
-from .boundaries import PriorityQueue, T
+from .boundaries import PriorityQueue, Prioritized
 
 
 @dataclass
-class Heap(Generic[T]):
-    _values: List[T] = field(default_factory=list)
+class Heap(Generic[Prioritized]):
+    """
+    A simple implementation of a priority queue.
+    """
+    _values: List[Prioritized] = field(default_factory=list)
 
-    def add(self, item: T) -> None:
+    def add(self, item: Prioritized) -> None:
+        "@see: L{PriorityQueue.add}"
         heappush(self._values, item)
 
-    def get(self) -> Optional[T]:
+    def get(self) -> Optional[Prioritized]:
+        "@see: L{PriorityQueue.get}"
         if not self._values:
             return None
         return heappop(self._values)
 
-    def peek(self) -> Optional[T]:
+    def peek(self) -> Optional[Prioritized]:
+        "@see: L{PriorityQueue.peek}"
         if not self._values:
             return None
         return self._values[0]
 
-    def remove(self, item: T) -> bool:
+    def remove(self, item: Prioritized) -> bool:
+        "@see: L{PriorityQueue.remove}"
         try:
             self._values.remove(item)
         except ValueError:
@@ -32,7 +44,8 @@ class Heap(Generic[T]):
         else:
             return True
 
-    def __iter__(self) -> Iterator[T]:
+    def __iter__(self) -> Iterator[Prioritized]:
+        "@see: L{PriorityQueue.__iter__}"
         return iter(self._values)
 
 

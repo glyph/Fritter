@@ -1,4 +1,10 @@
 # -*- test-case-name: fritter.test.test_tree -*-
+
+"""
+Groups of timers that may be paused, resumed, or time-scaled together.
+"""
+
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, NewType, Optional, Protocol, Tuple, TypeVar
 
