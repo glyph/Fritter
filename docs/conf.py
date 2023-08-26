@@ -71,6 +71,8 @@ pydoctor_args = [
     f"--html-viewsource-base=https://github.com/glyph/fritter/tree/{_git_reference}/src",
     f"--project-base-dir={_source_root}",
     "--html-output={outdir}/api",
+    "--privacy=HIDDEN:fritter.test.*",
+    "--privacy=HIDDEN:fritter.test",
     str(_source_root / "fritter"),
 ]
 pydoctor_url_path = "/en/{rtd_version}/api/"
