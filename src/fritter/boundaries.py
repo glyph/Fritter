@@ -80,7 +80,8 @@ class PriorityQueue(Protocol[Prioritized]):
 
     def peek(self) -> Optional[Prioritized]:
         """
-        Examine the lowest item from the priority queue.
+        Examine the lowest item from the priority queue without modifying the
+        queue.
         """
 
     def remove(self, item: Prioritized) -> bool:
