@@ -73,6 +73,7 @@ pydoctor_args = [
     "--html-output={outdir}/api",
     "--privacy=HIDDEN:fritter.test.*",
     "--privacy=HIDDEN:fritter.test",
+    "--privacy=HIDDEN:**.__post_init__",
     str(_source_root / "fritter"),
 ]
 pydoctor_url_path = "/en/{rtd_version}/api/"
