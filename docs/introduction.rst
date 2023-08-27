@@ -1,7 +1,7 @@
 Introduction
 ============
 
-Fritter (the Frame-Rate Independent Timer Tree Emulating Real-time) is a
+Fritter (the Frame-Rate Independent Timer Tree-er) is a
 generalizable scheduling library.
 
 If you're writing some code, and you need to schedule some part of that code to
@@ -155,9 +155,5 @@ Now that you know what its purpose is, I can explain the name is meaningful:
 - Timer Tree: Timers can be grouped together, and that group of timers can be
   embedded into a scheduler that is then scheduled on another scheduler, and so
   on.
-
-- Emulating Real-time: Fritter cannot be a real-time system, but by providing
-  frame-rate independence and persistence, it can allow code to track real,
-  physical time.
 
 Now that you know *why* you want to use it, let's move on to actually using it.

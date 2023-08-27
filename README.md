@@ -1,12 +1,6 @@
 # FRITTer
 
-Frame
-Rate
-Independent
-Timer
-Tree
-Emulating
-Real-time
+## (Frame Rate Independent Timer Tree-er)
 
 Sometimes you want to do something that tracks with real time but may not be
 called quite as often as it wants to be, because other tasks are bogging down
@@ -23,9 +17,11 @@ few key differences:
 
 1. it doesn't have the burden of being thread-safe, which may slightly improve
    its performance on some platforms in single-threaded contexts
+
 2. it is optimized for non-blocking, rather than event-driven, usage; i.e. no
    `delayfunc`, but a time-driver interface where it can schedule timers with a
    reactor or event loop
+
 3. it has an abstract interface for different priority queue implementations;
    experience with Twisted has taught me that different workloads (more or
    fewer events, more events added sooner or more events added later) often
