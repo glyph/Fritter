@@ -277,7 +277,8 @@ class Async(Generic[AsyncType]):
     ) -> AsyncType:
         """
         Kick off a repeated call within the given scheduler, returning an
-        L{AsyncType} (i.e. L{Future}, L{Deferred}, or similar, as defined by
+        L{AsyncType} (i.e. L{Future <asyncio.Future>}, L{Deferred
+        <twisted.internet.defer.Deferred>}, or similar, as defined by
         L{Async.asyncDriver}).
 
         If you call C{.cancel()} on the result of this method, the repetition
