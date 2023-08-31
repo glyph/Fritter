@@ -98,5 +98,6 @@ class SchedulerTests(TestCase):
 def noop() -> None:
     ...
 
+
 def nocancel(x: object) -> None:
     ...
