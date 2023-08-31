@@ -6,11 +6,34 @@ from twisted.internet.defer import CancelledError, Deferred, succeed
 from ..boundaries import Cancellable
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
-from ..repeat import EverySecond, Async
+from ..repeat import EverySecond, Async, repeatedly
 from ..scheduler import Scheduler
 
 
 class RepeatTestCase(TestCase):
+    def test_synchronous(self) -> None:
+        mem = MemoryDriver()
+        calls = []
+
+        def work(steps: int, stopper: Cancellable) -> None:
+            now = mem.now()
+            if mem.now() >= 10.0:
+                stopper.cancel()
+            calls.append((steps, now))
+
+        repeatedly(Scheduler(mem), work, EverySecond(5))
+
+        self.assertTrue(mem.isScheduled())
+        self.assertEqual(calls, [(1, 0.0)])
+        calls = []
+        mem.advance()
+        self.assertTrue(mem.isScheduled())
+        self.assertEqual(calls, [(1, 5.0)])
+        calls = []
+        mem.advance()
+        self.assertFalse(mem.isScheduled())
+        self.assertEqual(calls, [(1, 10.0)])
+
     def test_repeatEveryIntervalInSeconds(self) -> None:
         tad = TwistedAsyncDriver()
         mem = MemoryDriver()
