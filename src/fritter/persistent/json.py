@@ -40,7 +40,7 @@ from datetype import DateTime, fromisoformat
 
 from ..boundaries import Cancellable, TimeDriver, RepeatingWork
 from ..drivers.datetime import DateTimeDriver
-from ..repeat import Repeater, RuleFunction, daily
+from ..repeat import Repeater, RecurrenceRule, daily
 from ..scheduler import Scheduler
 
 LoadContext = TypeVar("LoadContext", contravariant=True)
@@ -499,7 +499,7 @@ class JSONRegistry(Generic[LoadContext]):
     def repeatedly(
         self,
         scheduler: JSONableScheduler,
-        rule: RuleFunction[DateTime[ZoneInfo]],
+        rule: RecurrenceRule[DateTime[ZoneInfo]],
         work: JSONableRepeatable,
         reference: DateTime[ZoneInfo] | None = None,
     ) -> None:
