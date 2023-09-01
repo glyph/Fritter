@@ -9,6 +9,7 @@ L{asyncio <fritter.drivers.asyncio>} or L{twisted <fritter.drivers.twisted>}.
 from dataclasses import dataclass
 from time import sleep as _sleep, time as _time
 from typing import Callable
+from math import inf
 
 from ..boundaries import TimeDriver
 
@@ -45,20 +46,28 @@ class SleepDriver:
         "Implementation of L{TimeDriver.now}"
         return self.time()
 
-    def block(self) -> int:
+    def block(self, timeout: float = inf) -> int:
         """
         While any active timer is scheduled with L{reschedule
         <SleepDriver.reschedule>}, sleep until the desired time specified by
         that call, call the work that was scheduled, and repeat.
+
+        @param timeout: if specified, the maximum I{total} amount of time to
+            sleep before unblocking, even if work remains to be done.
         """
         worked = 0
+        maxTime = self.time() + timeout
         while True:
             scheduled = self._work
             if scheduled is None:
                 break
-            worked += 1
+            time, work = scheduled
+            now = self.time()
             self._work, (time, work) = None, scheduled
-            self.sleep(max(0, time - self.time()))
+            self.sleep(max(0, min(time, maxTime) - now))
+            if time > maxTime:
+                break
+            worked += 1
             work()
         return worked
 
