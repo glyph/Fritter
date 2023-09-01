@@ -12,9 +12,9 @@ Welcome to Fritter's documentation!
 
    introduction
    quickstart
+   civil
    trees
    repeat
-   civil
    persistence
    api/index
 
