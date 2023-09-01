@@ -8,7 +8,7 @@ L{asyncio <fritter.drivers.asyncio>} or L{twisted <fritter.drivers.twisted>}.
 """
 from dataclasses import dataclass
 from time import sleep as _sleep, time as _time
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 from math import inf
 
 from ..boundaries import TimeDriver
@@ -71,8 +71,6 @@ class SleepDriver:
             work()
         return worked
 
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     _CheckSleepDriver: type[TimeDriver[float]] = SleepDriver
