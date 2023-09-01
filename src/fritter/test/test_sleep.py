@@ -26,6 +26,7 @@ class TestSleeping(TestCase):
         def three() -> None:
             nonlocal threeCalledAt
             threeCalledAt = driver.now()
+
         def seven() -> None:
             nonlocal sevenCalledAt
             sevenCalledAt = driver.now()
@@ -51,6 +52,7 @@ class TestSleeping(TestCase):
             return current
 
         driver = SleepDriver(sleep, time)
+
         def hello() -> None:
             ...
 
@@ -60,4 +62,3 @@ class TestSleeping(TestCase):
         self.assertEqual(sleeps, [0.5])
         self.assertEqual(result, 0)
         self.assertEqual(current, 0.5)
-

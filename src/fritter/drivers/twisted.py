@@ -36,7 +36,8 @@ class TwistedTimeDriver:
     _call: Optional[IDelayedCall] = None
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
-        ""
+        """"""
+
         def _() -> None:
             self._call = None
             work()

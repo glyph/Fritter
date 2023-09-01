@@ -1,4 +1,4 @@
- # -*- test-case-name: fritter.test.test_scheduler -*-
+# -*- test-case-name: fritter.test.test_scheduler -*-
 """
 A L{Scheduler} is the core interface of Fritter; a collection of timed calls
 scheduled by L{callAt <Scheduler.callAt>} connected to a L{TimeDriver} that
