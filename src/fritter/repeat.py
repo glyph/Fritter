@@ -192,7 +192,7 @@ class Repeater(Generic[WhenT, WhatT, RepeatingWhatT]):
 
     def repeat(self) -> None:
         """
-        Repeat the invocation.
+        Repeat the L{work <Repeater.work>} associated with this L{Repeater}.
 
         Applications should call this once, and only once, after the
         L{Repeater} is created, in order to kick off the repetition.  All
@@ -203,9 +203,8 @@ class Repeater(Generic[WhenT, WhatT, RepeatingWhatT]):
         now = self.scheduler.now()
         callIncrement, self.reference = self.rule(self.reference, now)
         callRepeat = self.convert(self)
-        self.work(
-            callIncrement, self.scheduler.callAt(self.reference, callRepeat)
-        )
+        stopHandle = self.scheduler.callAt(self.reference, callRepeat)
+        self.work(callIncrement, stopHandle)
 
 
 def repeatedly(
