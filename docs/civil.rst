@@ -14,6 +14,11 @@ minutes using :py:class:`fritter.drivers.datetime.DateTimeDriver`.
    whether they have timezones or not with Mypy; at run-time, they are
    datetimes.
 
+First, let's get all our imports sorted out:
+
+.. literalinclude:: civil_example.py
+   :end-before: memory driver
+
 We'll need a driver, as usual. :py:class:`MemoryDriver
 <fritter.drivers.memory.MemoryDriver>`, like other low-level drivers, is a
 ``float`` driver, which we will need first.
