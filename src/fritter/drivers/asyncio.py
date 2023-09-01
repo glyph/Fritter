@@ -47,7 +47,7 @@ class AsyncioTimeDriver:
     _call: Cancellable | None = None
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
-        "@see: L{TimeDriver.reschedule}"
+        "Implementation of L{TimeDriver.reschedule}"
 
         def _() -> None:
             self._call = None
@@ -58,13 +58,13 @@ class AsyncioTimeDriver:
         self._call = self._loop.call_at(max(0, desiredTime), _)
 
     def unschedule(self) -> None:
-        "@see: L{TimeDriver.unschedule}"
+        "Implementation of L{TimeDriver.unschedule}"
         if self._call is not None:
             self._call.cancel()
             self._call = None
 
     def now(self) -> float:
-        "@see: L{TimeDriver.now}"
+        "Implementation of L{TimeDriver.now}"
         return self._loop.time()
 
 

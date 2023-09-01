@@ -25,22 +25,16 @@ To use this module:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import (
-    Any,
-    Callable,
-    Generic,
-    ParamSpec,
-    Protocol,
-    Type,
-    TypeVar,
-)
+from datetime import timedelta
+from typing import Any, Callable, Generic, ParamSpec, Protocol, Type, TypeVar
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
+from fritter.repeat import EveryDelta
 
-from ..boundaries import Cancellable, TimeDriver, RepeatingWork
+from ..boundaries import Cancellable, RepeatingWork, TimeDriver
 from ..drivers.datetime import DateTimeDriver
-from ..repeat import Repeater, RecurrenceRule, daily
+from ..repeat import RecurrenceRule, Repeater
 from ..scheduler import Scheduler
 
 LoadContext = TypeVar("LoadContext", contravariant=True)
@@ -676,9 +670,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
         Deserialize a L{_JSONableRepeaterWrapper} from a JSON-dumpable dict
         previously produced by L{_JSONableRepeaterWrapper.asJSON}.
         """
-        rule = {"daily": daily}[  # , "dailyWithSkips": dailyWithSkips
-            json["rule"]
-        ]
+        rule = cls._loadRule(json["rule"])
         what = json["callable"]
         one = registry._loadOne(
             what, scheduler, registry._repeatable, loadContext
@@ -686,6 +678,17 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
         ref = fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"]))
         rep = Repeater(scheduler, rule, one, registry._repeaterToJSONable, ref)
         return cls(registry, rep)
+
+    def _saveRule(self, rule: object) -> object:
+        assert isinstance(
+            rule, EveryDelta
+        ), "Only EveryDelta instances supported so far"
+        result: object = rule.delta.__reduce__()[1]
+        return result
+
+    @classmethod
+    def _loadRule(cls, rule: list[int]) -> EveryDelta:
+        return EveryDelta(timedelta(*rule))
 
     def asJSON(self) -> JSONObject:
         """
@@ -698,7 +701,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
         return {
             "ts": when.replace(tzinfo=None).isoformat(),
             "tz": when.tzinfo.key,
-            "rule": {daily: "daily"}[self.repeater.rule],
+            "rule": self._saveRule(self.repeater.rule),
             # TODO: this si just a demo.
             "callable": _whatJSON(self.repeater.work),
             # "convert": is implicitly L{registry._repeaterToJSONable}

@@ -20,10 +20,23 @@ log = Logger()
 
 @dataclass
 class TwistedTimeDriver:
+    """
+    Instantiate a L{TwistedTimeDriver} with an L{IReactorTime}; for example::
+
+        from twisted.internet.task import react
+
+        async def main(reactor):
+            driver = TwistedTimeDriver(reactor)
+            ...
+
+        task.react(main)
+    """
+
     _reactor: IReactorTime
     _call: Optional[IDelayedCall] = None
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
+        ""
         def _() -> None:
             self._call = None
             work()

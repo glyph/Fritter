@@ -8,7 +8,7 @@ from fritter.drivers.memory import MemoryDriver
 from fritter.persistent.json import JSONRegistry, JSONableScheduler
 
 registry = JSONRegistry[dict[str,str]]()
-@registry.byName
+@registry.function
 def call1() -> None:
     print("hello world")
 
