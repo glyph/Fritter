@@ -52,8 +52,12 @@ class SleepDriver:
         <SleepDriver.reschedule>}, sleep until the desired time specified by
         that call, call the work that was scheduled, and repeat.
 
-        @param timeout: if specified, the maximum I{total} amount of time to
-            sleep before unblocking, even if work remains to be done.
+        @param timeout: if specified, the I{maximum, total} number of seconds
+            to sleep before unblocking, even if work remains to be done.
+
+        @note: When this driver runs out of work to do, it will return
+            immediately, even if it has not yet slept for C{total} seconds.  An
+            idle L{SleepDriver} will return immediately without ever blocking.
         """
         worked = 0
         maxTime = self.time() + timeout
@@ -63,11 +67,16 @@ class SleepDriver:
                 break
             time, work = scheduled
             now = self.time()
-            self._work, (time, work) = None, scheduled
             self.sleep(max(0, min(time, maxTime) - now))
             if time > maxTime:
                 break
             worked += 1
+            # This might get weird, or maybe even lose work, if self.sleep
+            # calls self.reschedule.  But it should never do that (it's a
+            # potential minefield of reentrancy weirdness, sort of but not
+            # entirely like a thread-safety bug), and we might want to enforce
+            # that with a runtime check.
+            self._work = None
             work()
         return worked
 

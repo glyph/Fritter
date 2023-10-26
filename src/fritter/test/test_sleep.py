@@ -42,6 +42,7 @@ class TestSleeping(TestCase):
     def test_timeout(self) -> None:
         current = 0.0
         sleeps = []
+        calls = []
 
         def sleep(duration: float) -> None:
             nonlocal current
@@ -54,11 +55,24 @@ class TestSleeping(TestCase):
         driver = SleepDriver(sleep, time)
 
         def hello() -> None:
-            ...
+            calls.append(1)
 
         driver.reschedule(1.0, hello)
-        result = driver.block(0.5)
+        result = driver.block(0.4)
 
-        self.assertEqual(sleeps, [0.5])
+        self.assertEqual(sleeps, [0.4])
         self.assertEqual(result, 0)
-        self.assertEqual(current, 0.5)
+        self.assertEqual(current, 0.4)
+        self.assertEqual(calls, [])
+
+        result = driver.block(0.6)
+        self.assertEqual(sleeps, [0.4, 0.6])
+        self.assertEqual(result, 1)
+        self.assertEqual(current, 1.0)
+        self.assertEqual(calls, [1])
+
+        result = driver.block(0.7)
+        self.assertEqual(result, 0)
+        self.assertEqual(current, 1.0)
+        self.assertEqual(calls, [1])
+        self.assertEqual(sleeps, [0.4, 0.6])
