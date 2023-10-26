@@ -43,7 +43,7 @@ You might need the work to be *time-accurate* (or “soft real-time”).  If you
 a game developer, you might be familiar with a concept like `deltaTime
 <https://docs.unity3d.com/ScriptReference/Time-deltaTime.html>`_ (a source of
 some `famously tricky bugs
-<https://blog.unity.com/engine-platform/fixing-time-deltatime-in-unity-2020-2-for-smoother-gameplay>`);
+<https://blog.unity.com/engine-platform/fixing-time-deltatime-in-unity-2020-2-for-smoother-gameplay>`_);
 if you have done any audiovisual work, you've probably dealt with issues of
 audio drift; if you've done A/V programming, you might have needed to maintain
 a `jitter buffer <https://vocal.com/voip/jitter-buffer-for-voice-over-ip/>`_\ .
@@ -65,7 +65,7 @@ You might need the work to happen on a *civil* rather than a *physical*
 schedule.  Physical time is time as measured by a clock from a specific
 reference point, recorded by something like your computer's monotonic clock or
 a caesium atomic clock.  An interval of physical time can be always be
-expressed as a number of `SI seconds <https://en.wikipedia.org/wiki/Second>`.
+expressed as a number of `SI seconds <https://en.wikipedia.org/wiki/Second>`_.
 However, a civil time delta can be expressed in terms of days, weeks, months,
 or years.  If it is 2:15 PM on March 10th, you say that something should happen
 “in 10 days”, you would expect everyone's clocks to say “March 20, 2:15” when
