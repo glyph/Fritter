@@ -48,7 +48,7 @@ def guessLocalZone() -> ZoneInfo:
         ianaID = popen(_PS_TZ_CMD).read().strip()
     else:
         path = readlink("/etc/localtime").split("/")
-        ianaID = "/".join(path[path.index("zoneinfo")+1:])
+        ianaID = "/".join(path[path.index("zoneinfo") + 1 :])
     _guessedZone = ZoneInfo(ianaID)
     return _guessedZone
 
