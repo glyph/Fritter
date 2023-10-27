@@ -6,3 +6,5 @@
 #
 datetype==2022.12.7
     # via fritter (pyproject.toml)
+tzdata==2023.3
+    # via fritter (pyproject.toml)

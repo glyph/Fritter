@@ -11,7 +11,8 @@ classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
 requires-python = ">=3.9"
 dependencies = [
-    "datetype",
+  "datetype",
+  "tzdata",
 ]
 
 [project.urls]
