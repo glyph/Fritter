@@ -29,10 +29,10 @@ ContentType=WindowsRuntime\
 ::New().GetTimeZone()\
 """
 
-_guessedZone: str | None = None
+_guessedZone: ZoneInfo | None = None
 
 
-def guessLocalZoneIANA() -> str:
+def guessLocalZone() -> ZoneInfo:
     """
     Attempt to determine the IANA timezone identifier for the local system
     using a variety of heuristics.
@@ -45,9 +45,11 @@ def guessLocalZoneIANA() -> str:
     if name == "nt":
         from os import popen
 
-        _guessedZone = popen(_PS_TZ_CMD).read().strip()
+        ianaID = popen(_PS_TZ_CMD).read().strip()
     else:
-        _guessedZone = "/".join(readlink("/etc/localtime").split("/")[-2:])
+        path = readlink("/etc/localtime").split("/")
+        ianaID = "/".join(path[path.index("zoneinfo")+1:])
+    _guessedZone = ZoneInfo(ianaID)
     return _guessedZone
 
 
