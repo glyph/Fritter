@@ -25,6 +25,7 @@ class RegInfo:
 
 registry = JSONRegistry[RegInfo]()
 emptyRegistry = JSONRegistry[RegInfo]()
+arbitraryZone = ZoneInfo(key="America/Los_Angeles")
 
 calls = []
 
@@ -116,7 +117,7 @@ class PersistentSchedulerTests(TestCase):
                 1,
                 1,
                 1,
-                tzinfo=ZoneInfo(key="America/Los_Angeles"),
+                tzinfo=arbitraryZone,
             ),
             ZoneInfo,
         )
@@ -128,7 +129,7 @@ class PersistentSchedulerTests(TestCase):
                 1,
                 1,
                 1,
-                tzinfo=ZoneInfo(key="America/Los_Angeles"),
+                tzinfo=arbitraryZone,
             ),
             ZoneInfo,
         )
@@ -167,7 +168,7 @@ class PersistentSchedulerTests(TestCase):
                 1,
                 1,
                 1,
-                tzinfo=ZoneInfo(key="America/Los_Angeles"),
+                tzinfo=arbitraryZone,
             ),
             ZoneInfo,
         )
@@ -192,7 +193,7 @@ class PersistentSchedulerTests(TestCase):
                 1,
                 1,
                 1,
-                tzinfo=ZoneInfo(key="America/Los_Angeles"),
+                tzinfo=arbitraryZone,
             ),
             ZoneInfo,
         )
@@ -231,7 +232,7 @@ class PersistentSchedulerTests(TestCase):
                 1,
                 1,
                 1,
-                tzinfo=ZoneInfo(key="America/Los_Angeles"),
+                tzinfo=arbitraryZone,
             ),
             ZoneInfo,
         )

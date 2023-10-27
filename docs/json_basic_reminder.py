@@ -10,7 +10,7 @@ from typing import Iterator
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
-from fritter.drivers.datetime import DateTimeDriver
+from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.sleep import SleepDriver
 from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
 
@@ -68,8 +68,7 @@ def schedulerLoaded() -> Iterator[JSONableScheduler]:
 
 def remind(scheduler: JSONableScheduler, seconds: int, message: str) -> None:
     scheduler.callAt(
-        DateTime.now(ZoneInfo(key="America/Los_Angeles"))
-        + timedelta(seconds=seconds),
+        DateTime.now(guessLocalZone()) + timedelta(seconds=seconds),
         Reminder(message).show,
     )
 

@@ -2,12 +2,13 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from datetype import aware
-
-from fritter.drivers.datetime import DateTimeDriver
+from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
-from fritter.persistent.json import JSONRegistry, JSONableScheduler
+from fritter.persistent.json import JSONableScheduler, JSONRegistry
 
-registry = JSONRegistry[dict[str,str]]()
+registry = JSONRegistry[dict[str, str]]()
+
+
 @registry.function
 def call1() -> None:
     print("hello world")
@@ -23,7 +24,7 @@ dt = aware(
         1,
         1,
         1,
-        tzinfo=ZoneInfo(key="America/Los_Angeles"),
+        tzinfo=guessLocalZone(),
     ),
     ZoneInfo,
 )

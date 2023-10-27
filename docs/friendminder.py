@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
 from fritter.boundaries import Cancellable, TimeDriver
-from fritter.drivers.datetime import DateTimeDriver
+from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.sleep import SleepDriver
 from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
 
@@ -70,7 +70,7 @@ class FriendList:
         friend.lastContact = now()
 
 
-TZ = ZoneInfo(key="America/Los_Angeles")
+TZ = guessLocalZone()
 
 
 def now() -> DateTime[ZoneInfo]:
