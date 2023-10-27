@@ -19,6 +19,37 @@ from datetype import DateTime
 
 from ..boundaries import TimeDriver
 
+_PS_TZ_CMD = """\
+powershell \
+[\
+Windows.Globalization.Calendar,\
+Windows.Globalization,\
+ContentType=WindowsRuntime\
+]\
+::New().GetTimeZone()\
+"""
+
+_guessedZone: str | None = None
+
+
+def guessLocalZoneIANA() -> str:
+    """
+    Attempt to determine the IANA timezone identifier for the local system
+    using a variety of heuristics.
+    """
+    global _guessedZone
+    if _guessedZone is not None:
+        return _guessedZone
+    from os import name, readlink
+
+    if name == "nt":
+        from os import popen
+
+        _guessedZone = popen(_PS_TZ_CMD).read().strip()
+    else:
+        _guessedZone = "/".join(readlink("/etc/localtime").split("/")[-2:])
+    return _guessedZone
+
 
 @dataclass(frozen=True)
 class DateTimeDriver:
