@@ -14,6 +14,7 @@ from fritter.drivers.datetime import DateTimeDriver
 from fritter.drivers.sleep import SleepDriver
 from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
 
+# start-registry
 registry = JSONRegistry[object]()
 # end-registry
 
