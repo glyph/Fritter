@@ -117,21 +117,23 @@ interactions.
 Adding Recurrences And Counts: Friendminder Example
 ---------------------------------------------------
 
-For an example of an application that needs to track this sort of long-term
-work, let's build a little application that can help you keep in touch with
-friends.  It's all too easy to just forget to send a message to keep in touch,
-so let's make a tool to remind ourselves.
+To illustrate some slightly more complex uses of ``JSONRegistry``, let's build
+a little application that can help you keep in touch with friends.  It's all
+too easy to just forget to send a message to keep in touch, so let's make a
+tool to remind ourselves.
 
-Just for starters, let's say that we want to:
+In this tool, we want to:
 
-1. have a list of friends in a text file that we can **append** to when we want
-   to add more people to the list to be reminded about, and
+1. have a list of friends that we can add to when we want to add more people to
+   be reminded about,
 
 2. be reminded to send a message to one of those friends each week, cycling
    through that list.
 
-   
+3. be reminded to get in touch with each friend on their birthday each year.
 
-.. literalinclude:: json_instance.py
+This means we have two kinds of repeating call; the general "get in touch"
+reminder, which would need to be a method on some shared object that can
+reference the full list of friends, as well as the birthday-specific reminder,
+which should probably be a method on a ``Friend`` class itself.
 
-.. literalinclude:: json_methods_example.py
