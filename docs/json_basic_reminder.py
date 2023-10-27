@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import timedelta
 from json import dump, load
-from os.path import exists
+from pathlib import Path
+from typing import Iterator
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
@@ -12,13 +14,15 @@ from fritter.drivers.datetime import DateTimeDriver
 from fritter.drivers.sleep import SleepDriver
 from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
 
-registry = JSONRegistry[dict[str, str]]()
+registry = JSONRegistry[object]()
+# end-registry
 
 
+# reminder-class
 @dataclass
 class Reminder:
     text: str
-    scheduler: JSONableScheduler
+    # reminder-methods
 
     @classmethod
     def typeCodeForJSON(cls) -> str:
@@ -30,45 +34,47 @@ class Reminder:
     @classmethod
     def fromJSON(
         cls,
-        registry: JSONRegistry[dict[str, str]],
+        registry: JSONRegistry[object],
         scheduler: JSONableScheduler,
-        loadContext: dict[str, str],
+        loadContext: object,
         json: JSONObject,
     ) -> Reminder:
-        return cls(json["text"], scheduler)
+        return cls(json["text"])
 
+    # app-method
     @registry.method
-    def remind(self) -> None:
-        print(f"Reminder: {self.text}")
+    def show(self) -> None:
+        print(f"Reminder! {self.text}")
+        # end reminder
 
 
-def wakeAndRun() -> JSONableScheduler:
+saved = Path("saved-schedule.json")
+
+
+@contextmanager
+def schedulerLoaded() -> Iterator[JSONableScheduler]:
     driver = SleepDriver()
-    if exists(FILENAME):
-        with open(FILENAME) as f:
+    if saved.exists():
+        with saved.open() as f:
             scheduler = registry.load(driver, load(f), {})
     else:
         scheduler = JSONableScheduler(DateTimeDriver(driver))
-
     driver.block(1.0)
-    return scheduler
+    yield scheduler
+    with saved.open("w") as f:
+        dump(registry.save(scheduler), f)
 
 
 def remind(scheduler: JSONableScheduler, seconds: int, message: str) -> None:
     scheduler.callAt(
         DateTime.now(ZoneInfo(key="America/Los_Angeles"))
         + timedelta(seconds=seconds),
-        Reminder(message, scheduler).remind,
+        Reminder(message).show,
     )
 
 
-FILENAME = "saved-schedule.json"
 if __name__ == "__main__":
-    scheduler = wakeAndRun()
-
-    extraArgs = sys.argv[1:]
-    if extraArgs:
-        remind(scheduler, int(extraArgs[0]), " ".join(extraArgs[1:]))
-
-    with open(FILENAME, "w") as f:
-        dump(registry.save(scheduler), f)
+    with schedulerLoaded() as scheduler:
+        extraArgs = sys.argv[1:]
+        if extraArgs:
+            remind(scheduler, int(extraArgs[0]), " ".join(extraArgs[1:]))
