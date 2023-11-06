@@ -106,10 +106,16 @@ class RepeatTestCase(TestCase):
             return
 
         pending: Deferred[None] = Deferred(canceled)
+        succeeding: int = 0
 
         async def asynchronously() -> None:
-            with self.assertRaises(CancelledError):
+            nonlocal succeeding
+            if succeeding:
+                succeeding = succeeding - 1
                 await pending
+            else:
+                with self.assertRaises(CancelledError):
+                    await pending
 
         async def synchronously() -> None:
             pass
@@ -133,6 +139,18 @@ class RepeatTestCase(TestCase):
         self.assertTrue(mem.isScheduled())
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())
+
+        pending = Deferred(canceled)
+        succeeding += 1
+        tad.runAsync(run(asynchronously))
+        self.assertTrue(mem.isScheduled())
+        mem.advance()
+        self.assertFalse(mem.isScheduled())
+        p, pending = pending, Deferred(canceled)
+        p.callback(None)
+        self.assertTrue(mem.isScheduled())
+        mem.advance()
+        repeatCall.cancel()
 
         tad.runAsync(run(synchronously))
         self.assertTrue(mem.isScheduled())

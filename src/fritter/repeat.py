@@ -287,7 +287,11 @@ class Async(Generic[AsyncType]):
         a coroutine awaiting it.
         """
 
+        cancelled = False
+
         def reallyCancel() -> None:
+            nonlocal cancelled
+            cancelled = True
             asyncStopper.shouldComplete = False
             asyncStopper.cancel()
 
@@ -298,15 +302,11 @@ class Async(Generic[AsyncType]):
 
         def complete() -> None:
             asyncStopper.asyncInProgress = None
-            if asyncStopper.timeInProgress is None:
+            if asyncStopper.timeInProgress is None and not cancelled:
                 repeater.repeat()
 
         def kickoff(steps: int, stopper: Cancellable) -> None:
             asyncStopper.timeInProgress = stopper
-
-            if asyncStopper.asyncInProgress is not None:
-                return
-
             completedSynchronously: bool = False
 
             async def coro() -> None:
