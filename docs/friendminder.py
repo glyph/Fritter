@@ -1,18 +1,21 @@
 from __future__ import annotations
 
-import sys
+from datetime import datetime
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import timedelta
 from json import dump, load
 from pathlib import Path
 from typing import Any, Iterator
 from zoneinfo import ZoneInfo
 
-from datetype import DateTime, fromisoformat
+from datetype import DateTime, aware, fromisoformat
 from fritter.boundaries import Cancellable, TimeDriver
 from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
+from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.sleep import SleepDriver
 from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from fritter.repeat import weekly
 
 registry: JSONRegistry[FriendList] = JSONRegistry()
 
@@ -41,6 +44,10 @@ class FriendList:
         self = cls(friendsByName)
         return self, registry.load(driver, json["scheduler"], self)
 
+    @classmethod
+    def typeCodeForJSON(cls) -> str:
+        return "friend-list"
+
     def asJSON(self) -> dict[str, object]:
         return {}
 
@@ -54,10 +61,6 @@ class FriendList:
     ) -> FriendList:
         return loadContext
 
-    @classmethod
-    def typeCodeForJSON(cls) -> str:
-        return "friend-list"
-
     @registry.repeatMethod
     def getInTouch(self, steps: int, stopper: Cancellable) -> None:
         byContact = sorted(
@@ -65,9 +68,31 @@ class FriendList:
             key=lambda f: f.lastContact,
         )
         if (friend := next(iter(byContact), None)) is None:
+            print("nobody to get in touch with right now")
             return
-        print("get in touch with", friend.name)
+        print("maybe you should get in touch with", friend.name)
         friend.lastContact = now()
+
+    def add(
+        self,
+        name: str,
+        birthdayDay: int,
+        birthdayMonth: int,
+        lastContact: DateTime[ZoneInfo],
+    ) -> Friend:
+        f = self.friendsByName[name] = Friend(
+            name, birthdayDay, birthdayMonth, lastContact
+        )
+        return f
+
+    @classmethod
+    def new(
+        cls, driver: TimeDriver[float]
+    ) -> tuple[FriendList, JSONableScheduler]:
+        self = cls()
+        scheduler = JSONableScheduler(DateTimeDriver(driver))
+        registry.repeatedly(scheduler, weekly, self.getInTouch)
+        return self, scheduler
 
 
 TZ = guessLocalZone()
@@ -130,22 +155,45 @@ saved = Path("friend-schedule.json")
 
 
 @contextmanager
-def listLoaded() -> Iterator[FriendList]:
-    driver = SleepDriver()
+def listLoaded(driver: TimeDriver[float]) -> Iterator[FriendList]:
     if saved.exists():
         with saved.open() as f:
             friendList, scheduler = FriendList.load(driver, load(f))
     else:
-        friendList = FriendList()
-        scheduler = JSONableScheduler(DateTimeDriver(driver))
-    driver.block(1.0)
+        friendList, scheduler = FriendList.new(driver)
     yield friendList
+    blob = friendList.save(scheduler)
     with saved.open("w") as f:
-        dump(registry.save(scheduler), f)
+        dump(blob, f)
+
+
+@contextmanager
+def realTimeList() -> Iterator[FriendList]:
+    driver = SleepDriver()
+    with listLoaded(driver) as fl:
+        driver.block(1.0)
+        yield fl
+
+
+@contextmanager
+def fakeTimeList(dt: DateTime[ZoneInfo]) -> Iterator[FriendList]:
+    driver = MemoryDriver(dt.timestamp())
+    with listLoaded(driver) as fl:
+        yield fl
+
+
+TZ = guessLocalZone()
+
+
+def story() -> None:
+    start = aware(datetime(2023, 11, 1, 9, 0, 0, tzinfo=TZ), ZoneInfo)
+    with fakeTimeList(start) as fl1:
+        fl1.add("alice", 12, 1, start)
+        fl1.add("bob", 12, 15, start)
+
+    with fakeTimeList(start + timedelta(days=10)):
+        pass
 
 
 if __name__ == "__main__":
-    with listLoaded() as friendList:
-        extraArgs = sys.argv[1:]
-        if extraArgs:
-            newFriend = extraArgs
+    story()
