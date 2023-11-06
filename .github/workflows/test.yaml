@@ -16,7 +16,7 @@ defaults:
 
 jobs:
   testing:
-    runs-on: ubuntu-latest
+    runs-on: "${{ matrix.runs-on }}"
     env:
       TOXENV: "${{ matrix.tox-env }}"
     name: ${{ matrix.tox-env }}-${{ matrix.coverage }}
@@ -26,6 +26,7 @@ jobs:
         tox-env: ['py310']
         coverage: ['yes']
         python-version: ['3.10']
+        runs-on: ['ubuntu-latest', 'windows-2022']
 
     steps:
     - uses: actions/checkout@v2
