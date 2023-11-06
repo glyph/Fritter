@@ -270,11 +270,13 @@ class PersistentSchedulerTests(TestCase):
 
         newInfo = RegInfo([])
         newNewInfo = RegInfo([])
+
         def atTimeDriver() -> MemoryDriver:
             x = MemoryDriver()
             x.advance(dt.timestamp())
             x.advance(days(7))
             return x
+
         mem2 = atTimeDriver()
         mem3 = atTimeDriver()
 

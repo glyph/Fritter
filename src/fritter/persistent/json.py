@@ -414,6 +414,7 @@ def _copyUniversal(
     Derive a registry type registration from the universal registry type
     registration.
     """
+
     def _() -> _SpecificTypeRegistration[_JSONableType]:
         result: _SpecificTypeRegistration[_JSONableType] = getattr(
             _universal, name
