@@ -269,26 +269,38 @@ class PersistentSchedulerTests(TestCase):
         )
 
         newInfo = RegInfo([])
-        mem2 = MemoryDriver()
-        mem2.advance(dt.timestamp())
-        mem2.advance(days(7))
+        newNewInfo = RegInfo([])
+        def atTimeDriver() -> MemoryDriver:
+            x = MemoryDriver()
+            x.advance(dt.timestamp())
+            x.advance(days(7))
+            return x
+        mem2 = atTimeDriver()
+        mem3 = atTimeDriver()
+
         self.assertEqual(mem2.isScheduled(), False)
         persistent = dumps(registry.save(scheduler))
-        registry.load(mem2, loads(persistent), newInfo)
+        loadedScheduler = registry.load(mem2, loads(persistent), newInfo)
+        repersistent = dumps(registry.save(loadedScheduler))
+        registry.load(mem3, loads(repersistent), newNewInfo)
         loaded = loads(persistent)
         with self.assertRaises(KeyError):
             # TODO: allow for better error handling that doesn't just blow up
+            # on the type code lookup failure
             emptyRegistry.load(MemoryDriver(), loaded, newInfo)
         self.assertEqual(mem2.isScheduled(), True)
         mem2.advance()
-        self.assertEqual(
-            newInfo.calls,
-            [
-                "InstanceWithMethods.fromJSON",
-                "InstanceWithMethods.fromJSON",
-                "InstanceWithMethods.fromJSON (cached)",
-                "repeatMethod 4 self.value='sample' self.calls=1",
-                "repeatMethod 4 self.value='shared' self.calls=1",
-                "repeatMethod 4 self.value='shared' self.calls=2",
-            ],
-        )
+        expectedCalls = [
+            "InstanceWithMethods.fromJSON",
+            "InstanceWithMethods.fromJSON",
+            "InstanceWithMethods.fromJSON (cached)",
+            "repeatMethod 4 self.value='sample' self.calls=1",
+            "repeatMethod 4 self.value='shared' self.calls=1",
+            "repeatMethod 4 self.value='shared' self.calls=2",
+        ]
+        self.assertEqual(newInfo.calls, expectedCalls)
+        self.assertEqual(mem3.isScheduled(), True)
+        mem3.advance()
+        self.assertEqual(newNewInfo.calls, expectedCalls)
+
+        # round trip:
