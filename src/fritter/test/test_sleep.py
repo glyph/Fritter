@@ -39,6 +39,35 @@ class TestSleeping(TestCase):
         self.assertEqual(sevenCalledAt, 7.0)
         self.assertEqual(sleeps, [3.0, 4.0])
 
+    def test_unschedule(self) -> None:
+        sleeps = []
+        current = 0.0
+
+        def sleep(duration: float) -> None:
+            nonlocal current
+            sleeps.append(duration)
+            current += duration
+
+        def time() -> float:
+            return current
+
+        driver = SleepDriver(sleep=sleep, time=time)
+        scheduler = SimpleScheduler(driver)
+
+        times = 0
+        def once() -> None:
+            nonlocal times
+            times += 1
+        scheduler.callAt(1, once)
+        two = scheduler.callAt(2, once)
+        driver.block(1.5)
+        self.assertEqual(times, 1)
+        two.cancel()
+        driver.block(1.5)
+        self.assertEqual(times, 1)
+
+
+
     def test_timeout(self) -> None:
         current = 0.0
         sleeps = []
