@@ -55,9 +55,11 @@ class TestSleeping(TestCase):
         scheduler = SimpleScheduler(driver)
 
         times = 0
+
         def once() -> None:
             nonlocal times
             times += 1
+
         scheduler.callAt(1, once)
         two = scheduler.callAt(2, once)
         driver.block(1.5)
@@ -65,8 +67,6 @@ class TestSleeping(TestCase):
         two.cancel()
         driver.block(1.5)
         self.assertEqual(times, 1)
-
-
 
     def test_timeout(self) -> None:
         current = 0.0
