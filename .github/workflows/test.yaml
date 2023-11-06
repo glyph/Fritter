@@ -19,7 +19,7 @@ jobs:
     runs-on: "${{ matrix.runs-on }}"
     env:
       TOXENV: "${{ matrix.tox-env }}"
-    name: ${{ matrix.tox-env }}-${{ matrix.coverage }}
+    name: ${{ matrix.tox-env }}-${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
@@ -60,6 +60,7 @@ jobs:
         files: coverage.xml
         fail_ci_if_error: true
         functionalities: gcov,search
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   static-checks:
     runs-on: ubuntu-20.04
