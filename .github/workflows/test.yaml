@@ -62,7 +62,7 @@ jobs:
         functionalities: gcov,search
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
-        version: 0.7.0
+        version: v0.7.0
 
   static-checks:
     runs-on: ubuntu-20.04
