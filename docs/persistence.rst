@@ -19,7 +19,8 @@ First, we need a ``JSONRegistry``, so let's instantiate one.
    :end-before: end-registry
 
 Don't worry about the ``[object]`` there just yet; that tells us the type of
-the "load context" for this registry, but we won't be using that for now.
+the "load context" for this registry.  We'll get to that a little later, but
+this first step doesn't need it yet.
 
 Next, we'll make a simple Reminder class, which just holds a bit of text to
 remind us about.
@@ -29,21 +30,29 @@ remind us about.
    :end-before: reminder-methods
 
 To make this class serializable by our JSON serializer, we have to add a few
-instance and class methods to conform to its interfaces: a ``typeCodeForJSON``
-classmethod to provide a type-code string that uniquely identifies this class
-within the context of our serialization format, an ``asJSON`` instance method
-to serialize it to a JSON-serializable dict, and a ``fromJSON`` method that
-passes in the result of that ``asJSON`` method as well as some other
-parameters.
+instance and class methods to conform to its interfaces:
+
+- a ``typeCodeForJSON`` classmethod to provide a type-code string that uniquely
+  identifies this class within the context of this specific ``JSONRegistry``
+  instance, which defines our serialization format.
+
+- an ``asJSON`` instance method to serialize it to a JSON-serializable dict,
+  and
+
+- a ``fromJSON`` method that passes in the result of that ``asJSON`` method as
+  well as some other parameters.
+
+Here are those implementations:
 
 .. literalinclude:: json_basic_reminder.py
    :start-after: reminder-methods
    :end-before: app-method
 
 To complete this object, we need the actual method which we will be scheduling
-to run in the future.  Not a whole lot to see there; the main bit of interest
-is that we decorate it with ``registry.method`` from the ``JSONRegistry`` that
-we instantiated before:
+to run in the future.  In order to mark a method as serializable by the
+scheduler, we define a 0-argument, ``None``-returning method and decorate it
+with :py:meth:`registry.method <fritter.persistent.json.JSONRegistry.method>`
+from the ``JSONRegistry`` that we instantiated before.
 
 .. literalinclude:: json_basic_reminder.py
    :start-after: app-method
@@ -59,16 +68,25 @@ do this, we'll take a scheduler, some number of seconds into the future, and a
 message to show.  We'll instantiate a ``Reminder``, and create a
 ``datetype.DateTime`` with a ``ZoneInfo`` time zone.
 
+Since the user probably wants their reminders scheduled in their *own* time
+zone, Fritter provides a convenience function, :py:func:`guessLocalZone
+<fritter.drivers.datetime.guessLocalZone>`\ , which uses platform-specific
+heuristics to determine the local machine's IANA timezone identifier and use
+that.
+
 .. note::
 
    In order to serialize time zone information, we need a common method of
-   identifying the zone, and a consistent type for using.  This means that we
-   must use exactly ``datetype``'s type-wrapper for ``datetime.datetime``
-   (don't worry, there's no runtime cost) and a ``ZoneInfo`` timezone
-   specifically, because it will be serialized by its ``key`` attribute, that
-   other sorts of ``tzinfo`` objects, like ``datetime.timezone``, do not have.
-   Mypy should alert you to any type mismatches here, so you don't need to
-   memorize this, but that's *why* this specificity is necessary.
+   identifying the zone, and a consistent type for using.  To ensure this,
+   Fritter uses `datetype <https://pypi.org/project/datetype>`_\ 's
+   type-wrapper for ``datetime.datetime``\ . This is purely for type-checking;
+   at runtime, these objects are :py:class:`datetime.datetime` instances.  The
+   JSON serializer also requires :py:class:`zoneinfo.ZoneInfo` objects
+   specifically as the ``tzinfo``, because it will be serialized by its ``key``
+   attribute. Other sorts of ``tzinfo`` objects, like ``datetime.timezone``, do
+   not have this attribute and cannot be reliably serialized.  Mypy should
+   alert you to any type mismatches here, so you don't need to memorize this,
+   but that's why we are using ``datetype`` here.
 
 .. literalinclude:: json_basic_reminder.py
    :pyobject: remind
@@ -76,10 +94,12 @@ message to show.  We'll instantiate a ``Reminder``, and create a
 Next, when we run our script, we always want to load up the scheduler from the
 file where it is saved, if that file is there, and let it run for a little
 while to take care of any pending work before we do anything else.  We can
-create a ``SleepDriver`` and use our ``JSONRegistry``'s ``load`` method, then
-``block()`` briefly before returning the loaded scheduler.  We will then want
-to run some code to update the scheduler, maybe adding some stuff to it, then
-save it again with any completed calls removed and any new calls added.
+create a :py:class:`SleepDriver <fritter.drivers.sleep.SleepDriver>` and use
+our ``JSONRegistry``'s ``load`` method, then :py:meth:`block
+<fritter.drivers.sleep.SleepDriver.block>` briefly before returning the loaded
+scheduler.  We will then want to run some code to update the scheduler, maybe
+adding some stuff to it, then save it again with any completed calls removed
+and any new calls added.
 
 We'll do this with a contextmanager that loads, then saves the scheduler to a
 file:
@@ -87,10 +107,10 @@ file:
 .. literalinclude:: json_basic_reminder.py
    :pyobject: schedulerLoaded
 
-Now to put *all* of that together, we'll do a bit of light command-line
-parsing; if we pass any arguments, the first should be an integer number of
-seconds, and the rest of the command line is the message we want to get
-reminded of.
+Now to put *all* of that together, we'll look at the command-line. If the user
+specifies any arguments, the first should be an integer number of seconds, and
+the rest of the command line is the message we want to get reminded of.
+Otherwise, just run the scheduler to catch up to the current time.
 
 .. literalinclude:: json_basic_reminder.py
    :start-at: __main__
