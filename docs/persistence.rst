@@ -85,7 +85,7 @@ We'll do this with a contextmanager that loads, then saves the scheduler to a
 file:
 
 .. literalinclude:: json_basic_reminder.py
-   :pyobject: schedulerLoaded.
+   :pyobject: schedulerLoaded
 
 Now to put *all* of that together, we'll do a bit of light command-line
 parsing; if we pass any arguments, the first should be an integer number of

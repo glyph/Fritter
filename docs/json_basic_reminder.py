@@ -46,7 +46,7 @@ class Reminder:
     @registry.method
     def show(self) -> None:
         print(f"Reminder! {self.text}")
-        # end reminder
+        # end-reminder
 
 
 saved = Path("saved-schedule.json")
