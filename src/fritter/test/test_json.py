@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timedelta
+from json import dumps, loads
+from typing import Any, Type
 from unittest import TestCase
 from zoneinfo import ZoneInfo
-from json import dumps, loads
 
-from datetype import aware
+from datetype import DateTime, aware
 
-from ..boundaries import TimeDriver, Cancellable
+from ..boundaries import Cancellable, TimeDriver
 from ..drivers.datetime import DateTimeDriver
 from ..drivers.memory import MemoryDriver
-from ..persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from ..persistent.json import (
+    JSONableCallable,
+    JSONableInstance,
+    JSONableScheduler,
+    JSONObject,
+    JSONRegistry,
+)
 from ..repeat import daily
-from ..scheduler import Scheduler
+from ..scheduler import FutureCall, Scheduler
 
 
 @dataclass
@@ -25,7 +31,7 @@ class RegInfo:
 
 registry = JSONRegistry[RegInfo]()
 emptyRegistry = JSONRegistry[RegInfo]()
-arbitraryZone = ZoneInfo(key="America/Los_Angeles")
+PT = ZoneInfo(key="America/Los_Angeles")
 
 calls = []
 
@@ -50,6 +56,7 @@ class InstanceWithMethods:
     value: str
     info: RegInfo
     calls: int = 0
+    stoppers: list[Cancellable] = field(default_factory=list)
 
     @classmethod
     def typeCodeForJSON(self) -> str:
@@ -90,9 +97,54 @@ class InstanceWithMethods:
     @registry.repeatMethod
     def repeatMethod(self, steps: int, stopper: Cancellable) -> None:
         self.calls += 1
+        self.stoppers.append(stopper)
         self.info.calls.append(
             f"repeatMethod {steps} {self.value=} {self.calls=}"
         )
+
+
+@dataclass
+class Stoppable:
+    fcall: FutureCall[DateTime[ZoneInfo], JSONableCallable] | None = None
+    ran: bool = False
+
+    def scheduleme(self, scheduler: JSONableScheduler) -> None:
+        """
+        Schedule 'runme' to run 2 seconds in the future, but 'stopme' to run 1
+        second in the future.
+        """
+        now = scheduler.now()
+        self.fcall = scheduler.callAt(now + timedelta(seconds=2), self.runme)
+        scheduler.callAt(now + timedelta(seconds=1), self.stopme)
+
+    @classmethod
+    def typeCodeForJSON(self) -> str:
+        return "stoppable"
+
+    def asJSON(self) -> dict[str, object]:
+        return {}
+
+    @classmethod
+    def fromJSON(
+        cls,
+        registry: JSONRegistry[RegInfo],
+        scheduler: JSONableScheduler,
+        loadContext: RegInfo,
+        json: JSONObject,
+    ) -> Stoppable:
+        return Stoppable()
+
+    @registry.method
+    def stopme(self) -> None:
+        assert self.fcall is not None
+        self.fcall.cancel()
+
+    @registry.method
+    def runme(self) -> None:
+        self.ran = True
+
+
+stp: Type[JSONableInstance[RegInfo]] = Stoppable
 
 
 def jsonScheduler(driver: TimeDriver[float]) -> JSONableScheduler:
@@ -110,27 +162,50 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver = MemoryDriver()
         scheduler = jsonScheduler(memoryDriver)
         dt = aware(
-            datetime(
-                2023,
-                7,
-                21,
-                1,
-                1,
-                1,
-                tzinfo=arbitraryZone,
-            ),
+            datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
             ZoneInfo,
         )
         dt2 = aware(
-            datetime(
-                2023,
-                7,
-                22,
-                1,
-                1,
-                1,
-                tzinfo=arbitraryZone,
-            ),
+            datetime(2023, 7, 22, 1, 1, 1, tzinfo=PT),
+            ZoneInfo,
+        )
+        ri0 = RegInfo([])
+        iwm = InstanceWithMethods("test_scheduleRunSaveRun value", ri0)
+        scheduler.callAt(dt, call1)
+        scheduler.callAt(dt, iwm.method1)
+        scheduler.callAt(dt2, call2)
+        scheduler.callAt(dt2, iwm.method2)
+        memoryDriver.advance(dt.timestamp() + 1)
+        self.assertEqual(calls, ["hello"])
+        del calls[:]
+        saved = registry.save(scheduler)
+        memory2 = MemoryDriver()
+        ri = RegInfo([])
+        registry.load(memory2, saved, ri)
+        memory2.advance(dt2.timestamp() + 1)
+        self.assertEqual(calls, ["goodbye"])
+        self.assertEqual(ri0.calls, ["test_scheduleRunSaveRun value/method1"])
+        self.assertEqual(
+            ri.calls,
+            [
+                "InstanceWithMethods.fromJSON",
+                "test_scheduleRunSaveRun value/method2",
+            ],
+        )
+
+    def test_persistCancellers(self) -> None:
+        """
+        scheduled instance methods ought to be able to save handles to other
+        instances and stuff
+        """
+        memoryDriver = MemoryDriver()
+        scheduler = jsonScheduler(memoryDriver)
+        dt = aware(
+            datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
+            ZoneInfo,
+        )
+        dt2 = aware(
+            datetime(2023, 7, 22, 1, 1, 1, tzinfo=PT),
             ZoneInfo,
         )
         ri0 = RegInfo([])
@@ -161,15 +236,7 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver = MemoryDriver()
         scheduler = jsonScheduler(memoryDriver)
         dt = aware(
-            datetime(
-                2023,
-                7,
-                21,
-                1,
-                1,
-                1,
-                tzinfo=arbitraryZone,
-            ),
+            datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
             ZoneInfo,
         )
         handle = scheduler.callAt(dt, call1)
@@ -186,15 +253,7 @@ class PersistentSchedulerTests(TestCase):
 
     def test_repeatable(self) -> None:
         dt = aware(
-            datetime(
-                2023,
-                7,
-                21,
-                1,
-                1,
-                1,
-                tzinfo=arbitraryZone,
-            ),
+            datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
             ZoneInfo,
         )
         memoryDriver = MemoryDriver()
@@ -225,15 +284,7 @@ class PersistentSchedulerTests(TestCase):
 
     def test_repeatableMethod(self) -> None:
         dt = aware(
-            datetime(
-                2023,
-                7,
-                21,
-                1,
-                1,
-                1,
-                tzinfo=arbitraryZone,
-            ),
+            datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
             ZoneInfo,
         )
         memoryDriver = MemoryDriver()

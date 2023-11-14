@@ -24,9 +24,20 @@ To use this module:
 
 from __future__ import annotations
 
+import traceback
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Callable, Generic, ParamSpec, Protocol, Type, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterator,
+    ParamSpec,
+    Protocol,
+    Type,
+    TypeVar,
+)
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
@@ -249,6 +260,14 @@ class JSONableBoundMethod(Generic[JSONableSelf]):
 __JC: Type[JSONableCallable] = JSONableBoundMethod
 
 
+@contextmanager
+def showFailures() -> Iterator[None]:
+    try:
+        yield
+    except:
+        traceback.print_exc()
+
+
 @dataclass
 class JSONableMethodDescriptor(Generic[JSONableSelf, LoadContext]):
     """
@@ -270,7 +289,8 @@ class JSONableMethodDescriptor(Generic[JSONableSelf, LoadContext]):
         Register the class of the decorated method when the decorator is
         registered with the class, via the protocol of L{object.__set_name__}.
         """
-        self.registry._registerJSONableType(cls)
+        with showFailures():
+            self.registry._registerJSONableType(cls)
 
     def __get__(
         self, instance: JSONableSelf, owner: object = None
@@ -608,6 +628,7 @@ class JSONRegistry(Generic[LoadContext]):
             what = self._loadOne(
                 callJSON["what"], new, self._functions, loadContext
             )
+            # callAt needs a way to communicate future call counters (IDs)
             new.callAt(when, what)
         return new
 
@@ -622,6 +643,7 @@ class JSONRegistry(Generic[LoadContext]):
         return {
             "scheduledCalls": [
                 {
+                    # should really save the counter in here, so that futurecall objects maintain their identity across serializations.
                     "when": item.when.replace(tzinfo=None).isoformat(),
                     "tz": item.when.tzinfo.key,
                     "what": _whatJSON(item.what),
