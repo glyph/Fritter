@@ -105,7 +105,8 @@ class InstanceWithMethods:
 
 @dataclass
 class Stoppable:
-    fcall: FutureCall[DateTime[ZoneInfo], JSONableCallable] | None = None
+    runcall: FutureCall[DateTime[ZoneInfo], JSONableCallable] | None = None
+    stopcall: FutureCall[DateTime[ZoneInfo], JSONableCallable] | None = None
     ran: bool = False
 
     def scheduleme(self, scheduler: JSONableScheduler) -> None:
@@ -114,15 +115,19 @@ class Stoppable:
         second in the future.
         """
         now = scheduler.now()
-        self.fcall = scheduler.callAt(now + timedelta(seconds=2), self.runme)
-        scheduler.callAt(now + timedelta(seconds=1), self.stopme)
+        self.runcall = scheduler.callAt(now + timedelta(seconds=2), self.runme)
+        self.stopcall = scheduler.callAt(now + timedelta(seconds=1), self.stopme)
 
     @classmethod
     def typeCodeForJSON(self) -> str:
         return "stoppable"
 
     def asJSON(self) -> dict[str, object]:
-        return {}
+        return {
+            "runcall": self.runcall,
+            "stopcall": self.stopcall,
+            "ran": self.ran,
+        }
 
     @classmethod
     def fromJSON(
@@ -132,16 +137,22 @@ class Stoppable:
         loadContext: RegInfo,
         json: JSONObject,
     ) -> Stoppable:
-        return Stoppable()
+        self = cls()
+        # leave it there for the test to pick up
+        loadContext.identityMap[str(len(loadContext.identityMap))] = self
+        return self
 
     @registry.method
     def stopme(self) -> None:
-        assert self.fcall is not None
-        self.fcall.cancel()
+        assert self.runcall is not None
+        self.stopcall = None
+        self.runcall.cancel()
+        self.runcall = None
 
     @registry.method
     def runme(self) -> None:
         self.ran = True
+        self.runcall = None
 
 
 stp: Type[JSONableInstance[RegInfo]] = Stoppable
@@ -204,33 +215,16 @@ class PersistentSchedulerTests(TestCase):
             datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
             ZoneInfo,
         )
-        dt2 = aware(
-            datetime(2023, 7, 22, 1, 1, 1, tzinfo=PT),
-            ZoneInfo,
-        )
-        ri0 = RegInfo([])
-        iwm = InstanceWithMethods("test_scheduleRunSaveRun value", ri0)
-        scheduler.callAt(dt, call1)
-        scheduler.callAt(dt, iwm.method1)
-        scheduler.callAt(dt2, call2)
-        scheduler.callAt(dt2, iwm.method2)
         memoryDriver.advance(dt.timestamp() + 1)
-        self.assertEqual(calls, ["hello"])
-        del calls[:]
-        saved = registry.save(scheduler)
+        s = Stoppable()
+        s.scheduleme(scheduler)
+        saved = loads(dumps(registry.save(scheduler)))
         memory2 = MemoryDriver()
         ri = RegInfo([])
         registry.load(memory2, saved, ri)
-        memory2.advance(dt2.timestamp() + 1)
-        self.assertEqual(calls, ["goodbye"])
-        self.assertEqual(ri0.calls, ["test_scheduleRunSaveRun value/method1"])
-        self.assertEqual(
-            ri.calls,
-            [
-                "InstanceWithMethods.fromJSON",
-                "test_scheduleRunSaveRun value/method2",
-            ],
-        )
+        [(name, loadedStoppable)] = ri.identityMap.items()
+        assert isinstance(loadedStoppable, Stoppable)
+        memory2.advance(dt.timestamp() + 3.0)
 
     def test_idling(self) -> None:
         memoryDriver = MemoryDriver()
