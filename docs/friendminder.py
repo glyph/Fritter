@@ -30,7 +30,7 @@ registry: JSONRegistry[FriendList] = JSONRegistry()
 class FriendList:
     friendsByName: dict[str, Friend] = field(default_factory=dict)
 
-    def save(self, scheduler: JSONableScheduler) -> dict[str, Any]:
+    def save(self, scheduler: JSONableScheduler[FriendList]) -> dict[str, Any]:
         return {
             "friends": [
                 friend.asFriendListJSON()
@@ -42,7 +42,7 @@ class FriendList:
     @classmethod
     def load(
         cls, driver: TimeDriver[float], json: dict[str, Any]
-    ) -> tuple[FriendList, JSONableScheduler]:
+    ) -> tuple[FriendList, JSONableScheduler[FriendList]]:
         friendsByName = {}
         for friendJSON in json["friends"]:
             friend = Friend.fromFriendListJSON(friendJSON)
@@ -54,7 +54,7 @@ class FriendList:
     def typeCodeForJSON(cls) -> str:
         return "friend-list"
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {}
 
     @classmethod
@@ -90,9 +90,9 @@ class FriendList:
     @classmethod
     def new(
         cls, driver: TimeDriver[float]
-    ) -> tuple[FriendList, JSONableScheduler]:
+    ) -> tuple[FriendList, JSONableScheduler[FriendList]]:
         self = cls()
-        scheduler = JSONableScheduler(DateTimeDriver(driver))
+        scheduler = registry.new(DateTimeDriver(driver))
         registry.repeatedly(scheduler, weekly, self.getInTouch)
         return self, scheduler
 
@@ -139,14 +139,12 @@ class Friend:
     def typeCodeForJSON(cls) -> str:
         return "friend"
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {"name": self.name}
 
     @classmethod
     def fromJSON(
-        cls,
-        load: LoadProcess[FriendList],
-        json: JSONObject,
+        cls, load: LoadProcess[FriendList], json: JSONObject
     ) -> Friend:
         return load.context.friendsByName[json["name"]]
 

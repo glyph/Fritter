@@ -17,14 +17,12 @@ class FriendReminder:
     def typeCodeForJSON(cls) -> str:
         return ".".join([cls.__module__, cls.__name__])
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {"filename": self.filename, "current": self.current}
 
     @classmethod
     def fromJSON(
-        cls,
-        load: LoadProcess[dict[str, str]],
-        json: JSONObject,
+        cls, load: LoadProcess[dict[str, str]], json: JSONObject
     ) -> FriendReminder:
         return cls(json["filename"], json["current"])
 

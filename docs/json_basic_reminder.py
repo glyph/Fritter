@@ -11,7 +11,13 @@ from typing import Iterator
 from datetype import DateTime
 from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.sleep import SleepDriver
-from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry, LoadProcess
+from fritter.persistent.json import (
+    JSONableScheduler,
+    JSONObject,
+    JSONRegistry,
+    LoadProcess,
+    JSONableInstance,
+)
 
 # start-registry
 registry = JSONRegistry[object]()
@@ -28,15 +34,11 @@ class Reminder:
     def typeCodeForJSON(cls) -> str:
         return "reminder"
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {"text": self.text}
 
     @classmethod
-    def fromJSON(
-        cls,
-        load: LoadProcess[object],
-        json: JSONObject,
-    ) -> Reminder:
+    def fromJSON(cls, load: LoadProcess[object], json: JSONObject) -> Reminder:
         return cls(json["text"])
 
     # app-method
@@ -46,24 +48,27 @@ class Reminder:
         # end-reminder
 
 
+r: JSONableInstance[object] = Reminder("hi")
+
+
 saved = Path("saved-schedule.json")
 
 
 @contextmanager
-def schedulerLoaded() -> Iterator[JSONableScheduler]:
+def schedulerLoaded() -> Iterator[JSONableScheduler[object]]:
     driver = SleepDriver()
     if saved.exists():
         with saved.open() as f:
             scheduler = registry.load(driver, load(f), {})
     else:
-        scheduler = JSONableScheduler(DateTimeDriver(driver))
+        scheduler = registry.new(DateTimeDriver(driver))
     driver.block(1.0)
     yield scheduler
     with saved.open("w") as f:
         dump(registry.save(scheduler), f)
 
 
-def remind(scheduler: JSONableScheduler, seconds: int, message: str) -> None:
+def remind(scheduler: JSONableScheduler[object], seconds: int, message: str) -> None:
     scheduler.callAt(
         DateTime.now(guessLocalZone()) + timedelta(seconds=seconds),
         Reminder(message).show,

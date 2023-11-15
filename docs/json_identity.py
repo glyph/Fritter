@@ -16,14 +16,12 @@ class MyClass:
     def typeCodeForJSON(cls) -> str:
         return ".".join([cls.__module__, cls.__name__])
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {"value": self.value, "id": id(self)}
 
     @classmethod
     def fromJSON(
-        cls,
-        load: LoadProcess[dict[int, MyClass]],
-        json: JSONObject,
+        cls, load: LoadProcess[dict[int, MyClass]], json: JSONObject
     ) -> MyClass:
         loadingID = int(json["id"])
         if loadingID in load.context:

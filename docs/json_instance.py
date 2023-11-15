@@ -20,14 +20,12 @@ class MyClass:
     def typeCodeForJSON(cls) -> str:
         return ".".join([cls.__module__, cls.__name__])
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[dict[str,str]]) -> dict[str, object]:
         return {"value": self.value}
 
     @classmethod
     def fromJSON(
-        cls,
-        load: LoadProcess[dict[str, str]],
-        json: JSONObject,
+        cls, load: LoadProcess[dict[str, str]], json: JSONObject
     ) -> MyClass:
         return cls(json["value"])
 

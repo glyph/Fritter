@@ -8,7 +8,6 @@ from datetype import aware
 from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.persistent.json import (
-    JSONableScheduler,
     JSONObject,
     JSONRegistry,
     LoadProcess,
@@ -25,14 +24,12 @@ class MyClass:
     def typeCodeForJSON(cls) -> str:
         return ".".join([cls.__module__, cls.__name__])
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {"value": self.value}
 
     @classmethod
     def fromJSON(
-        cls,
-        load: LoadProcess[dict[str, str]],
-        json: JSONObject,
+        cls, load: LoadProcess[dict[str, str]], json: JSONObject
     ) -> MyClass:
         return cls(json["value"])
 
@@ -42,7 +39,7 @@ class MyClass:
 
 
 memoryDriver = MemoryDriver()
-scheduler = JSONableScheduler(DateTimeDriver(memoryDriver))
+scheduler = registry.new(DateTimeDriver(memoryDriver))
 dt = aware(
     datetime(
         2023,

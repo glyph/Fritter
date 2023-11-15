@@ -77,7 +77,7 @@ class InstanceWithMethods:
         load.context.identityMap[key] = new
         return new
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
         return {
             "value": self.value,
             "identity": id(self),
@@ -102,11 +102,15 @@ class InstanceWithMethods:
 
 @dataclass
 class Stoppable:
-    runcall: FutureCall[DateTime[ZoneInfo], JSONableCallable] | None = None
-    stopcall: FutureCall[DateTime[ZoneInfo], JSONableCallable] | None = None
+    runcall: FutureCall[
+        DateTime[ZoneInfo], JSONableCallable[RegInfo]
+    ] | None = None
+    stopcall: FutureCall[
+        DateTime[ZoneInfo], JSONableCallable[RegInfo]
+    ] | None = None
     ran: bool = False
 
-    def scheduleme(self, scheduler: JSONableScheduler) -> None:
+    def scheduleme(self, scheduler: JSONableScheduler[RegInfo]) -> None:
         """
         Schedule 'runme' to run 2 seconds in the future, but 'stopme' to run 1
         second in the future.
@@ -121,7 +125,7 @@ class Stoppable:
     def typeCodeForJSON(self) -> str:
         return "stoppable"
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
         return {
             "runcall": self.runcall,
             "stopcall": self.stopcall,
@@ -153,7 +157,7 @@ class Stoppable:
 stp: Type[JSONableInstance[RegInfo]] = Stoppable
 
 
-def jsonScheduler(driver: TimeDriver[float]) -> JSONableScheduler:
+def jsonScheduler(driver: TimeDriver[float]) -> JSONableScheduler[RegInfo]:
     return Scheduler(DateTimeDriver(driver))
 
 
