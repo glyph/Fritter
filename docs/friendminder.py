@@ -1,21 +1,27 @@
 from __future__ import annotations
 
-from datetime import datetime
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta
 from json import dump, load
 from pathlib import Path
 from typing import Any, Iterator
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware, fromisoformat
+
 from fritter.boundaries import Cancellable, TimeDriver
 from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.sleep import SleepDriver
-from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from fritter.persistent.json import (
+    JSONObject,
+    JSONRegistry,
+    JSONableScheduler,
+    LoadProcess,
+)
 from fritter.repeat import weekly
+
 
 registry: JSONRegistry[FriendList] = JSONRegistry()
 
@@ -24,7 +30,7 @@ registry: JSONRegistry[FriendList] = JSONRegistry()
 class FriendList:
     friendsByName: dict[str, Friend] = field(default_factory=dict)
 
-    def save(self, scheduler: JSONableScheduler) -> dict[str, Any]:
+    def save(self, scheduler: JSONableScheduler[FriendList]) -> dict[str, Any]:
         return {
             "friends": [
                 friend.asFriendListJSON()
@@ -36,7 +42,7 @@ class FriendList:
     @classmethod
     def load(
         cls, driver: TimeDriver[float], json: dict[str, Any]
-    ) -> tuple[FriendList, JSONableScheduler]:
+    ) -> tuple[FriendList, JSONableScheduler[FriendList]]:
         friendsByName = {}
         for friendJSON in json["friends"]:
             friend = Friend.fromFriendListJSON(friendJSON)
@@ -48,18 +54,14 @@ class FriendList:
     def typeCodeForJSON(cls) -> str:
         return "friend-list"
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {}
 
     @classmethod
     def fromJSON(
-        cls,
-        registry: JSONRegistry[FriendList],
-        scheduler: JSONableScheduler,
-        loadContext: FriendList,
-        json: JSONObject,
+        cls, load: LoadProcess[FriendList], json: JSONObject
     ) -> FriendList:
-        return loadContext
+        return load.context
 
     @registry.repeatMethod
     def getInTouch(self, steps: int, stopper: Cancellable) -> None:
@@ -88,9 +90,9 @@ class FriendList:
     @classmethod
     def new(
         cls, driver: TimeDriver[float]
-    ) -> tuple[FriendList, JSONableScheduler]:
+    ) -> tuple[FriendList, JSONableScheduler[FriendList]]:
         self = cls()
-        scheduler = JSONableScheduler(DateTimeDriver(driver))
+        scheduler = registry.new(DateTimeDriver(driver))
         registry.repeatedly(scheduler, weekly, self.getInTouch)
         return self, scheduler
 
@@ -137,18 +139,14 @@ class Friend:
     def typeCodeForJSON(cls) -> str:
         return "friend"
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {"name": self.name}
 
     @classmethod
     def fromJSON(
-        cls,
-        registry: JSONRegistry[FriendList],
-        scheduler: JSONableScheduler,
-        loadContext: FriendList,
-        json: JSONObject,
+        cls, load: LoadProcess[FriendList], json: JSONObject
     ) -> Friend:
-        return loadContext.friendsByName[json["name"]]
+        return load.context.friendsByName[json["name"]]
 
 
 saved = Path("friend-schedule.json")

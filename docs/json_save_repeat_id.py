@@ -4,13 +4,12 @@ from json import dump
 from datetype import DateTime
 from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
-from fritter.persistent.json import JSONableScheduler
 from fritter.repeat import EveryDelta
 
 from json_identity import MyClass, registry
 
 memoryDriver = MemoryDriver()
-scheduler = JSONableScheduler(DateTimeDriver(memoryDriver))
+scheduler = registry.new(DateTimeDriver(memoryDriver))
 dt = DateTime.now(guessLocalZone())
 memoryDriver.advance(dt.timestamp())
 myInstance = MyClass(3)

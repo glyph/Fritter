@@ -19,9 +19,13 @@ scheduler = Scheduler[DateTime[ZoneInfo], Callable[[], None]](dtdriver)
 dt = datetime(2023, 5, 5, tzinfo=TZ)
 # advance to the timestamp
 memdriver.advance(dt.timestamp())
+
+
 # define some work
 def hi() -> None:
     print("hi", scheduler.now().isoformat())
+
+
 # schedule the work for 2 days in the future
 scheduler.callAt(aware(dt, ZoneInfo) + timedelta(days=2), hi)
-memdriver.advance(2*(60 * 60 * 24))
+memdriver.advance(2 * (60 * 60 * 24))

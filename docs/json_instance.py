@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fritter.boundaries import Cancellable
-from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from fritter.persistent.json import (
+    JSONObject,
+    JSONRegistry,
+    LoadProcess,
+)
 
 registry = JSONRegistry[dict[str, str]]()
 
@@ -16,16 +20,14 @@ class MyClass:
     def typeCodeForJSON(cls) -> str:
         return ".".join([cls.__module__, cls.__name__])
 
-    def asJSON(self) -> dict[str, object]:
+    def asJSON(
+        self, registry: JSONRegistry[dict[str, str]]
+    ) -> dict[str, object]:
         return {"value": self.value}
 
     @classmethod
     def fromJSON(
-        cls,
-        registry: JSONRegistry[dict[str, str]],
-        scheduler: JSONableScheduler,
-        loadContext: dict[str, str],
-        json: JSONObject,
+        cls, load: LoadProcess[dict[str, str]], json: JSONObject
     ) -> MyClass:
         return cls(json["value"])
 
