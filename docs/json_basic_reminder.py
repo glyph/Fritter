@@ -7,12 +7,11 @@ from datetime import timedelta
 from json import dump, load
 from pathlib import Path
 from typing import Iterator
-from zoneinfo import ZoneInfo
 
 from datetype import DateTime
 from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.sleep import SleepDriver
-from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry, LoadProcess
 
 # start-registry
 registry = JSONRegistry[object]()
@@ -35,9 +34,7 @@ class Reminder:
     @classmethod
     def fromJSON(
         cls,
-        registry: JSONRegistry[object],
-        scheduler: JSONableScheduler,
-        loadContext: object,
+        load: LoadProcess[object],
         json: JSONObject,
     ) -> Reminder:
         return cls(json["text"])

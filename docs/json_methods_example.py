@@ -7,7 +7,12 @@ from zoneinfo import ZoneInfo
 from datetype import aware
 from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
-from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from fritter.persistent.json import (
+    JSONableScheduler,
+    JSONObject,
+    JSONRegistry,
+    LoadProcess,
+)
 
 registry = JSONRegistry[dict[str, str]]()
 
@@ -26,9 +31,7 @@ class MyClass:
     @classmethod
     def fromJSON(
         cls,
-        registry: JSONRegistry[dict[str, str]],
-        scheduler: JSONableScheduler,
-        loadContext: dict[str, str],
+        load: LoadProcess[dict[str, str]],
         json: JSONObject,
     ) -> MyClass:
         return cls(json["value"])

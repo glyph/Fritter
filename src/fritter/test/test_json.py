@@ -8,6 +8,7 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
+from fritter.persistent.json import LoadProcess
 
 from ..boundaries import Cancellable, TimeDriver
 from ..drivers.datetime import DateTimeDriver
@@ -64,20 +65,16 @@ class InstanceWithMethods:
 
     @classmethod
     def fromJSON(
-        cls,
-        registry: JSONRegistry[RegInfo],
-        scheduler: JSONableScheduler,
-        loadContext: RegInfo,
-        json: JSONObject,
+        cls, load: LoadProcess[RegInfo], json: JSONObject
     ) -> InstanceWithMethods:
         key = json["identity"]
-        if key in loadContext.identityMap:
-            loadContext.calls.append("InstanceWithMethods.fromJSON (cached)")
-            self: InstanceWithMethods = loadContext.identityMap[key]
+        if key in load.context.identityMap:
+            load.context.calls.append("InstanceWithMethods.fromJSON (cached)")
+            self: InstanceWithMethods = load.context.identityMap[key]
             return self
-        loadContext.calls.append("InstanceWithMethods.fromJSON")
-        new = cls(json["value"], loadContext)
-        loadContext.identityMap[key] = new
+        load.context.calls.append("InstanceWithMethods.fromJSON")
+        new = cls(json["value"], load.context)
+        load.context.identityMap[key] = new
         return new
 
     def asJSON(self) -> dict[str, object]:
@@ -116,7 +113,9 @@ class Stoppable:
         """
         now = scheduler.now()
         self.runcall = scheduler.callAt(now + timedelta(seconds=2), self.runme)
-        self.stopcall = scheduler.callAt(now + timedelta(seconds=1), self.stopme)
+        self.stopcall = scheduler.callAt(
+            now + timedelta(seconds=1), self.stopme
+        )
 
     @classmethod
     def typeCodeForJSON(self) -> str:
@@ -131,15 +130,11 @@ class Stoppable:
 
     @classmethod
     def fromJSON(
-        cls,
-        registry: JSONRegistry[RegInfo],
-        scheduler: JSONableScheduler,
-        loadContext: RegInfo,
-        json: JSONObject,
+        cls, load: LoadProcess[RegInfo], json: JSONObject
     ) -> Stoppable:
         self = cls()
         # leave it there for the test to pick up
-        loadContext.identityMap[str(len(loadContext.identityMap))] = self
+        load.context.identityMap[str(len(load.context.identityMap))] = self
         return self
 
     @registry.method

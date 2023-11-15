@@ -1,21 +1,27 @@
 from __future__ import annotations
 
-from datetime import datetime
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta
 from json import dump, load
 from pathlib import Path
 from typing import Any, Iterator
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware, fromisoformat
+
 from fritter.boundaries import Cancellable, TimeDriver
 from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.sleep import SleepDriver
-from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from fritter.persistent.json import (
+    JSONObject,
+    JSONRegistry,
+    JSONableScheduler,
+    LoadProcess,
+)
 from fritter.repeat import weekly
+
 
 registry: JSONRegistry[FriendList] = JSONRegistry()
 
@@ -53,13 +59,9 @@ class FriendList:
 
     @classmethod
     def fromJSON(
-        cls,
-        registry: JSONRegistry[FriendList],
-        scheduler: JSONableScheduler,
-        loadContext: FriendList,
-        json: JSONObject,
+        cls, load: LoadProcess[FriendList], json: JSONObject
     ) -> FriendList:
-        return loadContext
+        return load.context
 
     @registry.repeatMethod
     def getInTouch(self, steps: int, stopper: Cancellable) -> None:
@@ -143,12 +145,10 @@ class Friend:
     @classmethod
     def fromJSON(
         cls,
-        registry: JSONRegistry[FriendList],
-        scheduler: JSONableScheduler,
-        loadContext: FriendList,
+        load: LoadProcess[FriendList],
         json: JSONObject,
     ) -> Friend:
-        return loadContext.friendsByName[json["name"]]
+        return load.context.friendsByName[json["name"]]
 
 
 saved = Path("friend-schedule.json")

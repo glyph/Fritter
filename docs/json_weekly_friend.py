@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fritter.boundaries import Cancellable
-from fritter.persistent.json import JSONableScheduler, JSONObject, JSONRegistry
+from fritter.persistent.json import JSONObject, JSONRegistry, LoadProcess
 
 registry = JSONRegistry[dict[str, str]]()
 
@@ -18,26 +18,23 @@ class FriendReminder:
         return ".".join([cls.__module__, cls.__name__])
 
     def asJSON(self) -> dict[str, object]:
-        return {"filename": self.filename,
-                "current": self.current}
+        return {"filename": self.filename, "current": self.current}
 
     @classmethod
     def fromJSON(
         cls,
-        registry: JSONRegistry[dict[str, str]],
-        scheduler: JSONableScheduler,
-        loadContext: dict[str, str],
+        load: LoadProcess[dict[str, str]],
         json: JSONObject,
     ) -> FriendReminder:
         return cls(json["filename"], json["current"])
 
     @registry.method
     def later(self) -> None:
-        print("my value is", self.value)
+        print("my value is", self.current)
 
     @registry.repeatMethod
     def repeat(self, steps: int, stopper: Cancellable) -> None:
-        print(f"performing {steps} steps at {self.value}")
-        self.value += steps
-        if self.value > 10:
+        self.current += steps
+        print(f"performing {steps} steps at {self.current}")
+        if self.current > 10:
             stopper.cancel()

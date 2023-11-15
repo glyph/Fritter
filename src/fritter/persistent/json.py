@@ -122,6 +122,18 @@ class JSONableRepeatable(JSONable, RepeatingWork, Protocol):
     """
 
 
+@dataclass
+class LoadProcess(Generic[LoadContextInv]):
+    """
+    A L{LoadProcess} collects the parameters to one top-level call to
+    L{JSONRegistry.load}.
+    """
+
+    registry: JSONRegistry[LoadContextInv]
+    scheduler: JSONableScheduler
+    context: LoadContextInv
+
+
 class JSONableInstance(JSONable, Protocol[LoadContextInv]):
     """
     A class that conforms to L{JSONableInstance} can be both serialized to and
@@ -142,9 +154,7 @@ class JSONableInstance(JSONable, Protocol[LoadContextInv]):
     @classmethod
     def fromJSON(
         cls: Type[JSONableSelf],
-        registry: JSONRegistry[LoadContextInv],
-        scheduler: JSONableScheduler,
-        loadContext: LoadContextInv,
+        load: LoadProcess[LoadContextInv],
         json: JSONObject,
     ) -> JSONableSelf:
         """
@@ -470,9 +480,8 @@ class JSONRegistry(Generic[LoadContext]):
     def _loadOne(
         self,
         json: JSONObject,
-        scheduler: JSONableScheduler,
         which: _SpecificTypeRegistration[_JSONableType],
-        ctx: LoadContext,
+        load: LoadProcess[LoadContext],
     ) -> _JSONableType:
         """
         Convert the given JSON-dumpable dict into an object of C{_JSONableType}
@@ -494,7 +503,7 @@ class JSONRegistry(Generic[LoadContext]):
             # _instances live on SpecificTypeRegistration rather than be shared
             # between both repeatable/non-repeatable types
 
-            instance = instanceType.fromJSON(self, scheduler, ctx, blob)
+            instance = instanceType.fromJSON(load, blob)
             result: _JSONableType = getattr(instance, methodName)
             return result
 
@@ -621,13 +630,12 @@ class JSONRegistry(Generic[LoadContext]):
             DateTimeDriver(runtimeDriver),
             counter=int(serializedJSON.get("counter", "0")),
         )
+        load = LoadProcess(self, new, loadContext)
         for callJSON in serializedJSON["scheduledCalls"]:
             when = fromisoformat(callJSON["when"]).replace(
                 tzinfo=ZoneInfo(callJSON["tz"])
             )
-            what = self._loadOne(
-                callJSON["what"], new, self._functions, loadContext
-            )
+            what = self._loadOne(callJSON["what"], self._functions, load)
             # callAt needs a way to communicate future call counters (IDs)
             new.callAt(when, what)
         return new
@@ -695,9 +703,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
     @classmethod
     def fromJSON(
         cls,
-        registry: JSONRegistry[LoadContext],
-        scheduler: JSONableScheduler,
-        loadContext: LoadContext,
+        load: LoadProcess[LoadContext],
         json: JSONObject,
     ) -> _JSONableRepeaterWrapper[LoadContext]:
         """
@@ -706,12 +712,10 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
         """
         rule = cls._loadRule(json["rule"])
         what = json["callable"]
-        one = registry._loadOne(
-            what, scheduler, registry._repeatable, loadContext
-        )
+        one = load.registry._loadOne(what, load.registry._repeatable, load)
         ref = fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"]))
-        rep = Repeater(scheduler, rule, one, registry._repeaterToJSONable, ref)
-        return cls(registry, rep)
+        rep = Repeater(load.scheduler, rule, one, load.registry._repeaterToJSONable, ref)
+        return cls(load.registry, rep)
 
     def _saveRule(self, rule: object) -> object:
         assert isinstance(
