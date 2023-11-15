@@ -299,7 +299,7 @@ __JC: Type[JSONableCallable[object]] = JSONableBoundMethod[
 def showFailures() -> Iterator[None]:
     try:
         yield
-    except:
+    except BaseException:
         traceback.print_exc()
 
 
@@ -705,7 +705,6 @@ class JSONRegistry(Generic[LoadContext]):
         return {
             "scheduledCalls": [
                 {
-                    # should really save the counter in here, so that futurecall objects maintain their identity across serializations.
                     "when": item.when.replace(tzinfo=None).isoformat(),
                     "tz": item.when.tzinfo.key,
                     "what": _whatJSON(self, item.what),
