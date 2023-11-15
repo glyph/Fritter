@@ -142,6 +142,7 @@ class Stoppable:
         if json["id"] in load.context.identityMap:
             result: Stoppable = load.context.identityMap[json["id"]]
             return result
+
         def get(
             name: str,
         ) -> Handle | None:

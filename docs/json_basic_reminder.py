@@ -68,7 +68,9 @@ def schedulerLoaded() -> Iterator[JSONableScheduler[object]]:
         dump(registry.save(scheduler), f)
 
 
-def remind(scheduler: JSONableScheduler[object], seconds: int, message: str) -> None:
+def remind(
+    scheduler: JSONableScheduler[object], seconds: int, message: str
+) -> None:
     scheduler.callAt(
         DateTime.now(guessLocalZone()) + timedelta(seconds=seconds),
         Reminder(message).show,
