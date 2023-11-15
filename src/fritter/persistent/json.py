@@ -664,6 +664,7 @@ class JSONRegistry(Generic[LoadContext]):
             counter=int(serializedJSON.get("counter", "0")),
         )
         load = LoadProcess(self, new, loadContext)
+        loads = []
         for callJSON in serializedJSON["scheduledCalls"]:
             when = fromisoformat(callJSON["when"]).replace(
                 tzinfo=ZoneInfo(callJSON["tz"])
@@ -675,12 +676,18 @@ class JSONRegistry(Generic[LoadContext]):
             fakeWhat = None  # type:ignore[assignment]
 
             placeholder = new.callAt(when, fakeWhat)
-            what = self._loadOne(callJSON["what"], self._functions, load)
-            placeholder.what = what
+            placeholder.id = callJSON["id"]
+
+            loads.append((placeholder, callJSON["what"]))
             # callAt needs a way to communicate future call counters (IDs)
+
+        for ph, wt in loads:
+            ph.what = self._loadOne(wt, self._functions, load)
         return new
 
-    def new(self, driver: TimeDriver[DateTime[ZoneInfo]]) -> JSONableScheduler[LoadContext]:
+    def new(
+        self, driver: TimeDriver[DateTime[ZoneInfo]]
+    ) -> JSONableScheduler[LoadContext]:
         """
         Create a new L{JSONableScheduler} with the same type as if it had been
         loaded by this L{JSONRegistry}.
@@ -704,11 +711,23 @@ class JSONRegistry(Generic[LoadContext]):
                     "what": _whatJSON(self, item.what),
                     "called": item.called,
                     "canceled": item.canceled,
+                    "id": item.id,
                 }
                 for item in scheduler.calls()
             ],
             "counter": str(scheduler.counter),
         }
+
+    def saveFutureCall(
+        self,
+        futureCall: FutureCall[
+            DateTime[ZoneInfo], JSONableCallable[LoadContextInv]
+        ],
+    ) -> dict[str, object]:
+        """
+        Convert a L{FutureCall} into a JSON-serializable object.
+        """
+        return {"id": futureCall.id}
 
 
 _universal = JSONRegistry(

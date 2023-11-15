@@ -100,14 +100,13 @@ class InstanceWithMethods:
         )
 
 
+Handle = FutureCall[DateTime[ZoneInfo], JSONableCallable[RegInfo]]
+
+
 @dataclass
 class Stoppable:
-    runcall: FutureCall[
-        DateTime[ZoneInfo], JSONableCallable[RegInfo]
-    ] | None = None
-    stopcall: FutureCall[
-        DateTime[ZoneInfo], JSONableCallable[RegInfo]
-    ] | None = None
+    runcall: Handle | None = None
+    stopcall: Handle | None = None
     ran: bool = False
 
     def scheduleme(self, scheduler: JSONableScheduler[RegInfo]) -> None:
@@ -126,19 +125,34 @@ class Stoppable:
         return "stoppable"
 
     def asJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
+        def save(it: Handle | None) -> object:
+            return registry.saveFutureCall(it) if it is not None else it
+
         return {
-            "runcall": self.runcall,
-            "stopcall": self.stopcall,
+            "runcall": save(self.runcall),
+            "stopcall": save(self.stopcall),
             "ran": self.ran,
+            "id": id(self),
         }
 
     @classmethod
     def fromJSON(
         cls, load: LoadProcess[RegInfo], json: JSONObject
     ) -> Stoppable:
-        self = cls()
+        if json["id"] in load.context.identityMap:
+            result: Stoppable = load.context.identityMap[json["id"]]
+            return result
+        def get(
+            name: str,
+        ) -> Handle | None:
+            it = json[name]
+            return it if it is None else load.loadFutureCall(it)
+
+        self = cls(
+            runcall=get("runcall"), stopcall=get("stopcall"), ran=json["ran"]
+        )
         # leave it there for the test to pick up
-        load.context.identityMap[str(len(load.context.identityMap))] = self
+        load.context.identityMap[json["id"]] = self
         return self
 
     @registry.method
@@ -210,10 +224,7 @@ class PersistentSchedulerTests(TestCase):
         """
         memoryDriver = MemoryDriver()
         scheduler = jsonScheduler(memoryDriver)
-        dt = aware(
-            datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
-            ZoneInfo,
-        )
+        dt = aware(datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT), ZoneInfo)
         memoryDriver.advance(dt.timestamp() + 1)
         s = Stoppable()
         s.scheduleme(scheduler)
