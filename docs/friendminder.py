@@ -173,11 +173,17 @@ def realTimeList() -> Iterator[FriendList]:
         yield fl
 
 
-@contextmanager
-def fakeTimeList(dt: DateTime[ZoneInfo]) -> Iterator[FriendList]:
-    driver = MemoryDriver(dt.timestamp())
-    with listLoaded(driver) as fl:
-        yield fl
+@dataclass
+class Storyteller:
+    currentTime: DateTime[ZoneInfo]
+
+    @contextmanager
+    def fakeTimeList(self, toAdvance: float) -> Iterator[FriendList]:
+        driver = MemoryDriver(self.currentTime.timestamp())
+        with listLoaded(driver) as fl:
+            yield fl
+            driver.advance(toAdvance)
+        self.currentTime = DateTime.fromtimestamp(driver.now(), tz=TZ)
 
 
 TZ = guessLocalZone()
@@ -185,13 +191,28 @@ TZ = guessLocalZone()
 
 def story() -> None:
     start = aware(datetime(2023, 11, 1, 9, 0, 0, tzinfo=TZ), ZoneInfo)
-    with fakeTimeList(start) as fl1:
+
+    print("day 1")
+    st = Storyteller(start)
+    with st.fakeTimeList(0) as fl1:
         fl1.add("alice", 12, 1, start)
         fl1.add("bob", 12, 15, start)
 
-    with fakeTimeList(start + timedelta(days=10)):
+    print("day 10")
+    with st.fakeTimeList(timedelta(days=10).total_seconds()):
         pass
 
+    print("day 30")
+    with st.fakeTimeList(timedelta(days=20).total_seconds()):
+        pass
 
+    print("day 40")
+    with st.fakeTimeList(timedelta(days=10).total_seconds()):
+        pass
+
+    print("day 90")
+    with st.fakeTimeList(timedelta(days=50).total_seconds()):
+        pass
+    print("done")
 if __name__ == "__main__":
     story()
