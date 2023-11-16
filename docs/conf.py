@@ -36,11 +36,6 @@ _git_reference = subprocess.run(
 ).stdout
 
 
-print(f"== Environment dump for {_git_reference} ===")
-pprint(dict(os.environ))
-print("======")
-
-
 # Try to find URL fragment for the GitHub source page based on current
 # branch or tag.
 
