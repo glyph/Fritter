@@ -301,14 +301,6 @@ __JC: Type[JSONableCallable[object]] = JSONableBoundMethod[
 ]
 
 
-@contextmanager
-def showFailures() -> Iterator[None]:
-    try:
-        yield
-    except BaseException:
-        traceback.print_exc()
-
-
 @dataclass
 class JSONableMethodDescriptor(Generic[JSONableSelf, LoadContext]):
     """
@@ -330,8 +322,7 @@ class JSONableMethodDescriptor(Generic[JSONableSelf, LoadContext]):
         Register the class of the decorated method when the decorator is
         registered with the class, via the protocol of L{object.__set_name__}.
         """
-        with showFailures():
-            self.registry._registerJSONableType(cls)
+        self.registry._registerJSONableType(cls)
 
     def __get__(
         self, instance: JSONableSelf, owner: object = None
