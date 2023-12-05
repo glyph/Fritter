@@ -19,6 +19,7 @@ from ..persistent.json import (
     JSONableScheduler,
     JSONObject,
     JSONRegistry,
+    MissingPersistentCall,
 )
 from ..repeat import daily
 from ..scheduler import FutureCall
@@ -229,13 +230,44 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(dt.timestamp() + 1)
         s = Stoppable()
         s.scheduleme(scheduler)
-        saved = loads(dumps(registry.save(scheduler)))
+        jsonobj = dumps(registry.save(scheduler))
+        saved = loads(jsonobj)
         memory2 = MemoryDriver()
         ri = RegInfo([])
         registry.load(memory2, saved, ri)
         [(name, loadedStoppable)] = ri.identityMap.items()
         assert isinstance(loadedStoppable, Stoppable)
         memory2.advance(dt.timestamp() + 3.0)
+
+    def test_noSuchCallID(self) -> None:
+        mem = MemoryDriver()
+        with self.assertRaises(MissingPersistentCall) as raised:
+            registry.load(
+                mem,
+                {
+                    "scheduledCalls": [
+                        {
+                            "when": "2023-07-21T08:01:03",
+                            "tz": "Etc/UTC",
+                            "what": {
+                                "type": "stoppable.stopme",
+                                "data": {
+                                    "runcall": {"id": 7},
+                                    "stopcall": {"id": 2},
+                                    "ran": False,
+                                    "id": 4411099664,
+                                },
+                            },
+                            "called": False,
+                            "canceled": False,
+                            "id": 2,
+                        }
+                    ],
+                    "counter": "2",
+                },
+                RegInfo([]),
+            )
+        self.assertEqual(raised.exception.args[0], 7)
 
     def test_idling(self) -> None:
         memoryDriver = MemoryDriver()

@@ -124,6 +124,12 @@ class JSONableRepeatable(JSONable[LoadContextCo], RepeatingWork, Protocol):
     """
 
 
+class MissingPersistentCall(Exception):
+    """
+    A serialized persistent-call handle was missing.
+    """
+
+
 @dataclass
 class LoadProcess(Generic[LoadContextInv]):
     """
@@ -142,7 +148,7 @@ class LoadProcess(Generic[LoadContextInv]):
         for call in self.scheduler._q:
             if call.id == callID:
                 return call
-        raise KeyError(f"No such ID: {callID}")
+        raise MissingPersistentCall(callID)
 
 
 class JSONableInstance(JSONable[LoadContextInv], Protocol):
