@@ -24,15 +24,12 @@ To use this module:
 
 from __future__ import annotations
 
-import traceback
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import (
     Any,
     Callable,
     Generic,
-    Iterator,
     ParamSpec,
     Protocol,
     Type,
