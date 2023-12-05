@@ -130,6 +130,7 @@ daily: DTRule = EveryDelta(timedelta(days=1))
 """
 Daily datetime-based rule.
 """
+
 hourly: DTRule = EveryDelta(timedelta(hours=1))
 """
 Hourly datetime-based rule.
