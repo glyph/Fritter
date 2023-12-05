@@ -21,7 +21,7 @@ from ..persistent.json import (
     JSONRegistry,
 )
 from ..repeat import daily
-from ..scheduler import FutureCall, Scheduler
+from ..scheduler import FutureCall
 
 
 @dataclass
@@ -173,7 +173,7 @@ stp: Type[JSONableInstance[RegInfo]] = Stoppable
 
 
 def jsonScheduler(driver: TimeDriver[float]) -> JSONableScheduler[RegInfo]:
-    return Scheduler(DateTimeDriver(driver))
+    return registry.new(DateTimeDriver(driver))
 
 
 class PersistentSchedulerTests(TestCase):
