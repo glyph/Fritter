@@ -22,8 +22,8 @@ Don't worry about the ``[object]`` there just yet; that tells us the type of
 the "load context" for this registry.  We'll get to that a little later, but
 this first step doesn't need it yet.
 
-Next, we'll make a simple Reminder class, which just holds a bit of text to
-remind us about.
+Next, we'll make a Reminder class, which just holds a bit of text to remind us
+about.
 
 .. literalinclude:: json_basic_reminder.py
    :start-after: reminder-class
@@ -58,13 +58,12 @@ from the ``JSONRegistry`` that we instantiated before.
    :start-after: app-method
    :end-before: end-reminder
 
-So that's it for our "object model", such as it is, for this extremely simple
-application.  Next we need to add the functions to perform the tasks that we
-need.
+So that's it for our "object model", such as it is, for this application.  Next
+we need to add the functions to perform the tasks that we need.
 
-First, we need to actually schedule the reminder.  For that, we'll have a very
-simple function that schedules our ``show`` method with a given scheduler.  To
-do this, we'll take a scheduler, some number of seconds into the future, and a
+First, we need to actually schedule the reminder.  For that, we'll have a
+function that schedules our ``show`` method with a given scheduler.  To do
+this, we'll take a scheduler, some number of seconds into the future, and a
 message to show.  We'll instantiate a ``Reminder``, and create a
 ``datetype.DateTime`` with a ``ZoneInfo`` time zone.
 
