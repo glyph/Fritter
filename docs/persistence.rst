@@ -58,8 +58,8 @@ from the ``JSONRegistry`` that we instantiated before.
    :start-after: app-method
    :end-before: end-reminder
 
-So that's it for our "object model", such as it is, for this application.  Next
-we need to add the functions to perform the tasks that we need.
+So that's it for our "object model" for this application.  Next we need to add
+the functions to perform the tasks that we need.
 
 First, we need to actually schedule the reminder.  For that, we'll have a
 function that schedules our ``show`` method with a given scheduler.  To do
@@ -77,7 +77,7 @@ that.
 
    In order to serialize time zone information, we need a common method of
    identifying the zone, and a consistent type for using.  To ensure this,
-   Fritter uses `datetype <https://pypi.org/project/datetype>`_\ 's
+   Fritter uses |datetype|_\ ’s
    type-wrapper for ``datetime.datetime``\ . This is purely for type-checking;
    at runtime, these objects are :py:class:`datetime.datetime` instances.  The
    JSON serializer also requires :py:class:`zoneinfo.ZoneInfo` objects
@@ -86,6 +86,9 @@ that.
    not have this attribute and cannot be reliably serialized.  Mypy should
    alert you to any type mismatches here, so you don't need to memorize this,
    but that's why we are using ``datetype`` here.
+
+.. |datetype| replace:: ``datetype``
+.. _datetype: https://pypi.org/project/datetype
 
 .. literalinclude:: json_basic_reminder.py
    :pyobject: remind
