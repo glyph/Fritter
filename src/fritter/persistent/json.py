@@ -24,12 +24,16 @@ To use this module:
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
+from pathlib import Path
+from json import load as load_json, dump as save_json
 from typing import (
     Any,
     Callable,
     Generic,
+    Iterator,
     ParamSpec,
     Protocol,
     Type,
@@ -41,8 +45,8 @@ from datetype import DateTime, fromisoformat
 
 from ..boundaries import Cancellable, RepeatingWork, TimeDriver
 from ..drivers.datetime import DateTimeDriver
-from ..repeat import RecurrenceRule, Repeater, EveryDelta
-from ..scheduler import Scheduler, FutureCall
+from ..repeat import EveryDelta, RecurrenceRule, Repeater
+from ..scheduler import FutureCall, Scheduler
 
 LoadContext = TypeVar("LoadContext", contravariant=True)
 LoadContextCo = TypeVar("LoadContextCo", covariant=True)
@@ -817,9 +821,27 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
         self.repeater.repeat()
 
 
+@contextmanager
+def schedulerAtPath(
+    registry: JSONRegistry[LoadContext],
+    driver: TimeDriver[float],
+    path: Path,
+    context: LoadContext,
+) -> Iterator[JSONableScheduler[LoadContext]]:
+    if path.exists():
+        with path.open() as rf:
+            scheduler = registry.load(driver, load_json(rf), context)
+    else:
+        scheduler = registry.new(DateTimeDriver(driver))
+    yield scheduler
+    with path.open("w") as wf:
+        save_json(registry.save(scheduler), wf)
+
+
 __all__ = [
     "JSONableScheduler",
     "JSONObject",
     "JSONRegistry",
     "JSONableRepeatable",
+    "schedulerAtPath",
 ]

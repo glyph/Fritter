@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 import sys
-from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import timedelta
-from json import dump, load
 from pathlib import Path
-from typing import Iterator
+from typing import Any
 
 from datetype import DateTime
-from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
+from fritter.drivers.datetime import guessLocalZone
 from fritter.drivers.sleep import SleepDriver
 from fritter.persistent.json import (
+    JSONableInstance,
     JSONableScheduler,
     JSONObject,
     JSONRegistry,
     LoadProcess,
-    JSONableInstance,
+    schedulerAtPath,
 )
 
 # start-registry
@@ -28,18 +27,26 @@ registry = JSONRegistry[object]()
 @dataclass
 class Reminder:
     text: str
-    # reminder-methods
 
+    # reminder-methods
     @classmethod
     def typeCodeForJSON(cls) -> str:
         return "reminder"
 
-    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
+    def asJSON(
+        self,
+        registry: JSONRegistry[object],
+    ) -> dict[str, object]:
         return {"text": self.text}
 
     @classmethod
-    def fromJSON(cls, load: LoadProcess[object], json: JSONObject) -> Reminder:
+    def fromJSON(
+        cls,
+        load: LoadProcess[object],
+        json: JSONObject,
+    ) -> Reminder:
         return cls(json["text"])
+        # end-reminder-methods
 
     # app-method
     @registry.method
@@ -51,34 +58,32 @@ class Reminder:
 r: JSONableInstance[object] = Reminder("hi")
 
 
-saved = Path("saved-schedule.json")
-
-
-@contextmanager
-def schedulerLoaded() -> Iterator[JSONableScheduler[object]]:
-    driver = SleepDriver()
-    if saved.exists():
-        with saved.open() as f:
-            scheduler = registry.load(driver, load(f), {})
-    else:
-        scheduler = registry.new(DateTimeDriver(driver))
-    driver.block(1.0)
-    yield scheduler
-    with saved.open("w") as f:
-        dump(registry.save(scheduler), f)
-
-
 def remind(
-    scheduler: JSONableScheduler[object], seconds: int, message: str
+    scheduler: JSONableScheduler[dict[Any, Any]],
+    seconds: int,
+    message: str,
 ) -> None:
-    scheduler.callAt(
-        DateTime.now(guessLocalZone()) + timedelta(seconds=seconds),
-        Reminder(message).show,
-    )
+    now = DateTime.now(guessLocalZone())
+    later = now + timedelta(seconds=seconds)
+    work = Reminder(message).show
+    scheduler.callAt(later, work)
+
+
+def runScheduler(newReminder: tuple[int, str] | None) -> None:
+    context: dict[Any, Any] = {}
+    with schedulerAtPath(
+        registry,
+        driver := SleepDriver(),
+        Path("saved-schedule.json"),
+        context,
+    ) as sched:
+        driver.block(1.0)
+        if newReminder:
+            newTime, message = newReminder
+            remind(sched, newTime, message)
 
 
 if __name__ == "__main__":
-    with schedulerLoaded() as scheduler:
-        extraArgs = sys.argv[1:]
-        if extraArgs:
-            remind(scheduler, int(extraArgs[0]), " ".join(extraArgs[1:]))
+    args = sys.argv[1:]
+    reminder = None if not args else (int(args[0]), " ".join(args[1:]))
+    runScheduler(reminder)

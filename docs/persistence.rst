@@ -46,7 +46,7 @@ Here are those implementations:
 
 .. literalinclude:: json_basic_reminder.py
    :start-after: reminder-methods
-   :end-before: app-method
+   :end-before: end-reminder-methods
 
 To complete this object, we need the actual method which we will be scheduling
 to run in the future.  In order to mark a method as serializable by the
@@ -98,13 +98,14 @@ file where it is saved, if that file is there, and let it run for a little
 while to take care of any pending work before we do anything else.  We can
 create a :py:class:`SleepDriver <fritter.drivers.sleep.SleepDriver>` and use
 our ``JSONRegistry``'s ``load`` method, then :py:meth:`block
-<fritter.drivers.sleep.SleepDriver.block>` briefly before returning the loaded
-scheduler.  We will then want to run some code to update the scheduler, maybe
-adding some stuff to it, then save it again with any completed calls removed
-and any new calls added.
+<fritter.drivers.sleep.SleepDriver.block>` with a short timeout before
+returning the loaded scheduler.  We will then run some code to update the
+scheduler, maybe adding some stuff to it, then save it again with any completed
+calls removed and any new calls added.
 
-We'll do this with a contextmanager that loads, then saves the scheduler to a
-file:
+Fritter provides a function,
+:py:func:`fritter.persistent.json.schedulerAtPath`, which does most of this
+work for you, returning a contextmanager that either loads or creates a ????????????????????????.
 
 .. literalinclude:: json_basic_reminder.py
    :pyobject: schedulerLoaded
