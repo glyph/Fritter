@@ -1,12 +1,18 @@
 from typing import Any, Callable
 from unittest import TestCase
+from zoneinfo import ZoneInfo
 
+from datetype import DateTime
+from datetime import datetime
+
+from fritter.repeat import Day, customWeekly
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
 from ..boundaries import Cancellable
+from ..drivers.datetime import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
-from ..repeat import EverySecond, Async, repeatedly
+from ..repeat import Async, EverySecond, repeatedly
 from ..scheduler import Scheduler
 
 
@@ -156,3 +162,48 @@ class RepeatTestCase(TestCase):
         self.assertTrue(mem.isScheduled())
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())
+
+    def test_customWeekly(self) -> None:
+        """
+        Testing a custom weekly recurrence.
+        """
+        tad = TwistedAsyncDriver()
+        mem = MemoryDriver()
+        mem.advance(1706826915.372823)
+
+        TZ = ZoneInfo("America/Los_Angeles")
+        dtd = DateTimeDriver(mem, TZ)
+        sch = Scheduler[DateTime[ZoneInfo], Callable[[], None]](dtd)
+        x = []
+
+        async def record(steps: int, stopper: Cancellable) -> None:
+            x.append((sch.now(), steps, stopper))
+
+        Async(tad).repeatedly(
+            sch,
+            customWeekly(
+                days={Day.Monday, Day.Wednesday, Day.Friday},
+                hour=15,
+                minute=10,
+            ),
+            record,
+        )
+
+        mem.advance()
+        mem.advance()
+        mem.advance(86401 * 5)
+        # mem.advance()
+
+        [
+            (start, _, _),
+            (first, tries1, _),
+            (second, tries2, _),
+            (fourth, tries4, _),
+        ] = x
+        self.assertEqual(tries1, 1)
+        self.assertEqual(tries2, 1)
+        self.assertEqual(tries4, 2)
+        self.assertEqual(datetime(2024, 2, 2, 15, 10, tzinfo=TZ), first)
+        self.assertEqual(datetime(2024, 2, 5, 15, 10, tzinfo=TZ), second)
+        # 2/7, 2/9 skipped!
+        self.assertEqual(datetime(2024, 2, 10, 15, 10, 5, tzinfo=TZ), fourth)

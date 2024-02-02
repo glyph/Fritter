@@ -118,7 +118,9 @@ performed, so that they can be serialized later.
 # TODO: datetype API docs?
 
 
-class JSONableRepeatable(JSONable[LoadContextCo], RepeatingWork, Protocol):
+class JSONableRepeatable(
+    JSONable[LoadContextCo], RepeatingWork[int], Protocol
+):
     """
     A callable that can be serialized as JSON, with a signature that can be
     used for repeated calls with L{JSONRegistry.repeatedly}.
@@ -198,7 +200,7 @@ _JSONableType = TypeVar("_JSONableType", bound=HasTypeCode)
 JSONRepeater = Repeater[
     DateTime[ZoneInfo],
     JSONableCallable[LoadContext],
-    JSONableRepeatable[LoadContext],
+    int,
 ]
 "A L{Repeater} that is constrained to accept only JSON-serializable types."
 
@@ -550,7 +552,7 @@ class JSONRegistry(Generic[LoadContext]):
     def repeatedly(
         self,
         scheduler: JSONableScheduler[LoadContext],
-        rule: RecurrenceRule[DateTime[ZoneInfo]],
+        rule: RecurrenceRule[DateTime[ZoneInfo], int],
         work: JSONableRepeatable[LoadContext],
         reference: DateTime[ZoneInfo] | None = None,
     ) -> None:
@@ -604,7 +606,7 @@ class JSONRegistry(Generic[LoadContext]):
         return JSONableMethodDescriptor(self, method)
 
     def repeatFunction(
-        self, cb: RepeatingWork
+        self, cb: RepeatingWork[int]
     ) -> JSONableRepeatable[LoadContext]:
         """
         Mark the given function that matches the signature of L{RepeatingWork},
@@ -801,12 +803,14 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
         underlying repeating callable.
         """
         when = self.repeater.reference
+        # because StepsT is parameterizable in Repeater.work, we can't make
+        # Repeater.work itself be a TypeVar.
+        work: JSONable[object] = self.repeater.work  # type:ignore[assignment]
         return {
             "ts": when.replace(tzinfo=None).isoformat(),
             "tz": when.tzinfo.key,
             "rule": self._saveRule(self.repeater.rule),
-            # TODO: this si just a demo.
-            "callable": _whatJSON(registry, self.repeater.work),
+            "callable": _whatJSON(registry, work),
             # "convert": is implicitly L{registry._repeaterToJSONable}
             # "scheduler": is what's doing the serializing
         }

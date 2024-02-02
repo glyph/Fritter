@@ -7,6 +7,8 @@ timing accuracy when timers cannot always be invoked promptly.
 
 from __future__ import annotations
 
+
+from enum import IntEnum
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Callable, Coroutine, Generic, Protocol, TypeVar
@@ -19,15 +21,20 @@ from fritter.boundaries import Cancellable
 from .boundaries import AsyncDriver, AsyncType, RepeatingWork
 from .scheduler import Scheduler, WhatT, WhenT
 
+StepsT = TypeVar("StepsT", covariant=True)
+StepsTInv = TypeVar("StepsTInv")
 
-class RecurrenceRule(Protocol[WhenT]):
+
+class RecurrenceRule(Protocol[WhenT, StepsT]):
     """
     A L{RecurrenceRule} is a callable that takes a reference time and a current
     time, and computes a step count for the current recurrence and a new
     reference time for the next one.
     """
 
-    def __call__(self, reference: WhenT, current: WhenT) -> tuple[int, WhenT]:
+    def __call__(
+        self, reference: WhenT, current: WhenT
+    ) -> tuple[StepsT, WhenT]:
         """
         Given a reference time and a current time, compute a step count and the
         next reference time.
@@ -53,12 +60,12 @@ class RecurrenceRule(Protocol[WhenT]):
         """
 
 
-RepeatingWhatT = TypeVar("RepeatingWhatT", bound=RepeatingWork)
+RepeatingWhatT = TypeVar("RepeatingWhatT", bound=RepeatingWork[object])
 """
 A TypeVar for L{Repeater} to reference a specific type of L{RepeatingWork}.
 """
 
-DTRule = RecurrenceRule[DateTime[ZoneInfo]]
+DTRule = RecurrenceRule[DateTime[ZoneInfo], int]
 """
 A type alias to describe a recurrence rule function that operates on aware
 datetimes.
@@ -126,6 +133,57 @@ weekly: DTRule = EveryDelta(timedelta(weeks=1))
 Weekly datetime-based delta.
 """
 
+
+class Day(IntEnum):
+    Monday = 0
+    Tuesday = 1
+    Wednesday = 2
+    Thursday = 3
+    Friday = 4
+    Saturday = 5
+    Sunday = 6
+
+
+@dataclass
+class CustomWeekly:
+    days: set[Day]
+    hour: int
+    minute: int
+    second: int = 0
+
+
+def customWeekly(
+    days: set[Day], hour: int, minute: int, second: int = 0
+) -> RecurrenceRule[DateTime[ZoneInfo], int]:
+    """
+    Repeat every week, on each weekday in the given set of C{days}, at the
+    given C{hour}, C{minute}, and C{second}.
+    """
+
+    sdays = sorted([day.value for day in days])
+
+    def _(
+        reference: DateTime[ZoneInfo], current: DateTime[ZoneInfo]
+    ) -> tuple[int, DateTime[ZoneInfo]]:
+        count = 0
+        for sday in sdays + [sdplus + 7 for sdplus in sdays]:
+            daydelta = timedelta(days=sday - reference.date().weekday())
+            candidate = (reference + daydelta).replace(
+                hour=hour,
+                minute=minute,
+                second=second,
+                microsecond=0,
+            )
+            if candidate > reference:
+                count += 1
+                if candidate > current:
+                    return count, candidate
+
+        raise ValueError("invalid recurrence")
+
+    return _
+
+
 daily: DTRule = EveryDelta(timedelta(days=1))
 """
 Daily datetime-based rule.
@@ -136,12 +194,12 @@ hourly: DTRule = EveryDelta(timedelta(hours=1))
 Hourly datetime-based rule.
 """
 
-_everyIsRecurrenceRule: Callable[[float], RecurrenceRule[float]]
+_everyIsRecurrenceRule: Callable[[float], RecurrenceRule[float, int]]
 _everyIsRecurrenceRule = EverySecond
 
 
 @dataclass
-class Repeater(Generic[WhenT, WhatT, RepeatingWhatT]):
+class Repeater(Generic[WhenT, WhatT, StepsT]):
     """
     A L{Repeater} can call a L{RepeatingWork} function repeatedly.
 
@@ -168,20 +226,20 @@ class Repeater(Generic[WhenT, WhatT, RepeatingWhatT]):
     """
 
     scheduler: Scheduler[WhenT, WhatT]
-    rule: RecurrenceRule[WhenT]
-    work: RepeatingWhatT
-    convert: Callable[[Repeater[WhenT, WhatT, RepeatingWhatT]], WhatT]
+    rule: RecurrenceRule[WhenT, StepsT]
+    work: RepeatingWork[StepsT]
+    convert: Callable[[Repeater[WhenT, WhatT, StepsT]], WhatT]
     reference: WhenT
 
     @classmethod
     def new(
         cls,
         scheduler: Scheduler[WhenT, WhatT],
-        rule: RecurrenceRule[WhenT],
-        work: RepeatingWhatT,
-        convert: Callable[[Repeater[WhenT, WhatT, RepeatingWhatT]], WhatT],
+        rule: RecurrenceRule[WhenT, StepsT],
+        work: RepeatingWork[StepsT],
+        convert: Callable[[Repeater[WhenT, WhatT, StepsT]], WhatT],
         reference: WhenT | None = None,
-    ) -> Repeater[WhenT, WhatT, RepeatingWhatT]:
+    ) -> Repeater[WhenT, WhatT, StepsT]:
         """
         Create a L{Repeater}, filling out its reference time with the L{current
         time of the given scheduler <Scheduler.now>}, if no other time is
@@ -210,8 +268,8 @@ class Repeater(Generic[WhenT, WhatT, RepeatingWhatT]):
 
 def repeatedly(
     scheduler: Scheduler[WhenT, Callable[[], None]],
-    work: RepeatingWork,
-    rule: RecurrenceRule[WhenT],
+    work: RepeatingWork[StepsT],
+    rule: RecurrenceRule[WhenT, StepsT],
 ) -> None:
     """
     Create a L{Repeater} and call its C{repeat} method.  This is a utility
@@ -270,9 +328,10 @@ class Async(Generic[AsyncType]):
     def repeatedly(
         self,
         scheduler: Scheduler[WhenT, Callable[[], None]],
-        rule: RecurrenceRule[WhenT],
+        rule: RecurrenceRule[WhenT, StepsTInv],
         work: Callable[
-            [int, Cancellable], AsyncType | Coroutine[AsyncType, Any, Any]
+            [StepsTInv, Cancellable],
+            AsyncType | Coroutine[AsyncType, Any, Any],
         ],
     ) -> AsyncType:
         """
@@ -306,7 +365,7 @@ class Async(Generic[AsyncType]):
             if asyncStopper.timeInProgress is None and not cancelled:
                 repeater.repeat()
 
-        def kickoff(steps: int, stopper: Cancellable) -> None:
+        def kickoff(steps: StepsTInv, stopper: Cancellable) -> None:
             asyncStopper.timeInProgress = stopper
             completedSynchronously: bool = False
 
