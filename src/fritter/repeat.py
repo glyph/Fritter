@@ -154,7 +154,7 @@ class CustomWeekly:
 
 def customWeekly(
     days: set[Day], hour: int, minute: int, second: int = 0
-) -> RecurrenceRule[DateTime[ZoneInfo], int]:
+) -> RecurrenceRule[DateTime[ZoneInfo], list[DateTime[ZoneInfo]]]:
     """
     Repeat every week, on each weekday in the given set of C{days}, at the
     given C{hour}, C{minute}, and C{second}.
@@ -164,20 +164,19 @@ def customWeekly(
 
     def _(
         reference: DateTime[ZoneInfo], current: DateTime[ZoneInfo]
-    ) -> tuple[int, DateTime[ZoneInfo]]:
-        count = 0
+    ) -> tuple[list[DateTime[ZoneInfo]], DateTime[ZoneInfo]]:
+        steps: list[DateTime[ZoneInfo]] = []
+
         for sday in sdays + [sdplus + 7 for sdplus in sdays]:
             daydelta = timedelta(days=sday - reference.date().weekday())
             candidate = (reference + daydelta).replace(
-                hour=hour,
-                minute=minute,
-                second=second,
-                microsecond=0,
+                hour=hour, minute=minute, second=second, microsecond=0
             )
-            if candidate > reference:
-                count += 1
+
+            if candidate >= reference:
                 if candidate > current:
-                    return count, candidate
+                    return steps, candidate
+                steps.append(candidate)
 
         raise ValueError("invalid recurrence")
 

@@ -176,7 +176,9 @@ class RepeatTestCase(TestCase):
         sch = Scheduler[DateTime[ZoneInfo], Callable[[], None]](dtd)
         x = []
 
-        async def record(steps: int, stopper: Cancellable) -> None:
+        async def record(
+            steps: list[DateTime[ZoneInfo]], stopper: Cancellable
+        ) -> None:
             x.append((sch.now(), steps, stopper))
 
         Async(tad).repeatedly(
@@ -200,9 +202,15 @@ class RepeatTestCase(TestCase):
             (second, tries2, _),
             (fourth, tries4, _),
         ] = x
-        self.assertEqual(tries1, 1)
-        self.assertEqual(tries2, 1)
-        self.assertEqual(tries4, 2)
+        self.assertEqual(tries1, [datetime(2024, 2, 2, 15, 10, tzinfo=TZ)])
+        self.assertEqual(tries2, [datetime(2024, 2, 5, 15, 10, tzinfo=TZ)])
+        self.assertEqual(
+            tries4,
+            [
+                datetime(2024, 2, 7, 15, 10, tzinfo=TZ),
+                datetime(2024, 2, 9, 15, 10, tzinfo=TZ),
+            ],
+        )
         self.assertEqual(datetime(2024, 2, 2, 15, 10, tzinfo=TZ), first)
         self.assertEqual(datetime(2024, 2, 5, 15, 10, tzinfo=TZ), second)
         # 2/7, 2/9 skipped!
