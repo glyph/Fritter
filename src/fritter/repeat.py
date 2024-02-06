@@ -7,21 +7,19 @@ timing accuracy when timers cannot always be invoked promptly.
 
 from __future__ import annotations
 
-
-from enum import IntEnum
 from dataclasses import dataclass
 from datetime import timedelta
+from enum import IntEnum
 from typing import Any, Callable, Coroutine, Generic, Protocol, TypeVar
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
 
-from fritter.boundaries import Cancellable
+from fritter.boundaries import Cancellable, StepsT
 
 from .boundaries import AsyncDriver, AsyncType, RepeatingWork
 from .scheduler import Scheduler, WhatT, WhenT
 
-StepsT = TypeVar("StepsT", covariant=True)
 StepsTInv = TypeVar("StepsTInv")
 
 

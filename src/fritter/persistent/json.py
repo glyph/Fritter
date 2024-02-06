@@ -27,8 +27,9 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
+from json import dump as save_json
+from json import load as load_json
 from pathlib import Path
-from json import load as load_json, dump as save_json
 from typing import (
     Any,
     Callable,
@@ -42,6 +43,7 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
+from fritter.boundaries import StepsT, StepsTInv
 
 from ..boundaries import Cancellable, RepeatingWork, TimeDriver
 from ..drivers.datetime import DateTimeDriver
@@ -337,7 +339,7 @@ class JSONableMethodDescriptor(Generic[JSONableSelf, LoadContext]):
 
 
 @dataclass
-class JSONableBoundRepeatable(Generic[JSONableSelf, LoadContext]):
+class JSONableBoundRepeatable(Generic[JSONableSelf, LoadContext, StepsTInv]):
     """
     Like L{JSONableBoundMethod}, but for repeating calls.
 
@@ -348,10 +350,10 @@ class JSONableBoundRepeatable(Generic[JSONableSelf, LoadContext]):
         L{JSONableInstance} of some kind.
     """
 
-    descriptor: JSONableRepeatableDescriptor[JSONableSelf, Any]
+    descriptor: JSONableRepeatableDescriptor[JSONableSelf, Any, StepsTInv]
     instance: JSONableSelf
 
-    def __call__(self, steps: int, stopper: Cancellable) -> None:
+    def __call__(self, steps: StepsTInv, stopper: Cancellable) -> None:
         """
         Call this bound method's function with its instance as C{self}.
         """
@@ -374,7 +376,7 @@ class JSONableBoundRepeatable(Generic[JSONableSelf, LoadContext]):
 
 
 @dataclass
-class JSONableRepeatableDescriptor(Generic[JSONableSelf, LoadContext]):
+class JSONableRepeatableDescriptor(Generic[JSONableSelf, LoadContext, StepsT]):
     """
     A descriptor that can bind methods into L{JSONableBoundRepeatable}s.
 
@@ -385,7 +387,7 @@ class JSONableRepeatableDescriptor(Generic[JSONableSelf, LoadContext]):
     """
 
     registry: JSONRegistry[LoadContext]
-    func: Callable[[JSONableSelf, int, Cancellable], None]
+    func: Callable[[JSONableSelf, StepsT, Cancellable], None]
 
     def __set_name__(
         self, cls: Type[JSONableInstance[LoadContext]], name: str
@@ -398,7 +400,7 @@ class JSONableRepeatableDescriptor(Generic[JSONableSelf, LoadContext]):
 
     def __get__(
         self, instance: JSONableSelf, owner: object = None
-    ) -> JSONableBoundRepeatable[JSONableSelf, LoadContext]:
+    ) -> JSONableBoundRepeatable[JSONableSelf, LoadContext, StepsT]:
         """
         Bind the decorated method to an instance.
         """
@@ -622,8 +624,8 @@ class JSONRegistry(Generic[LoadContext]):
         return self._repeatable.add(func)
 
     def repeatMethod(
-        self, repeatable: Callable[[JSONableSelf, int, Cancellable], None]
-    ) -> JSONableRepeatableDescriptor[JSONableSelf, LoadContext]:
+        self, repeatable: Callable[[JSONableSelf, StepsT, Cancellable], None]
+    ) -> JSONableRepeatableDescriptor[JSONableSelf, LoadContext, StepsT]:
         """
         Mark the given method that matches the signature of L{RepeatingWork},
         i.e. one which takes a number of steps and a L{Cancellable} to cancel

@@ -142,15 +142,17 @@ class Cancellable(Protocol):
         """
 
 
-StepsT = TypeVar("StepsT", contravariant=True)
+StepsT = TypeVar("StepsT", covariant=True)
+StepsTCon = TypeVar("StepsTCon", contravariant=True)
+StepsTInv = TypeVar("StepsTInv")
 
 
-class RepeatingWork(Protocol[StepsT]):
+class RepeatingWork(Protocol[StepsTCon]):
     """
     L{RepeatingWork} is work that can be performed repeatedly in a loop.
     """
 
-    def __call__(self, steps: StepsT, stopper: Cancellable) -> None:
+    def __call__(self, steps: StepsTCon, stopper: Cancellable) -> None:
         """
         Do the work.
 

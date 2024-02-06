@@ -328,7 +328,8 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(dt.timestamp())
         scheduler = jsonScheduler(memoryDriver)
         info = RegInfo([])
-        method = InstanceWithMethods("sample", info).repeatMethod
+        inst = InstanceWithMethods("sample", info)
+        method = inst.repeatMethod
         shared = InstanceWithMethods("shared", info)
         registry.repeatedly(scheduler, daily, method)
         registry.repeatedly(scheduler, daily, shared.repeatMethod)
