@@ -114,14 +114,18 @@ class RepeatTestCase(TestCase):
 
         pending = Deferred(canceled)
 
+        async def bonk(d: Deferred[None]) -> None:
+            # odd idiom for suppressing cancellation to work around
+            # https://github.com/nedbat/coveragepy/issues/1595#issuecomment-1931494916
+            await d.addErrback(lambda e: e.trap(CancelledError))
+
         async def asynchronously() -> None:
             nonlocal succeeding
             if succeeding:
                 succeeding = succeeding - 1
                 await pending
             else:
-                with self.assertRaises(CancelledError):
-                    await pending
+                await bonk(pending)
 
         async def synchronously() -> None:
             pass
@@ -136,9 +140,8 @@ class RepeatTestCase(TestCase):
 
         async def run(how: Callable[[], Any]) -> None:
             go(how)
-            with self.assertRaises(CancelledError):
-                assert repeatCall is not None
-                await repeatCall
+            assert repeatCall is not None, "repeatCall should already be set"
+            await bonk(repeatCall)
 
         tad.runAsync(run(asynchronously))
         self.assertTrue(mem.isScheduled())
