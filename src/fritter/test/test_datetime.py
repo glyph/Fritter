@@ -1,7 +1,7 @@
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
-from fritter.drivers.datetime import guessLocalZone
+from ..drivers.datetime import guessLocalZone
 
 
 class ZoneSmokeTest(TestCase):

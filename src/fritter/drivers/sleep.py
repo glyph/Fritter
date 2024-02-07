@@ -7,9 +7,10 @@ This is suitable for batch scripts that don't require an event loop like
 L{asyncio <fritter.drivers.asyncio>} or L{twisted <fritter.drivers.twisted>}.
 """
 from dataclasses import dataclass
-from time import sleep as _sleep, time as _time
-from typing import Callable, TYPE_CHECKING
 from math import inf
+from time import sleep as _sleep
+from time import time as _time
+from typing import TYPE_CHECKING, Callable
 
 from ..boundaries import TimeDriver
 

@@ -43,9 +43,14 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
-from fritter.boundaries import StepsT, StepsTInv
 
-from ..boundaries import Cancellable, RepeatingWork, TimeDriver
+from ..boundaries import (
+    Cancellable,
+    RepeatingWork,
+    StepsT,
+    StepsTInv,
+    TimeDriver,
+)
 from ..drivers.datetime import DateTimeDriver
 from ..repeat import EveryDelta, RecurrenceRule, Repeater
 from ..scheduler import FutureCall, Scheduler

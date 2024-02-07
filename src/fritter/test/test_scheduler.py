@@ -1,9 +1,9 @@
 from typing import Callable
 from unittest import TestCase
 
-from ..scheduler import FutureCall, SimpleScheduler
 from ..drivers.memory import MemoryDriver
 from ..heap import Heap
+from ..scheduler import FutureCall, SimpleScheduler
 
 
 class SchedulerTests(TestCase):

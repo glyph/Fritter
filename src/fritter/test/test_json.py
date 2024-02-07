@@ -8,7 +8,6 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
-from fritter.persistent.json import LoadProcess
 
 from ..boundaries import Cancellable, TimeDriver
 from ..drivers.datetime import DateTimeDriver
@@ -19,6 +18,7 @@ from ..persistent.json import (
     JSONableScheduler,
     JSONObject,
     JSONRegistry,
+    LoadProcess,
     MissingPersistentCall,
 )
 from ..repeat import daily

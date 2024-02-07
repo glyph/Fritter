@@ -1,18 +1,16 @@
+from datetime import datetime
 from typing import Any, Callable
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
-from datetime import datetime
-
-from fritter.repeat import Day, customWeekly
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
 from ..boundaries import Cancellable
 from ..drivers.datetime import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
-from ..repeat import Async, EverySecond, repeatedly
+from ..repeat import Async, Day, EverySecond, customWeekly, repeatedly
 from ..scheduler import Scheduler
 
 

@@ -2,8 +2,8 @@ from typing import Callable, List, Tuple
 from unittest import TestCase
 
 from ..drivers.memory import MemoryDriver
-from ..tree import branch, _BranchDriver
 from ..scheduler import SimpleScheduler
+from ..tree import _BranchDriver, branch
 
 
 class RecursiveTest(TestCase):

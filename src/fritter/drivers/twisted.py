@@ -11,7 +11,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 
-from ..boundaries import PriorityQueue, TimeDriver, AsyncDriver
+from ..boundaries import AsyncDriver, PriorityQueue, TimeDriver
 from ..heap import Heap
 from ..scheduler import FutureCall, Scheduler, SimpleScheduler
 

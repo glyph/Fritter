@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from heapq import heappop, heappush
 from typing import Generic, Iterator, List, Optional
 
-from .boundaries import PriorityQueue, Prioritized
+from .boundaries import Prioritized, PriorityQueue
 
 
 @dataclass

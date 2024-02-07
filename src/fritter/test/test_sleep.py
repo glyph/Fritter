@@ -1,7 +1,7 @@
-from fritter.drivers.sleep import SleepDriver
-from fritter.scheduler import SimpleScheduler
-
 from unittest import TestCase
+
+from ..drivers.sleep import SleepDriver
+from ..scheduler import SimpleScheduler
 
 
 class TestSleeping(TestCase):

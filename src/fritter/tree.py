@@ -5,11 +5,11 @@ Groups of timers that may be paused, resumed, or time-scaled together.
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
-from .scheduler import FutureCall
 from typing import Callable, NewType, Optional, Protocol, Tuple, TypeVar
 
-from .scheduler import Scheduler
+from .scheduler import FutureCall, Scheduler
 
 _BranchTime = NewType("_BranchTime", float)
 _TrunkTime = NewType("_TrunkTime", float)

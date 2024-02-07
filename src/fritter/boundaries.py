@@ -5,6 +5,7 @@ L{TypeVar}s, and constant values, but no logic of its own.
 """
 
 from __future__ import annotations
+
 from typing import (
     Any,
     Callable,

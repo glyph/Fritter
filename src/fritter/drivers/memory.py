@@ -5,9 +5,8 @@ In-memory implementation of L{TimeDriver} for use in tests and batch scripts.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import inf, nextafter
 from typing import Callable, Optional, Tuple
-
-from math import nextafter, inf
 
 from ..boundaries import TimeDriver
 

@@ -10,7 +10,7 @@ from unittest import TestCase
 from twisted.internet.task import Clock
 
 from ..boundaries import Cancellable
-from ..drivers.asyncio import AsyncioTimeDriver, AsyncioAsyncDriver, scheduler
+from ..drivers.asyncio import AsyncioAsyncDriver, AsyncioTimeDriver, scheduler
 
 
 @dataclass

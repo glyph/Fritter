@@ -1,6 +1,6 @@
-from ..heap import Heap
-
 from unittest import TestCase
+
+from ..heap import Heap
 
 
 class QueueTests(TestCase):

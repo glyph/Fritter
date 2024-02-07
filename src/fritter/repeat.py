@@ -15,9 +15,13 @@ from zoneinfo import ZoneInfo
 
 from datetype import DateTime
 
-from fritter.boundaries import Cancellable, StepsT
-
-from .boundaries import AsyncDriver, AsyncType, RepeatingWork
+from .boundaries import (
+    AsyncDriver,
+    AsyncType,
+    Cancellable,
+    RepeatingWork,
+    StepsT,
+)
 from .scheduler import Scheduler, WhatT, WhenT
 
 StepsTInv = TypeVar("StepsTInv")
