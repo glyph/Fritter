@@ -416,7 +416,9 @@ class _JSONableMethodBinder(Protocol[LoadContextInv, StepsTInv]):
         self,
         instance: _JSONableRepeaterWrapper[LoadContextInv, StepsTInv],
         owner: object = None,
-    ) -> JSONableBoundMethod[_JSONableRepeaterWrapper[LoadContextInv, StepsTInv]]:
+    ) -> JSONableBoundMethod[
+        _JSONableRepeaterWrapper[LoadContextInv, StepsTInv]
+    ]:
         """
         Bind the method.
         """
@@ -480,8 +482,28 @@ def _copyUniversal(
 
 
 _JSONableCallableT = TypeVar(
-    "_JSONableCallableT", bound=JSONableCallable[Any] | JSONableRepeatable[Any, Any]
+    "_JSONableCallableT",
+    bound=JSONableCallable[Any] | JSONableRepeatable[Any, Any],
 )
+
+RRuleT = TypeVar("RRuleT", bound=RecurrenceRule[DateTime[ZoneInfo], Any])
+RRuleTx = TypeVar("RRuleTx", bound=RecurrenceRule[DateTime[ZoneInfo], Any], contravariant=True)
+
+
+class RuleJSONIfier(HasTypeCode, Protocol[RRuleT]):
+    """
+    External serializer for a recurrence rule.
+    """
+
+    def ruleFromJSON(self, json: JSONObject) -> RRuleT:
+        """
+        Construct a recurrence rule from the given JSON object.
+        """
+
+    def ruleAsJSON(self, rule: RRuleT) -> JSONObject:
+        """
+        Serialize the recurrence rule from the given JSON object.
+        """
 
 
 @dataclass
@@ -506,6 +528,42 @@ class JSONRegistry(Generic[LoadContext]):
     _instances: _SpecificTypeRegistration[
         Type[JSONableInstance[LoadContext]]
     ] = field(default_factory=_copyUniversal("_instances"))
+    _rules: _SpecificTypeRegistration[
+        RuleJSONIfier[RecurrenceRule[DateTime[ZoneInfo], Any]]
+    ] = field(default_factory=_copyUniversal("_rules"))
+    _ruletype2jsonifier: dict[
+        type[RecurrenceRule[DateTime[ZoneInfo], object]],
+        RuleJSONIfier[RecurrenceRule[DateTime[ZoneInfo], Any]],
+    ] = field(default_factory=lambda: _universal._ruletype2jsonifier.copy())
+
+    def _loadRRule(
+        self, json: JSONObject
+    ) -> RecurrenceRule[DateTime[ZoneInfo], Any]:
+        typeCode = json["type"]
+        blob = json["data"]
+
+        if (it := self._rules.get(typeCode)) is not None:
+            return it.ruleFromJSON(blob)
+
+        raise KeyError(f"cannot interpret rule type code {repr(typeCode)}")
+
+    def _saveRRule(
+        self, rule: RecurrenceRule[DateTime[ZoneInfo], Any]
+    ) -> JSONObject:
+        ser = self._ruletype2jsonifier[type(rule)]
+        return {
+            "type": ser.typeCodeForJSON(),
+            "data": ser.ruleAsJSON(rule),
+        }
+
+    def _registerRRule(
+        self,
+        ruleType: Type[RRuleTx],
+        serializer: RuleJSONIfier[RRuleTx],
+    ) -> None:
+        # TODO: there's a variance problem here, I think?
+        self._rules.add(serializer)  # type:ignore[arg-type]
+        self._ruletype2jsonifier[ruleType] = serializer  # type:ignore[assignment]
 
     def _loadOne(
         self,
@@ -738,7 +796,22 @@ _universal = JSONRegistry(
     _SpecificTypeRegistration(),
     _SpecificTypeRegistration(),
     _SpecificTypeRegistration(),
+    _SpecificTypeRegistration(),
+    {},
 )
+
+class _EveryDeltaJSONifier:
+    def typeCodeForJSON(self) -> str:
+        return "fritter:fixed-delta"
+
+    def ruleFromJSON(self, json: JSONObject) -> EveryDelta:
+        return EveryDelta(timedelta(*json["delta"]))
+
+    def ruleAsJSON(self, rule: EveryDelta) -> JSONObject:
+        return {"delta": rule.delta.__reduce__()[1]}
+
+
+_universal._registerRRule(EveryDelta, _EveryDeltaJSONifier())
 
 
 @dataclass
@@ -780,7 +853,9 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
         Deserialize a L{_JSONableRepeaterWrapper} from a JSON-dumpable dict
         previously produced by L{_JSONableRepeaterWrapper.asJSON}.
         """
-        rule = cls._loadRule(json["rule"])
+        rule: RecurrenceRule[
+            DateTime[ZoneInfo], StepsT
+        ] = load.registry._loadRRule(json["rule"])
         what = json["callable"]
         one = load.registry._loadOne(what, load.registry._repeatable, load)
         ref = fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"]))
@@ -788,17 +863,6 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
             load.scheduler, rule, one, load.registry._repeaterToJSONable, ref
         )
         return cls(load.registry, rep)
-
-    def _saveRule(self, rule: object) -> object:
-        assert isinstance(
-            rule, EveryDelta
-        ), "Only EveryDelta instances supported so far"
-        result: object = rule.delta.__reduce__()[1]
-        return result
-
-    @classmethod
-    def _loadRule(cls, rule: list[int]) -> EveryDelta:
-        return EveryDelta(timedelta(*rule))
 
     def asJSON(self, registry: JSONRegistry[object]) -> JSONObject:
         """
@@ -814,7 +878,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
         return {
             "ts": when.replace(tzinfo=None).isoformat(),
             "tz": when.tzinfo.key,
-            "rule": self._saveRule(self.repeater.rule),
+            "rule": registry._saveRRule(self.repeater.rule),
             "callable": _whatJSON(registry, work),
             # "convert": is implicitly L{registry._repeaterToJSONable}
             # "scheduler": is what's doing the serializing
