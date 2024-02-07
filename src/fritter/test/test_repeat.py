@@ -11,7 +11,7 @@ from ..boundaries import Cancellable
 from ..drivers.datetime import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
-from ..repeat import Async, Day, EverySecond, customWeekly, repeatedly
+from ..repeat import Async, Day, EverySecond, EveryWeekOn, repeatedly
 from ..scheduler import Scheduler
 
 
@@ -166,9 +166,10 @@ class RepeatTestCase(TestCase):
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())
 
-    def test_customWeekly(self) -> None:
+    def test_everyWeekOn(self) -> None:
         """
-        Testing a custom weekly recurrence.
+        L{EveryWeekOn} provides a recurrence on custom weekdays at custom
+        times.
         """
         tad = TwistedAsyncDriver()
         mem = MemoryDriver()
@@ -186,7 +187,7 @@ class RepeatTestCase(TestCase):
 
         Async(tad).repeatedly(
             sch,
-            customWeekly(
+            EveryWeekOn(
                 days={Day.Monday, Day.Wednesday, Day.Friday},
                 hour=15,
                 minute=10,

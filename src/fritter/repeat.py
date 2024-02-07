@@ -173,26 +173,21 @@ class Day(IntEnum):
 
 
 @dataclass
-class CustomWeekly:
+class EveryWeekOn:
+    """
+    Repeat every week, on each weekday in the given set of C{days}, at the
+    given C{hour}, C{minute}, and C{second}.
+    """
+
     days: set[Day]
     hour: int
     minute: int
     second: int = 0
 
-
-def customWeekly(
-    days: set[Day], hour: int, minute: int, second: int = 0
-) -> RecurrenceRule[DateTime[ZoneInfo], list[DateTime[ZoneInfo]]]:
-    """
-    Repeat every week, on each weekday in the given set of C{days}, at the
-    given C{hour}, C{minute}, and C{second}.
-    """
-    sdays = sorted([day.value for day in days])
-    assert days, "cannot pass an empty set of days"
-
-    def _(
-        reference: DateTime[ZoneInfo], current: DateTime[ZoneInfo]
+    def __call__(
+        self, reference: DateTime[ZoneInfo], current: DateTime[ZoneInfo]
     ) -> tuple[list[DateTime[ZoneInfo]], DateTime[ZoneInfo]]:
+        sdays = sorted([day.value for day in self.days])
         steps: list[DateTime[ZoneInfo]] = []
         refDay = reference.date().weekday()
         weekOffset = 0
@@ -200,7 +195,10 @@ def customWeekly(
             for sday in sdays:
                 daydelta = timedelta(days=(weekOffset + sday) - refDay)
                 candidate = (reference + daydelta).replace(
-                    hour=hour, minute=minute, second=second, microsecond=0
+                    hour=self.hour,
+                    minute=self.minute,
+                    second=self.second,
+                    microsecond=0,
                 )
 
                 if candidate < reference:
@@ -217,8 +215,6 @@ def customWeekly(
                 # done
                 return steps, candidate
             weekOffset += 7
-
-    return _
 
 
 daily: DTRule = EveryDelta(timedelta(days=1))

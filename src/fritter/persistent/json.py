@@ -43,6 +43,7 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
+from fritter.boundaries import StepsTCon
 
 from ..boundaries import (
     Cancellable,
@@ -126,7 +127,7 @@ performed, so that they can be serialized later.
 
 
 class JSONableRepeatable(
-    JSONable[LoadContextCo], RepeatingWork[int], Protocol
+    JSONable[LoadContextCo], RepeatingWork[StepsTCon], Protocol
 ):
     """
     A callable that can be serialized as JSON, with a signature that can be
@@ -207,7 +208,7 @@ _JSONableType = TypeVar("_JSONableType", bound=HasTypeCode)
 JSONRepeater = Repeater[
     DateTime[ZoneInfo],
     JSONableCallable[LoadContext],
-    int,
+    StepsT,
 ]
 "A L{Repeater} that is constrained to accept only JSON-serializable types."
 
@@ -404,7 +405,7 @@ class JSONableRepeatableDescriptor(Generic[JSONableSelf, LoadContext, StepsT]):
         return JSONableBoundRepeatable(self, instance)
 
 
-class _JSONableMethodBinder(Protocol[LoadContextInv]):
+class _JSONableMethodBinder(Protocol[LoadContextInv, StepsTInv]):
     """
     Separated description of L{JSONableMethodDescriptor.__get__} that wraps
     L{_JSONableRepeaterWrapper.repeat} to work around U{this issue
@@ -413,9 +414,9 @@ class _JSONableMethodBinder(Protocol[LoadContextInv]):
 
     def __call__(
         self,
-        instance: _JSONableRepeaterWrapper[LoadContextInv],
+        instance: _JSONableRepeaterWrapper[LoadContextInv, StepsTInv],
         owner: object = None,
-    ) -> JSONableBoundMethod[_JSONableRepeaterWrapper[LoadContextInv]]:
+    ) -> JSONableBoundMethod[_JSONableRepeaterWrapper[LoadContextInv, StepsTInv]]:
         """
         Bind the method.
         """
@@ -479,7 +480,7 @@ def _copyUniversal(
 
 
 _JSONableCallableT = TypeVar(
-    "_JSONableCallableT", bound=JSONableCallable[Any] | JSONableRepeatable[Any]
+    "_JSONableCallableT", bound=JSONableCallable[Any] | JSONableRepeatable[Any, Any]
 )
 
 
@@ -500,7 +501,7 @@ class JSONRegistry(Generic[LoadContext]):
         JSONableCallable[LoadContext]
     ] = field(default_factory=_copyUniversal("_functions"))
     _repeatable: _SpecificTypeRegistration[
-        JSONableRepeatable[LoadContext]
+        JSONableRepeatable[LoadContext, Any]
     ] = field(default_factory=_copyUniversal("_repeatable"))
     _instances: _SpecificTypeRegistration[
         Type[JSONableInstance[LoadContext]]
@@ -546,8 +547,8 @@ class JSONRegistry(Generic[LoadContext]):
         raise KeyError(f"cannot interpret type code {repr(typeCode)}")
 
     def _repeaterToJSONable(
-        self, repeater: JSONRepeater[LoadContext]
-    ) -> JSONableBoundMethod[_JSONableRepeaterWrapper[LoadContext]]:
+        self, repeater: JSONRepeater[LoadContext, StepsT]
+    ) -> JSONableBoundMethod[_JSONableRepeaterWrapper[LoadContext, StepsT]]:
         """
         Convert the given L{JSONRepeater} into a method that can be serialized.
         """
@@ -556,8 +557,8 @@ class JSONRegistry(Generic[LoadContext]):
     def repeatedly(
         self,
         scheduler: JSONableScheduler[LoadContext],
-        rule: RecurrenceRule[DateTime[ZoneInfo], int],
-        work: JSONableRepeatable[LoadContext],
+        rule: RecurrenceRule[DateTime[ZoneInfo], StepsT],
+        work: JSONableRepeatable[LoadContext, StepsT],
         reference: DateTime[ZoneInfo] | None = None,
     ) -> None:
         """
@@ -610,8 +611,8 @@ class JSONRegistry(Generic[LoadContext]):
         return JSONableMethodDescriptor(self, method)
 
     def repeatFunction(
-        self, cb: RepeatingWork[int]
-    ) -> JSONableRepeatable[LoadContext]:
+        self, cb: RepeatingWork[StepsT]
+    ) -> JSONableRepeatable[LoadContext, StepsT]:
         """
         Mark the given function that matches the signature of L{RepeatingWork},
         i.e. one which takes a number of steps and a L{Cancellable} to cancel
@@ -620,7 +621,7 @@ class JSONRegistry(Generic[LoadContext]):
         @return: a function that mimics the signature of the original function,
             but also conforms to the L{JSONable} protocol.
         """
-        func: JSONableRepeatable[LoadContext] = SerializableFunction(
+        func: JSONableRepeatable[LoadContext, StepsT] = SerializableFunction(
             cb, getattr(cb, "__qualname__")
         )
         return self._repeatable.add(func)
@@ -741,7 +742,7 @@ _universal = JSONRegistry(
 
 
 @dataclass
-class _JSONableRepeaterWrapper(Generic[LoadContext]):
+class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
     """
     Since a L{Scheduler} can only contain C{work} of a given type, which must
     have a 0-argument, C{None}-returning signature, and L{JSONRegistry.save}
@@ -760,7 +761,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
     """
 
     jsonRegistry: JSONRegistry[LoadContext]
-    repeater: JSONRepeater[LoadContext]
+    repeater: JSONRepeater[LoadContext, StepsT]
 
     @classmethod
     def typeCodeForJSON(cls) -> str:
@@ -774,7 +775,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext]):
         cls,
         load: LoadProcess[LoadContext],
         json: JSONObject,
-    ) -> _JSONableRepeaterWrapper[LoadContext]:
+    ) -> _JSONableRepeaterWrapper[LoadContext, StepsT]:
         """
         Deserialize a L{_JSONableRepeaterWrapper} from a JSON-dumpable dict
         previously produced by L{_JSONableRepeaterWrapper.asJSON}.
