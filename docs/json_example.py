@@ -6,7 +6,9 @@ from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.persistent.json import JSONableScheduler, JSONRegistry
 
-registry = JSONRegistry[dict[str, str]]()
+ctxtype = dict[str, str]
+
+registry = JSONRegistry[ctxtype]()
 
 
 @registry.function
@@ -15,7 +17,7 @@ def call1() -> None:
 
 
 memoryDriver = MemoryDriver()
-scheduler = JSONableScheduler(DateTimeDriver(memoryDriver))
+scheduler = JSONableScheduler[ctxtype](DateTimeDriver(memoryDriver))
 dt = aware(
     datetime(
         2023,
