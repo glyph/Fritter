@@ -105,12 +105,14 @@ class RepeatTestCase(TestCase):
     def test_cancel(self) -> None:
         tad = TwistedAsyncDriver()
         mem = MemoryDriver()
+        succeeding: int = 0
+        repeatCall: Deferred[None] | None = None
+        pending: Deferred[None]
 
         def canceled(d: Deferred[None]) -> None:
             return
 
-        pending: Deferred[None] = Deferred(canceled)
-        succeeding: int = 0
+        pending = Deferred(canceled)
 
         async def asynchronously() -> None:
             nonlocal succeeding
@@ -123,8 +125,6 @@ class RepeatTestCase(TestCase):
 
         async def synchronously() -> None:
             pass
-
-        repeatCall: Deferred[None] | None = None
 
         def go(how: Callable[[], Any]) -> None:
             nonlocal repeatCall
@@ -143,9 +143,9 @@ class RepeatTestCase(TestCase):
         tad.runAsync(run(asynchronously))
         self.assertTrue(mem.isScheduled())
         assert repeatCall is not None
+
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())
-
         pending = Deferred(canceled)
         succeeding += 1
         tad.runAsync(run(asynchronously))
@@ -157,7 +157,6 @@ class RepeatTestCase(TestCase):
         self.assertTrue(mem.isScheduled())
         mem.advance()
         repeatCall.cancel()
-
         tad.runAsync(run(synchronously))
         self.assertTrue(mem.isScheduled())
         repeatCall.cancel()
