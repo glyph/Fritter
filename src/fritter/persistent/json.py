@@ -486,6 +486,8 @@ def _copyUniversal(
     return _
 
 
+_JSONableCallableT = TypeVar("_JSONableCallableT", bound=JSONableCallable[Any] | JSONableRepeatable[Any])
+
 @dataclass
 class JSONRegistry(Generic[LoadContext]):
     """
@@ -512,9 +514,9 @@ class JSONRegistry(Generic[LoadContext]):
     def _loadOne(
         self,
         json: JSONObject,
-        which: _SpecificTypeRegistration[_JSONableType],
+        which: _SpecificTypeRegistration[_JSONableCallableT],
         load: LoadProcess[LoadContext],
-    ) -> _JSONableType:
+    ) -> _JSONableCallableT:
         """
         Convert the given JSON-dumpable dict into an object of C{_JSONableType}
         via its L{JSONableInstance.fromJSON} classmethod registered in the
@@ -536,7 +538,7 @@ class JSONRegistry(Generic[LoadContext]):
             # between both repeatable/non-repeatable types
 
             instance = instanceType.fromJSON(load, blob)
-            result: _JSONableType = getattr(instance, methodName)
+            result: _JSONableCallableT = getattr(instance, methodName)
             return result
 
         # TODO: this is for *long-term* storage of sets of scheduled events, so
