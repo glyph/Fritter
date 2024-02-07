@@ -478,7 +478,10 @@ def _copyUniversal(
     return _
 
 
-_JSONableCallableT = TypeVar("_JSONableCallableT", bound=JSONableCallable[Any] | JSONableRepeatable[Any])
+_JSONableCallableT = TypeVar(
+    "_JSONableCallableT", bound=JSONableCallable[Any] | JSONableRepeatable[Any]
+)
+
 
 @dataclass
 class JSONRegistry(Generic[LoadContext]):
