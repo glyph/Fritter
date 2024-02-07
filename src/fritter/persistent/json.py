@@ -487,7 +487,11 @@ _JSONableCallableT = TypeVar(
 )
 
 RRuleT = TypeVar("RRuleT", bound=RecurrenceRule[DateTime[ZoneInfo], Any])
-RRuleTx = TypeVar("RRuleTx", bound=RecurrenceRule[DateTime[ZoneInfo], Any], contravariant=True)
+RRuleTx = TypeVar(
+    "RRuleTx",
+    bound=RecurrenceRule[DateTime[ZoneInfo], Any],
+    contravariant=True,
+)
 
 
 class RuleJSONIfier(HasTypeCode, Protocol[RRuleT]):
@@ -563,7 +567,9 @@ class JSONRegistry(Generic[LoadContext]):
     ) -> None:
         # TODO: there's a variance problem here, I think?
         self._rules.add(serializer)  # type:ignore[arg-type]
-        self._ruletype2jsonifier[ruleType] = serializer  # type:ignore[assignment]
+        self._ruletype2jsonifier[
+            ruleType
+        ] = serializer  # type:ignore[assignment]
 
     def _loadOne(
         self,
@@ -799,6 +805,7 @@ _universal = JSONRegistry(
     _SpecificTypeRegistration(),
     {},
 )
+
 
 class _EveryDeltaJSONifier:
     def typeCodeForJSON(self) -> str:
