@@ -124,7 +124,7 @@ class RepeatTestCase(TestCase):
         async def synchronously() -> None:
             pass
 
-        repeatCall: Deferred[None]
+        repeatCall: Deferred[None] | None = None
 
         def go(how: Callable[[], Any]) -> None:
             nonlocal repeatCall
@@ -137,10 +137,12 @@ class RepeatTestCase(TestCase):
         async def run(how: Callable[[], Any]) -> None:
             go(how)
             with self.assertRaises(CancelledError):
+                assert repeatCall is not None
                 await repeatCall
 
         tad.runAsync(run(asynchronously))
         self.assertTrue(mem.isScheduled())
+        assert repeatCall is not None
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())
 
