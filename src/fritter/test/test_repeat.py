@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, Callable
 from unittest import TestCase
 from zoneinfo import ZoneInfo
+from itertools import chain
 
 from datetype import DateTime
 from twisted.internet.defer import CancelledError, Deferred, succeed
@@ -196,13 +197,14 @@ class RepeatTestCase(TestCase):
         mem.advance()
         mem.advance()
         mem.advance(86401 * 5)
-        # mem.advance()
+        mem.advance(86401 * 24)
 
         [
             (start, _, _),
             (first, tries1, _),
             (second, tries2, _),
             (fourth, tries4, _),
+            *rest,
         ] = x
         self.assertEqual(tries1, [datetime(2024, 2, 2, 15, 10, tzinfo=TZ)])
         self.assertEqual(tries2, [datetime(2024, 2, 5, 15, 10, tzinfo=TZ)])
@@ -217,3 +219,13 @@ class RepeatTestCase(TestCase):
         self.assertEqual(datetime(2024, 2, 5, 15, 10, tzinfo=TZ), second)
         # 2/7, 2/9 skipped!
         self.assertEqual(datetime(2024, 2, 10, 15, 10, 5, tzinfo=TZ), fourth)
+        bigSkip = [
+            *[
+                datetime(2024, 2, n, 15, 10, tzinfo=TZ)
+                for n in [12, 14, 16, 19, 21, 23, 26, 28]
+            ],
+            *[datetime(2024, 3, n, 15, 10, tzinfo=TZ) for n in [1, 4]],
+        ]
+        self.maxDiff = 99999
+        actual = list(chain(*[tries for (_, tries, _) in rest]))
+        self.assertEqual(bigSkip, actual)

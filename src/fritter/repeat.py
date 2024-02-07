@@ -10,7 +10,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import IntEnum
-from typing import Any, Callable, Coroutine, Generic, Protocol, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Generic,
+    Protocol,
+    TypeVar,
+)
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
@@ -30,32 +37,51 @@ StepsTInv = TypeVar("StepsTInv")
 class RecurrenceRule(Protocol[WhenT, StepsT]):
     """
     A L{RecurrenceRule} is a callable that takes a reference time and a current
-    time, and computes a step count for the current recurrence and a new
-    reference time for the next one.
+    time, and computes series of steps between the current recurrence and a new
+    reference time for the next call.
+
+    Depending on the application, C{StepsT} type can either be an integer
+    (i.e.: a count of the number of steps that have passed between the
+    reference time and the current time) or a collection of specific previous
+    step timestamps, usually a collection of C{WhenT}.
     """
 
     def __call__(
         self, reference: WhenT, current: WhenT
     ) -> tuple[StepsT, WhenT]:
         """
-        Given a reference time and a current time, compute a step count and the
-        next reference time.
+        Given a reference time and a current time, compute the steps between
+        the calls and the next reference time.
 
-        @param reference: (the time at which the current recurrence was
-            scheduled to occur)
+        @param reference: the time at which the current invocation was
+            I{scheduled} to occur; i.e. the time that the call was computed to
+            have been called.
+
+        @param current: the time at which the current invocation I{actually}
+            occurred; i.e. the time that the event loop got around to actually
+            calling the function.
+
+        @note: The delta between the reference time and the current time will
+            I{often} be quite small.  If a system is running actively and is
+            not overloaded, then this delta will be close to zero.  However,
+            there are cases (some examples: a laptop goes to sleep, then wakes
+            up hours later; a program schedules a call in a database and is not
+            run for several weeks) when this delta can be very large.
 
         @return: a 2-tuple of:
 
-                1. a I{step count}; the number of recurrences that were
-                   expected to have occurred between C{reference} and the
-                   I{current time}.  So for example, for a L{RecurrenceRule}
-                   representing a once-every-5-seconds recurrence, if your
-                   reference time were 1.0 and your current time were 15.0,
-                   then your step count should be 2, since recurrences should
-                   have occurred at 6.0 and 11.0.
+                1. I{steps}; the recurrences that were expected to have
+                   occurred between C{reference} and the I{current time}.  So
+                   for example, for a L{RecurrenceRule} representing a
+                   once-every-5-seconds recurrence, if your reference time were
+                   1.0 and your current time were 15.0, then your step count
+                   should be 2, since recurrences should have occurred at 6.0
+                   and 11.0.  Alternately, for a C{RecurrenceRule[float,
+                   list[float]]} with the same scheduled times, C{steps} will
+                   be C{[6.0, 11.0]}.
 
-                2. a I{desired time}; the next reference time at which a
-                   recurrence should occur.  In our previous example, where our
+                2. I{next reference time}; time at which the next recurrence
+                   I{should} occur.  In our previous example, where our
                    reference time was 1.0 and current time was 15.0, the next
                    desired time should be 16.0, since that's the next 5-second
                    recurrence after 11.0.
@@ -161,26 +187,36 @@ def customWeekly(
     Repeat every week, on each weekday in the given set of C{days}, at the
     given C{hour}, C{minute}, and C{second}.
     """
-
     sdays = sorted([day.value for day in days])
+    assert days, "cannot pass an empty set of days"
 
     def _(
         reference: DateTime[ZoneInfo], current: DateTime[ZoneInfo]
     ) -> tuple[list[DateTime[ZoneInfo]], DateTime[ZoneInfo]]:
         steps: list[DateTime[ZoneInfo]] = []
+        refDay = reference.date().weekday()
+        weekOffset = 0
+        while True:
+            for sday in sdays:
+                daydelta = timedelta(days=(weekOffset + sday) - refDay)
+                candidate = (reference + daydelta).replace(
+                    hour=hour, minute=minute, second=second, microsecond=0
+                )
 
-        for sday in sdays + [sdplus + 7 for sdplus in sdays]:
-            daydelta = timedelta(days=sday - reference.date().weekday())
-            candidate = (reference + daydelta).replace(
-                hour=hour, minute=minute, second=second, microsecond=0
-            )
+                if candidate < reference:
+                    # earlier than the reference time, let's ignore
+                    continue
 
-            if candidate >= reference:
-                if candidate > current:
-                    return steps, candidate
-                steps.append(candidate)
+                if candidate <= current:
+                    # after the reference time but before the current time,
+                    # record as a missed step, then continue
+                    steps.append(candidate)
+                    continue
 
-        raise ValueError("invalid recurrence")
+                # it's after the reference *and* after the current time, we're
+                # done
+                return steps, candidate
+            weekOffset += 7
 
     return _
 
