@@ -288,14 +288,6 @@ class JSONableBoundMethod(Generic[JSONableSelf]):
         """
         return self.instance.asJSON(registry)
 
-    @classmethod
-    def fromJSON(
-        cls,
-        load: LoadProcess[LoadContext],
-        json: JSONObject,
-    ) -> JSONableBoundMethod[JSONableSelf]:
-        return None  # type:ignore
-
     def typeCodeForJSON(self) -> str:
         """
         Combine the bound method's name with its owning class's type code.
