@@ -20,6 +20,7 @@ author = "Glyph"
 extensions = [
     "sphinx.ext.intersphinx",
     "pydoctor.sphinx_ext.build_apidocs",
+    "sphinx.ext.autosectionlabel",
 ]
 
 import pathlib

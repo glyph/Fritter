@@ -1,9 +1,10 @@
 Civil Time
 ===========
 
-Now that we can schedule work in terms of a floating-point timestamp, let's
-take a look at scheduling things in terms of years, months, days, hours, and
-minutes using :py:class:`fritter.drivers.datetime.DateTimeDriver`.
+Now that we can :ref:`schedule work in terms of a floating-point timestamp
+<Running In Real Life>`, let's take a look at scheduling things in terms of
+years, months, days, hours, and minutes using
+:py:class:`fritter.drivers.datetime.DateTimeDriver`.
 
 .. note::
 
@@ -12,7 +13,7 @@ minutes using :py:class:`fritter.drivers.datetime.DateTimeDriver`.
    objects are actually just slightly better type-hints around
    :py:class:`datetime <datetime.datetime>` objects so you can type-check
    whether they have timezones or not with Mypy; at run-time, they are
-   datetimes.
+   :py:class:`datetime <datetime.datetime>`\ s.
 
 First, let's get all our imports sorted out:
 
@@ -28,8 +29,8 @@ We'll need a driver, as usual. :py:class:`MemoryDriver
    :end-before: set up datetime
 
 :py:class:`DateTimeDriver <fritter.drivers.datetime.DateTimeDriver>` is a
-wrapper around a ``float`` driver, so we can wrap it around a memory driver
-(or, similarly, another ``float`` driver such as :py:mod:`twisted
+wrapper around any ``TimeDriver[float]``, so we can wrap it around a memory
+driver (or, similarly, another ``TimeDriver[float]`` such as :py:mod:`twisted
 <fritter.drivers.twisted>`, :py:mod:`asyncio <fritter.drivers.asyncio>` or just
 :py:mod:`sleep <fritter.drivers.sleep>`).  We need to create a time zone first
 — a :py:class:`ZoneInfo <zoneinfo.ZoneInfo>`, specifically.
@@ -49,7 +50,7 @@ And catch our driver up to the timestamp that corresponds to the date.
 
 .. literalinclude:: civil_example.py
    :start-after: advance to the timestamp
-   :end-before: define some work
+   :end-before: done advancing
 
 We'll schedule some work using a :py:class:`timedelta <datetime.timedelta>`,
 and then advance by a number of seconds which calls our callable.
