@@ -29,7 +29,7 @@ We'll need a driver, as usual. :py:class:`MemoryDriver
    :end-before: set up datetime
 
 :py:class:`DateTimeDriver <fritter.drivers.datetime.DateTimeDriver>` is a
-wrapper around any ``TimeDriver[float]``, so we can wrap it around a memory
+wrapper around any :py:class:`TimeDriver <fritter.boundaries.TimeDriver>`\ ``[float]``, so we can wrap it around a memory
 driver (or, similarly, another ``TimeDriver[float]`` such as :py:mod:`twisted
 <fritter.drivers.twisted>`, :py:mod:`asyncio <fritter.drivers.asyncio>` or just
 :py:mod:`sleep <fritter.drivers.sleep>`).  We need to create a time zone first
