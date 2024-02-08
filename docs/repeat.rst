@@ -6,18 +6,22 @@ like this:
 
 .. code-block::
 
-   def work(steps: int, stopper: Cancellable) -> None: ...
+   def work(steps: StepsT, stopper: Cancellable) -> None: ...
 
-The parameters are, respectively, the number of *steps* that have been
-performed, and an object with a ``.cancel()`` method that will stop the next
-iteration from occurring.
+The parameters are, respectively, the *steps* that ``work`` should perform in
+this invocation, and an object with a ``.cancel()`` method that will stop the
+next iteration from occurring.
 
 Sometimes, real time moves more quickly than your code can keep up. Perhaps
 your code is slow, or you need to wait on an external system; whatever the
 reason, if if you've got a timer that is supposed to repeat every N seconds,
 eventually, you'll see a repetition happen after 2N seconds, or more.  At that
-point, any logic needs to catch up.  So that's the ``steps`` count.  And of
-course you need to be able to stop the repetition, and the ``stopper``'s
+point, any logic needs to catch up.
+
+``steps`` can reflect this multiple ways, depending on the type of recurrence
+you are using.  Recurrence rules
+
+And of course you need to be able to stop the repetition, and the ``stopper``'s
 ``.cancel()`` method is there to help you do that.
 
 Let's get set up with our imports.
