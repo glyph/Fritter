@@ -20,7 +20,7 @@ class MyClass:
     def typeCodeForJSON(cls) -> str:
         return ".".join([cls.__module__, cls.__name__])
 
-    def asJSON(
+    def toJSON(
         self, registry: JSONRegistry[dict[str, str]]
     ) -> dict[str, object]:
         return {"value": self.value}

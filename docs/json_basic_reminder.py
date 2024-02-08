@@ -33,7 +33,7 @@ class Reminder:
     def typeCodeForJSON(cls) -> str:
         return "reminder"
 
-    def asJSON(
+    def toJSON(
         self,
         registry: JSONRegistry[object],
     ) -> dict[str, object]:

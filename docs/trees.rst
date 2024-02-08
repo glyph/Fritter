@@ -4,7 +4,7 @@ Timer Trees
 You can use :py:mod:`fritter.tree` to organize your timers into groups.
 
 :py:func:`fritter.tree.branch` takes a scheduler and branches off of it,
-returning a 2-tuple of a :py:class:`friter.tree.Group` that allows you to
+returning a 2-tuple of a :py:class:`fritter.tree.Group` that allows you to
 control the group by pausing and unpausing it, and by changing its scaling
 factor, and a :py:class:`fritter.scheduler.Scheduler` of the same type as its
 argument.

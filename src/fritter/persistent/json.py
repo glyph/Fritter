@@ -9,7 +9,7 @@ To use this module:
     - decorate your functions and methods with L{JSONRegistry.function} and
       L{JSONRegistry.method}
 
-    - implement L{JSONable.typeCodeForJSON}, L{JSONable.asJSON},
+    - implement L{JSONable.typeCodeForJSON}, L{JSONable.toJSON},
       L{JSONableInstance.fromJSON} as appropriate, until C{mypy} passes on your
       code
 
@@ -93,7 +93,7 @@ class JSONable(HasTypeCode, Protocol[LoadContextCo]):
     Methods that allow a L{JSONRegistry} to serialize an object as JSON.
     """
 
-    def asJSON(self, registry: JSONRegistry[LoadContextCo]) -> JSONObject:
+    def toJSON(self, registry: JSONRegistry[LoadContextCo]) -> JSONObject:
         """
         Convert this callable to a JSON-serializable dictionary.
         """
@@ -188,7 +188,7 @@ class JSONableInstance(JSONable[LoadContextInv], Protocol):
         """
         Load an instance of this type from the given deserialized JSON object,
         which should be in the format returned by an instance of this class's
-        L{asJSON <JSONable.asJSON>} method.
+        L{toJSON <JSONable.toJSON>} method.
         """
 
 
@@ -221,7 +221,7 @@ def _whatJSON(
     """
     return {
         "type": what.typeCodeForJSON(),
-        "data": what.asJSON(registry),
+        "data": what.toJSON(registry),
     }
 
 
@@ -254,7 +254,7 @@ class SerializableFunction(Generic[LoadContext, SomeSignature]):
         """
         return self.typeCode
 
-    def asJSON(self, registry: JSONRegistry[LoadContext]) -> JSONObject:
+    def toJSON(self, registry: JSONRegistry[LoadContext]) -> JSONObject:
         """
         Return an empty object.
         """
@@ -283,11 +283,11 @@ class JSONableBoundMethod(Generic[JSONableSelf]):
         """
         self.descriptor.func(self.instance)
 
-    def asJSON(self, registry: JSONRegistry[LoadContext]) -> JSONObject:
+    def toJSON(self, registry: JSONRegistry[LoadContext]) -> JSONObject:
         """
         Convert this method's instance to a JSON-dumpable dict.
         """
-        return self.instance.asJSON(registry)
+        return self.instance.toJSON(registry)
 
     def typeCodeForJSON(self) -> str:
         """
@@ -357,11 +357,11 @@ class JSONableBoundRepeatable(Generic[JSONableSelf, LoadContext, StepsTInv]):
         """
         self.descriptor.func(self.instance, steps, stopper)
 
-    def asJSON(self, registry: JSONRegistry[LoadContext]) -> JSONObject:
+    def toJSON(self, registry: JSONRegistry[LoadContext]) -> JSONObject:
         """
         Convert this method's instance to a JSON-dumpable dict.
         """
-        return self.instance.asJSON(registry)
+        return self.instance.toJSON(registry)
 
     def typeCodeForJSON(self) -> str:
         """
@@ -858,7 +858,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
     ) -> _JSONableRepeaterWrapper[LoadContext, StepsT]:
         """
         Deserialize a L{_JSONableRepeaterWrapper} from a JSON-dumpable dict
-        previously produced by L{_JSONableRepeaterWrapper.asJSON}.
+        previously produced by L{_JSONableRepeaterWrapper.toJSON}.
         """
         rule: RecurrenceRule[
             DateTime[ZoneInfo], StepsT
@@ -871,7 +871,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
         )
         return cls(load.registry, rep)
 
-    def asJSON(self, registry: JSONRegistry[object]) -> JSONObject:
+    def toJSON(self, registry: JSONRegistry[object]) -> JSONObject:
         """
         Serialize this L{_JSONableRepeaterWrapper} to a JSON-dumpable dict
         suitable for deserialization with L{_JSONableRepeaterWrapper.fromJSON},

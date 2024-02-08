@@ -12,15 +12,18 @@ The most basic thing that we can do with a persistent task is remind the user
 to do sommething at some point in the future.  So let's start off by building
 that.
 
-First, we need a ``JSONRegistry``, so let's instantiate one.
+Whever building anything persistent it is important to establish what objects
+are safe to serialize and how to serialize them in this context.  To register
+our serializable objects, we will use a :py:class:`JSONRegistry
+<fritter.persistent.JSONRegistry>`, so let's instantiate one.
 
 .. literalinclude:: json_basic_reminder.py
    :start-after: start-registry
    :end-before: end-registry
 
 Don't worry about the ``[object]`` there just yet; that tells us the type of
-the "load context" for this registry.  We'll get to that a little later, but
-this first step doesn't need it yet.
+the "load context" for this registry.  We'll get to that a little later, but we
+don't need it yet.
 
 Next, we'll make a Reminder class, which just holds a bit of text to remind us
 about.
@@ -36,10 +39,10 @@ instance and class methods to conform to its interfaces:
   identifies this class within the context of this specific ``JSONRegistry``
   instance, which defines our serialization format.
 
-- an ``asJSON`` instance method to serialize it to a JSON-serializable dict,
+- an ``toJSON`` instance method to serialize it to a JSON-serializable dict,
   and
 
-- a ``fromJSON`` method that passes in the result of that ``asJSON`` method as
+- a ``fromJSON`` method that passes in the result of that ``toJSON`` method as
   well as some other parameters.
 
 Here are those implementations:
@@ -105,10 +108,10 @@ calls removed and any new calls added.
 
 Fritter provides a function,
 :py:func:`fritter.persistent.json.schedulerAtPath`, which does most of this
-work for you, returning a contextmanager that either loads or creates a ????????????????????????.
+work for you, returning a contextmanager that either loads or creates a :py:class:`Scheduler <fritter.scheduler.Scheduler>`.
 
 .. literalinclude:: json_basic_reminder.py
-   :pyobject: schedulerLoaded
+   :pyobject: runScheduler
 
 Now to put *all* of that together, we'll look at the command-line. If the user
 specifies any arguments, the first should be an integer number of seconds, and

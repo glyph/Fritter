@@ -54,7 +54,7 @@ class FriendList:
     def typeCodeForJSON(cls) -> str:
         return "friend-list"
 
-    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
+    def toJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {}
 
     @classmethod
@@ -139,7 +139,7 @@ class Friend:
     def typeCodeForJSON(cls) -> str:
         return "friend"
 
-    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
+    def toJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {"name": self.name}
 
     @classmethod

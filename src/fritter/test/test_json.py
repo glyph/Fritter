@@ -78,7 +78,7 @@ class InstanceWithMethods:
         load.context.identityMap[key] = new
         return new
 
-    def asJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
+    def toJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
         return {
             "value": self.value,
             "identity": id(self),
@@ -125,7 +125,7 @@ class Stoppable:
     def typeCodeForJSON(self) -> str:
         return "stoppable"
 
-    def asJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
+    def toJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
         def save(it: Handle | None) -> object:
             return registry.saveFutureCall(it) if it is not None else it
 

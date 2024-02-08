@@ -17,7 +17,7 @@ class FriendReminder:
     def typeCodeForJSON(cls) -> str:
         return ".".join([cls.__module__, cls.__name__])
 
-    def asJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
+    def toJSON(self, registry: JSONRegistry[object]) -> dict[str, object]:
         return {"filename": self.filename, "current": self.current}
 
     @classmethod
