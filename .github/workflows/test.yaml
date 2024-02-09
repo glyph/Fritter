@@ -19,7 +19,7 @@ jobs:
     runs-on: "${{ matrix.runs-on }}"
     env:
       TOXENV: "${{ matrix.tox-env }}"
-    name: ${{ matrix.tox-env }}-${{ matrix.runs-on }}
+    name: ${{ matrix.tox-env }}-${{ matrix.python-version }}-${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
