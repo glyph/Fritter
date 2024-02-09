@@ -29,8 +29,8 @@ _TrunkDelta = TypeVar("_TrunkDelta")
 
 class Scale(Protocol[_BranchTime, _TrunkTime, _TrunkDelta]):
     """
-    A L{Scale} defines a translation between a child, or "branch" time scale,
-    and a parent, or "trunk" time scale.
+    A L{Scale} defines a translation between a branch (i.e., "child") time
+    scale, and a trunk (i.e., "parent") time scale.
     """
 
     def up(self, offset: _TrunkDelta, time: _BranchTime) -> _TrunkTime:
@@ -141,37 +141,41 @@ def timesFaster(factor: float) -> Scale[float, float, float]:
     """
     Scale a C{float} time-scale by C{factor}.  e.g., in ::
 
-        group, child = branch(parent, timesFaster(3.0))
+        manager, branched = branch(trunk, timesFaster(3.0))
 
-    C{child} will be a child scheduler running 3 times faster than C{parent}.
+    C{branched} will be a branch scheduler running 3 times faster than
+    C{trunk}.
     """
     return _FloatScale(factor)
 
 
-class Group(Protocol[WhenT, _TrunkDelta]):
+class BranchManager(Protocol[WhenT, _TrunkDelta]):
     """
-    A L{Group} presents an interface to control a group of timers collected
-    into a scheduler; pausing the group, unpausing it, or making its relative
-    rate of progress faster or slower.
+    A L{BranchManager} controls a group of timers in a branch scheduler created
+    with L{branch}; pausing the passage of time in the branch, unpausing it, or
+    making its relative rate of progress faster or slower.
     """
 
     def changeScale(self, scale: Scale[WhenT, WhenT, _TrunkDelta]) -> None:
         """
-        Change the relative scale of the time coordinate system for this group
-        and for its parent to the new, given C{scale}.  i.e.: with a scale of
+        Change the relative scale of the time coordinate system for this branch
+        and for its trunk to the new, given C{scale}.  i.e.: with a scale of
         C{timesFaster(2.0)}, that means time is running 2 times faster in this
-        L{Group}'s temporal coordinate system, and C{scheduler.callAt(3.0, X)}
-        will run C{X} when the trunk's current timestamp is 1.5.
+        L{BranchManager}'s temporal coordinate system, and
+        C{scheduler.callAt(3.0, X)} will run C{X} when the trunk's current
+        timestamp is 1.5.
         """
 
     def unpause(self) -> None:
         """
-        Start the group of timers again.
+        Start the branched scheduler running again.
         """
 
     def pause(self) -> None:
         """
-        Pause the group of timers.
+        Pause the passage of time in the branched scheduler, causing its C{now}
+        to stop advancing and causing any timers schedule with it via
+        L{Scheduler.callAt} to stop running.
         """
 
 
@@ -180,22 +184,22 @@ def branch(
     trunk: Scheduler[WhenT, Callable[[], None]],
     scale: Scale[WhenT, WhenT, _TrunkDelta],
 ) -> tuple[
-    Group[WhenT, _TrunkDelta], Scheduler[WhenT, Callable[[], None]]
+    BranchManager[WhenT, _TrunkDelta], Scheduler[WhenT, Callable[[], None]]
 ]: ...
 
 
 @overload
 def branch(
     trunk: Scheduler[WhenT, Callable[[], None]]
-) -> tuple[Group[WhenT, WhenT], Scheduler[WhenT, Callable[[], None]]]: ...
+) -> tuple[BranchManager[WhenT, WhenT], Scheduler[WhenT, Callable[[], None]]]: ...
 
 
 def branch(
     trunk: Scheduler[WhenT, Callable[[], None]],
     scale: Scale[WhenT, WhenT, _TrunkDelta] | None = None,
-) -> tuple[Group[WhenT, _TrunkDelta], Scheduler[WhenT, Callable[[], None]]]:
+) -> tuple[BranchManager[WhenT, _TrunkDelta], Scheduler[WhenT, Callable[[], None]]]:
     """
-    Derive a branch (child) scheduler from a trunk (trunk) scheduler.
+    Derive a branch (child) scheduler from a C{trunk} (parent) scheduler.
     """
     if scale is None:
         scale = NoScale[_TrunkDelta]()
@@ -289,7 +293,7 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
         ), "If a timer has been paused, _pauseTime must have been set"
         return self._pauseTime
 
-    # implementation of 'Group' interface
+    # implementation of 'BranchManager' interface
 
     def unpause(self) -> None:
         if self._running:
@@ -329,7 +333,7 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
 
 
 __all__ = [
-    "Group",
+    "BranchManager",
     "branch",
     "timesFaster",
     "Scale",

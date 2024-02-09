@@ -4,9 +4,9 @@ from fritter.scheduler import SimpleScheduler
 from fritter.tree import branch, timesFaster
 
 driver = MemoryDriver()
-parent = SimpleScheduler(driver)
+trunk = SimpleScheduler(driver)
 rate = 3.0
-group, child = branch(parent, timesFaster(rate))
+manager, branched = branch(trunk, timesFaster(rate))
 # end setup
 
 
@@ -22,11 +22,11 @@ def loop(scheduler: SimpleScheduler, name: str, interval: float = 1.0) -> None:
 # end showfunc
 
 # loops
-loop(parent, "parent", 1.0)
-loop(child, "child", 1.0)
+loop(trunk, "trunk", 1.0)
+loop(branched, "branch", 1.0)
 # work
 for again in range(10):
     driver.advance()
     rate += 1
-    group.changeScale(timesFaster(rate))
-    print(f"time: parent={parent.now()} child={child.now()}")
+    manager.changeScale(timesFaster(rate))
+    print(f"time: trunk={trunk.now()} branch={branched.now()}")

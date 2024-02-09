@@ -5,38 +5,36 @@ from fritter.scheduler import SimpleScheduler
 from fritter.tree import branch
 
 driver = MemoryDriver()
-parent = SimpleScheduler(driver)
-group, child = branch(parent)
+trunk = SimpleScheduler(driver)
+manager, branched = branch(trunk)
 # end setup
 
 
 # showfunc
 def show(name: str) -> Callable[[], None]:
     def _() -> None:
-        print(f"{name} parent={parent.now()} child={child.now()}")
+        print(f"{name} trunk={trunk.now()} branch={branched.now()}")
 
     return _
-
-
 # end showfunc
 
 
-# childcalls
-child.callAt(1.0, show("child 1"))
-child.callAt(2.0, show("child 2"))
-child.callAt(3.0, show("child 3"))
-# parentcalls
-parent.callAt(1.0, show("parent 1"))
-parent.callAt(2.0, show("parent 2"))
-parent.callAt(3.0, show("parent 3"))
+# branchcalls
+branched.callAt(1.0, show("branch 1"))
+branched.callAt(2.0, show("branch 2"))
+branched.callAt(3.0, show("branch 3"))
+# trunkcalls
+trunk.callAt(1.0, show("trunk 1"))
+trunk.callAt(2.0, show("trunk 2"))
+trunk.callAt(3.0, show("trunk 3"))
 # endcalls
 
 # interact
 driver.advance()
 print("pause")
-group.pause()
+manager.pause()
 driver.advance()
 print("unpause")
-group.unpause()
+manager.unpause()
 driver.advance()
 driver.advance()
