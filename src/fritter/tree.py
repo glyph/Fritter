@@ -95,6 +95,10 @@ class FloatScale(Generic[_BranchFloat, _TrunkFloat]):
         return 0.0              # type:ignore[return-value]
 
 
+def timesFaster(factor: float) -> FloatScale[float,float]:
+    return FloatScale(factor)
+
+
 class Group(Protocol[WhenT]):
     """
     A L{Group} presents an interface to control a group of timers collected

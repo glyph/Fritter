@@ -1,17 +1,26 @@
 from typing import Callable, List, Tuple
 from unittest import TestCase
 
+from fritter.scheduler import Scheduler
+from fritter.tree import FloatScale, Group
+
 from ..drivers.memory import MemoryDriver
 from ..scheduler import SimpleScheduler
-from ..tree import _BranchDriver, branch
+from ..tree import _BranchDriver, branch, timesFaster
 
 
 class RecursiveTest(TestCase):
     def _oneRecursiveCall(
         self, scaleFactor: float
     ) -> List[Tuple[float, float]]:
-        scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = branch(scheduler1, scaleFactor)
+        scheduler1: Scheduler[float, Callable[[], None]] = SimpleScheduler(
+            driver := MemoryDriver()
+        )
+        result: tuple[Group[float], Scheduler[float, Callable[[], None]]]
+        result = branch(
+            scheduler1, FloatScale[float, float](scaleFactor)
+        )
+        recursive, scheduler2 = result
         calls = []
         scheduler2.callAt(
             1.0,
@@ -30,14 +39,14 @@ class RecursiveTest(TestCase):
 
     def test_changeScaling(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = branch(scheduler1, 2.0)
+        recursive, scheduler2 = branch(scheduler1, timesFaster(2.0))
         calls = []
         scheduler2.callAt(
             1.0,
             lambda: calls.append((scheduler1.now(), scheduler2.now())),
         )
         driver.advance(1 / 4)
-        recursive.scaleFactor *= 2.0
+        recursive.scale = timesFaster(4.0)
         self.assertEqual(driver.advance(), 1 / 8)
         self.assertEqual(calls, [((1 / 4) + (1 / 8), 1.0)])
 

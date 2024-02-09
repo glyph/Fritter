@@ -21,7 +21,7 @@ from ..persistent.json import (
     LoadProcess,
     MissingPersistentCall,
 )
-from ..repeat import daily
+from ..repeat.rules.datetimes import daily
 from ..scheduler import FutureCall
 
 

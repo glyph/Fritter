@@ -47,13 +47,15 @@ from fritter.boundaries import StepsTCon
 
 from ..boundaries import (
     Cancellable,
-    RepeatingWork,
+    RecurrenceRule,
     StepsT,
     StepsTInv,
     TimeDriver,
+    RepeatingWork,
 )
 from ..drivers.datetime import DateTimeDriver
-from ..repeat import EveryDelta, RecurrenceRule, Repeater
+from ..repeat import Repeater
+from ..repeat.rules.datetimes import EveryDelta
 from ..scheduler import FutureCall, Scheduler
 
 LoadContext = TypeVar("LoadContext", contravariant=True)
