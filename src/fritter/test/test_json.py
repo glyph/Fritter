@@ -356,37 +356,36 @@ class PersistentSchedulerTests(TestCase):
         )
         memoryDriver = MemoryDriver()
         memoryDriver.advance(dt.timestamp())
+        oneCall = {
+            "when": "2023-07-22T08:01:01",
+            "tz": "Etc/UTC",
+            "what": {
+                "type": "fritter:repetition.repeat",
+                "data": {
+                    "ts": "2023-07-22T08:01:01",
+                    "tz": "Etc/UTC",
+                    "rule": {
+                        "type": "incorrect rule type",
+                        "data": {"delta": (1, 0, 0)},
+                    },
+                    "callable": {
+                        "type": "instanceWithMethods.repeatMethod",
+                        "data": {
+                            "value": "sample",
+                            "identity": 4335201296,
+                        },
+                    },
+                },
+            },
+            "called": False,
+            "canceled": False,
+            "id": 1,
+        }
         with self.assertRaises(KeyError) as ke:
             registry.load(
                 memoryDriver,
                 {
-                    "scheduledCalls": [
-                        {
-                            "when": "2023-07-22T08:01:01",
-                            "tz": "Etc/UTC",
-                            "what": {
-                                "type": "fritter:repetition.repeat",
-                                "data": {
-                                    "ts": "2023-07-22T08:01:01",
-                                    "tz": "Etc/UTC",
-                                    "rule": {
-                                        "type": "incorrect rule type",
-                                        "data": {"delta": (1, 0, 0)},
-                                    },
-                                    "callable": {
-                                        "type": "instanceWithMethods.repeatMethod",
-                                        "data": {
-                                            "value": "sample",
-                                            "identity": 4335201296,
-                                        },
-                                    },
-                                },
-                            },
-                            "called": False,
-                            "canceled": False,
-                            "id": 1,
-                        }
-                    ],
+                    "scheduledCalls": [oneCall],
                     "counter": "1",
                 },
                 RegInfo([]),
