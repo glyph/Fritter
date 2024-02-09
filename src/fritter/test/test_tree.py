@@ -63,11 +63,17 @@ class RecursiveTest(TestCase):
         def callme() -> None:
             nonlocal called
             called = True
+
         def callme2() -> None:
             nonlocal called2
             called2 = True
-        scheduler2.callAt(DateTime.fromtimestamp(ts, TZ) + timedelta(days=1), callme)
-        scheduler2.callAt(DateTime.fromtimestamp(ts, TZ) + timedelta(days=3), callme2)
+
+        scheduler2.callAt(
+            DateTime.fromtimestamp(ts, TZ) + timedelta(days=1), callme
+        )
+        scheduler2.callAt(
+            DateTime.fromtimestamp(ts, TZ) + timedelta(days=3), callme2
+        )
         driver.advance(86400)
         self.assertTrue(called)
         called = False
@@ -79,8 +85,9 @@ class RecursiveTest(TestCase):
         self.assertFalse(called2)
         driver.advance(86400)
         self.assertTrue(called2)
-        self.assertEqual(scheduler1.now() - scheduler2.now(), timedelta(days=1))
-
+        self.assertEqual(
+            scheduler1.now() - scheduler2.now(), timedelta(days=1)
+        )
 
     def test_unscheduleNoOp(self) -> None:
         """

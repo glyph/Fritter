@@ -187,12 +187,12 @@ class RepeatTestCase(TestCase):
         ) -> None:
             x.append((sch.now(), steps, stopper))
 
-        rule: RecurrenceRule[
-            DateTime[ZoneInfo], list[DateTime[ZoneInfo]]
-        ] = EachWeekOn(
-            days={Day.MONDAY, Day.WEDNESDAY, Day.FRIDAY},
-            hour=15,
-            minute=10,
+        rule: RecurrenceRule[DateTime[ZoneInfo], list[DateTime[ZoneInfo]]] = (
+            EachWeekOn(
+                days={Day.MONDAY, Day.WEDNESDAY, Day.FRIDAY},
+                hour=15,
+                minute=10,
+            )
         )
 
         Async(tad).repeatedly(sch, rule, record)

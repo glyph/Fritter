@@ -30,4 +30,5 @@ class EverySecond:
 
 if TYPE_CHECKING:
     from ...boundaries import RecurrenceRule
+
     _isRule: RecurrenceRule[float, int] = EverySecond(1.0)

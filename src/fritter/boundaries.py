@@ -273,4 +273,3 @@ class AsyncDriver(Protocol[AsyncType]):
         @note: Whether this starts the given coroutine synchronously or waits
             until the next event-loop tick is implementation-defined.
         """
-

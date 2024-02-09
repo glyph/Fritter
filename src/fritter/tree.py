@@ -91,7 +91,6 @@ _BranchFloat = TypeVar("_BranchFloat", bound=float)
 _TrunkFloat = TypeVar("_TrunkFloat", bound=float)
 
 
-
 @dataclass
 class _FloatScale(Generic[_BranchFloat, _TrunkFloat]):
     """

@@ -13,6 +13,7 @@ from typing import Callable, Generic, Iterator
 from .boundaries import PriorityQueue, TimeDriver, WhenT, WhatT
 from .heap import Heap
 
+
 @dataclass(eq=True, order=True)
 class FutureCall(Generic[WhenT, WhatT]):
     """

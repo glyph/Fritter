@@ -30,11 +30,9 @@ class LoopTimeInterface(Protocol):
         callback: Callable[[], None],
         *args: object,
         context: Context | None = None,
-    ) -> Cancellable:
-        ...
+    ) -> Cancellable: ...
 
-    def time(self) -> float:
-        ...
+    def time(self) -> float: ...
 
 
 @dataclass

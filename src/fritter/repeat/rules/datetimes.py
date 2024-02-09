@@ -109,4 +109,6 @@ Hourly datetime-based rule.
 """
 
 if TYPE_CHECKING:
-    _isRule: RecurrenceRule[DateTime[ZoneInfo], list[DateTime[ZoneInfo]]] = EachWeekOn({Day.MONDAY}, 1, 1, 1)
+    _isRule: RecurrenceRule[DateTime[ZoneInfo], list[DateTime[ZoneInfo]]] = (
+        EachWeekOn({Day.MONDAY}, 1, 1, 1)
+    )

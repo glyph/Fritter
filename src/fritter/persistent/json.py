@@ -525,9 +525,9 @@ class JSONRegistry(Generic[LoadContext]):
 
     # TODO: implement merging multiple registries together so that objects from
     # different libraries can live in the same blob
-    _functions: _SpecificTypeRegistration[
-        JSONableCallable[LoadContext]
-    ] = field(default_factory=_copyUniversal("_functions"))
+    _functions: _SpecificTypeRegistration[JSONableCallable[LoadContext]] = (
+        field(default_factory=_copyUniversal("_functions"))
+    )
     _repeatable: _SpecificTypeRegistration[
         JSONableRepeatable[LoadContext, Any]
     ] = field(default_factory=_copyUniversal("_repeatable"))
@@ -569,9 +569,9 @@ class JSONRegistry(Generic[LoadContext]):
     ) -> None:
         # TODO: there's a variance problem here, I think?
         self._rules.add(serializer)  # type:ignore[arg-type]
-        self._ruletype2jsonifier[
-            ruleType
-        ] = serializer  # type:ignore[assignment]
+        self._ruletype2jsonifier[ruleType] = (
+            serializer
+        )  # type:ignore[assignment]
 
     def _loadOne(
         self,
@@ -862,9 +862,9 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
         Deserialize a L{_JSONableRepeaterWrapper} from a JSON-dumpable dict
         previously produced by L{_JSONableRepeaterWrapper.toJSON}.
         """
-        rule: RecurrenceRule[
-            DateTime[ZoneInfo], StepsT
-        ] = load.registry._loadRRule(json["rule"])
+        rule: RecurrenceRule[DateTime[ZoneInfo], StepsT] = (
+            load.registry._loadRRule(json["rule"])
+        )
         what = json["callable"]
         one = load.registry._loadOne(what, load.registry._repeatable, load)
         ref = fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"]))
