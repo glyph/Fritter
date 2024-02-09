@@ -28,5 +28,5 @@ loop(child, "child", 1.0)
 for again in range(10):
     driver.advance()
     rate += 1
-    group.scale = timesFaster(rate)
+    group.changeScale(timesFaster(rate))
     print(f"time: parent={parent.now()} child={child.now()}")
