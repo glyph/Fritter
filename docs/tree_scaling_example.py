@@ -1,11 +1,12 @@
 # setup
 from fritter.drivers.memory import MemoryDriver
 from fritter.scheduler import SimpleScheduler
-from fritter.tree import branch
+from fritter.tree import branch, timesFaster
 
 driver = MemoryDriver()
 parent = SimpleScheduler(driver)
-group, child = branch(parent, 3.0)
+rate = 3.0
+group, child = branch(parent, timesFaster(rate))
 # end setup
 
 
@@ -26,5 +27,6 @@ loop(child, "child", 1.0)
 # work
 for again in range(10):
     driver.advance()
-    group.scaleFactor += 1.0
+    rate += 1
+    group.scale = timesFaster(rate)
     print(f"time: parent={parent.now()} child={child.now()}")
