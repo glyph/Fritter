@@ -155,13 +155,14 @@ class Group(Protocol[WhenT, _TrunkDelta]):
     rate of progress faster or slower.
     """
 
-    scale: Scale[WhenT, WhenT, _TrunkDelta]
-    """
-    How much faster the branch time coordinate system is within this scheduler?
-    i.e.: with a scale factor of 2, that means time is running 2 times faster
-    in this branch temporal coordinate system, and C{self.callAt(3.0,
-    X)} will run C{X} when the trunk's current timestamp is 1.5.
-    """
+    def changeScale(self, scale: Scale[WhenT, WhenT, _TrunkDelta]) -> None:
+        """
+        Change the relative scale of the time coordinate system for this group
+        and for its parent to the new, given C{scale}.  i.e.: with a scale of
+        C{timesFaster(2.0)}, that means time is running 2 times faster in this
+        L{Group}'s temporal coordinate system, and C{scheduler.callAt(3.0, X)}
+        will run C{X} when the trunk's current timestamp is 1.5.
+        """
 
     def unpause(self) -> None:
         """
@@ -203,17 +204,13 @@ def branch(
     driver: _BranchDriver[WhenT, WhenT, _TrunkDelta] = _BranchDriver(
         trunk, scale, scale.shift(None, trunk.now())
     )
-    driver.scale = scale
+    driver.changeScale(scale)
     branchScheduler: Scheduler[WhenT, Callable[[], None]] = Scheduler(driver)
     driver.unpause()
     return driver, branchScheduler
 
 
 _F = TypeVar("_F", bound=float)
-
-
-def _add(someFloat: _F, other: _F) -> _F:
-    return someFloat + other  # type:ignore[return-value]
 
 
 def _subtract(someFloat: _F, other: _F) -> _F:
@@ -313,22 +310,14 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
             self._call.cancel()
             self._call = None
 
-    @property
-    def scale(self) -> Scale[_BranchTime, _TrunkTime, _TrunkDelta]:
-        """
-        @see: L{Scale}
-        """
-        return self._scale
-
-    @scale.setter
-    def scale(
+    def changeScale(
         self, newScale: Scale[_BranchTime, _TrunkTime, _TrunkDelta]
     ) -> None:
         """
         Change this recursive driver to be running at the time scale of
-        C{newScale}.  i.e. C{driver.scale = timesFaster(3.0)} will change this
-        driver's rate of time passing to be 3x faster than its trunk, presuming
-        it is a float-based timer.
+        C{newScale}.  i.e. C{driver.changeScale(timesFaster(3.0))} will change
+        this driver's rate of time passing to be 3x faster than its trunk,
+        presuming it is a float-based timer.
         """
         wasRunning = self._running
         if wasRunning:

@@ -45,7 +45,7 @@ class RecursiveTest(TestCase):
             lambda: calls.append((scheduler1.now(), scheduler2.now())),
         )
         driver.advance(1 / 4)
-        recursive.scale = timesFaster(4.0)
+        recursive.changeScale(timesFaster(4.0))
         self.assertEqual(driver.advance(), 1 / 8)
         self.assertEqual(calls, [((1 / 4) + (1 / 8), 1.0)])
 

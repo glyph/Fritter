@@ -3,11 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from json import dumps, loads
+from pathlib import Path
+from tempfile import mkdtemp
 from typing import Any, Type
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
+from fritter.persistent.json import schedulerAtPath
 
 from ..boundaries import Cancellable, TimeDriver
 from ..drivers.datetime import DateTimeDriver
@@ -247,6 +250,24 @@ class PersistentSchedulerTests(TestCase):
         memory2.advance(dt.timestamp() + 3.0)
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIs(loadedStoppable.runcall, None)
+
+    def test_schedulerAtPath(self) -> None:
+        ri0 = RegInfo([])
+        iwm = InstanceWithMethods("A", ri0)
+        mem = MemoryDriver()
+        p = Path(mkdtemp()) / "scheduler.json"
+        ts = datetime(2024, 2, 1, tzinfo=ZoneInfo("Etc/UTC")).timestamp()
+        mem.advance(ts)
+        aw = aware(datetime(2024, 2, 2, tzinfo=ZoneInfo("Etc/UTC")), ZoneInfo)
+        with schedulerAtPath(registry, mem, p, ri0) as sched1:
+            sched1.callAt(aw, iwm.method1)
+        ri1 = RegInfo([])
+        mem2 = MemoryDriver()
+        with schedulerAtPath(registry, mem2, p, ri1):
+            mem2.advance()
+        self.assertEqual(
+            ri1.calls, ["InstanceWithMethods.fromJSON", "A/method1"]
+        )
 
     def test_noSuchCallID(self) -> None:
         mem = MemoryDriver()
