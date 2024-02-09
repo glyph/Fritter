@@ -570,8 +570,8 @@ class JSONRegistry(Generic[LoadContext]):
         # TODO: there's a variance problem here, I think?
         self._rules.add(serializer)  # type:ignore[arg-type]
         self._ruletype2jsonifier[ruleType] = (
-            serializer
-        )  # type:ignore[assignment]
+            serializer  # type:ignore[assignment]
+        )
 
     def _loadOne(
         self,
