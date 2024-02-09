@@ -391,7 +391,10 @@ class PersistentSchedulerTests(TestCase):
                 },
                 RegInfo([]),
             )
-        self.assertEqual(str(ke.exception), repr("cannot interpret rule type code 'incorrect rule type'"))
+        self.assertEqual(
+            str(ke.exception),
+            repr("cannot interpret rule type code 'incorrect rule type'"),
+        )
 
     def test_repeatableMethod(self) -> None:
         dt = aware(
