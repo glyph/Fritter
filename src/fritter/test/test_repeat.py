@@ -1,17 +1,19 @@
 from datetime import datetime
+from itertools import chain
 from typing import Any, Callable
 from unittest import TestCase
 from zoneinfo import ZoneInfo
-from itertools import chain
 
 from datetype import DateTime
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
-from ..boundaries import Cancellable
+from ..boundaries import Cancellable, Day, RecurrenceRule
 from ..drivers.datetime import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
-from ..repeat import Async, Day, EverySecond, EveryWeekOn, repeatedly
+from ..repeat import Async, repeatedly
+from ..repeat.rules.datetimes import EachWeekOn
+from ..repeat.rules.seconds import EverySecond
 from ..scheduler import Scheduler
 
 
@@ -166,9 +168,9 @@ class RepeatTestCase(TestCase):
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())
 
-    def test_everyWeekOn(self) -> None:
+    def test_eachWeekOn(self) -> None:
         """
-        L{EveryWeekOn} provides a recurrence on custom weekdays at custom
+        L{EachWeekOn} provides a recurrence on custom weekdays at custom
         times.
         """
         tad = TwistedAsyncDriver()
@@ -185,15 +187,15 @@ class RepeatTestCase(TestCase):
         ) -> None:
             x.append((sch.now(), steps, stopper))
 
-        Async(tad).repeatedly(
-            sch,
-            EveryWeekOn(
-                days={Day.Monday, Day.Wednesday, Day.Friday},
-                hour=15,
-                minute=10,
-            ),
-            record,
+        rule: RecurrenceRule[
+            DateTime[ZoneInfo], list[DateTime[ZoneInfo]]
+        ] = EachWeekOn(
+            days={Day.MONDAY, Day.WEDNESDAY, Day.FRIDAY},
+            hour=15,
+            minute=10,
         )
+
+        Async(tad).repeatedly(sch, rule, record)
 
         mem.advance()
         mem.advance()

@@ -20,7 +20,7 @@ from fritter.persistent.json import (
     JSONableScheduler,
     LoadProcess,
 )
-from fritter.repeat import weekly
+from fritter.repeat.rules.datetimes import weekly
 
 
 registry: JSONRegistry[FriendList] = JSONRegistry()

@@ -8,22 +8,10 @@ causes them to actually be called.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Generic, Iterator, TypeVar
+from typing import Callable, Generic, Iterator
 
-from .boundaries import PriorityComparable, PriorityQueue, TimeDriver
+from .boundaries import PriorityQueue, TimeDriver, WhenT, WhatT
 from .heap import Heap
-
-WhenT = TypeVar("WhenT", bound=PriorityComparable)
-"""
-TypeVar for representing a time at which something can occur; a temporal
-coordinate in a timekeeping system.
-"""
-WhatT = TypeVar("WhatT", bound=Callable[[], None])
-"""
-TypeVar for representing a unit of work that can take place within the context
-of a L{Scheduler}.
-"""
-
 
 @dataclass(eq=True, order=True)
 class FutureCall(Generic[WhenT, WhatT]):

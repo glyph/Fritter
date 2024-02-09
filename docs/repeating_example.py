@@ -1,5 +1,6 @@
 from fritter.boundaries import Cancellable
-from fritter.repeat import Async, EverySecond
+from fritter.repeat import Async
+from fritter.repeat.rules.seconds import EverySecond
 from fritter.drivers.asyncio import AsyncioTimeDriver, AsyncioAsyncDriver
 from fritter.scheduler import SimpleScheduler
 from asyncio import run

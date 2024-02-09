@@ -1,5 +1,6 @@
 from fritter.boundaries import Cancellable
-from fritter.repeat import EverySecond, repeatedly
+from fritter.repeat import repeatedly
+from fritter.repeat.rules.seconds import EverySecond
 from fritter.drivers.sleep import SleepDriver
 from fritter.scheduler import Scheduler
 
