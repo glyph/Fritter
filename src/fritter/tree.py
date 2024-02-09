@@ -13,11 +13,11 @@ from typing import (
     Generic,
     Optional,
     Protocol,
-    Self,
     Tuple,
     TypeVar,
     overload,
 )
+from typing_extensions import Self
 from .boundaries import PriorityComparable
 
 from .scheduler import FutureCall, Scheduler
