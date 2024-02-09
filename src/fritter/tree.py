@@ -7,22 +7,102 @@ Groups of timers that may be paused, resumed, or time-scaled together.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, NewType, Optional, Protocol, Tuple, TypeVar
+from typing import (
+    Callable,
+    Generic,
+    Optional,
+    Protocol,
+    Tuple,
+    TypeVar,
+)
+
+from fritter.boundaries import PriorityComparable, WhenT
 
 from .scheduler import FutureCall, Scheduler
 
-_BranchTime = NewType("_BranchTime", float)
-_TrunkTime = NewType("_TrunkTime", float)
+_BranchTime = TypeVar("_BranchTime", bound=PriorityComparable)
+_TrunkTime = TypeVar("_TrunkTime", bound=PriorityComparable)
+_TrunkDelta = TypeVar("_TrunkDelta")
 
 
-class Group(Protocol):
+class Scale(Protocol[_BranchTime, _TrunkTime]):
+    def up(self, time: _BranchTime) -> _TrunkTime:
+        ...
+
+    def down(self, time: _TrunkTime) -> _BranchTime:
+        ...
+
+    def zero(self) -> _TrunkTime:
+        ...
+
+    def shift(self, pauseTime: _BranchTime, currentTime: _TrunkTime) -> None:
+        ...
+
+T = TypeVar("T")
+
+
+@dataclass
+class NoScale(Generic[T]):
+    _zero: T
+
+    def up(self, time: T) -> T:
+        return time
+
+    def down(self, time: T) -> T:
+        return time
+
+    def zero(self) -> T:
+        return self._zero
+
+
+
+_BranchFloat = TypeVar("_BranchFloat", bound=float)
+_TrunkFloat = TypeVar("_TrunkFloat", bound=float)
+
+@dataclass
+class FloatScale(Generic[_BranchFloat, _TrunkFloat]):
+    factor: float
+
+    _offset: _TrunkFloat = 0.0  # type:ignore[assignment]
+    _fudge: float = 0.0
+
+    """
+    Amount to subtract from trunk's timestamp to get to this driver's base
+    relative timestamp - in trunk's (unscaled, not branch) time-scale.  When a
+    L{_BranchDriver} is created, it has a default offset of 0, which means that
+    the moment '.start()' is called, that is time 0 in branch time.
+    """
+
+    def up(self, time: _BranchFloat) -> _TrunkFloat:
+        trunk: _TrunkFloat
+        computed = ((time / self.factor) + self._offset)
+        trunk = computed        # type:ignore[assignment]
+
+        roundTripped: _BranchFloat = self.down(trunk)
+        self._fudge = _subtract(time, roundTripped)
+        return trunk
+
+    def down(self, trunkTime: _TrunkFloat) -> _BranchFloat:
+        computed  = ((trunkTime - self._offset) * self.factor) + self._fudge
+        branch: _BranchFloat = computed  # type:ignore[assignment]
+        return branch
+
+    def shift(self, pauseTime: _BranchFloat, currentTime: _TrunkTime) -> None:
+        trunkDelta = pauseTime / self.factor
+        self._offset = currentTime - trunkDelta  # type:ignore[assignment,operator]
+
+    def zero(self) -> _BranchFloat:
+        return 0.0              # type:ignore[return-value]
+
+
+class Group(Protocol[WhenT]):
     """
     A L{Group} presents an interface to control a group of timers collected
     into a scheduler; pausing the group, unpausing it, or making its relative
     rate of progress faster or slower.
     """
 
-    scaleFactor: float
+    scale: Scale[WhenT, WhenT]
     """
     How much faster the branch time coordinate system is within this scheduler?
     i.e.: with a scale factor of 2, that means time is running 2 times faster
@@ -42,14 +122,15 @@ class Group(Protocol):
 
 
 def branch(
-    trunk: Scheduler[float, Callable[[], None]], scaleFactor: float = 1.0
-) -> tuple[Group, Scheduler[float, Callable[[], None]]]:
+    trunk: Scheduler[WhenT, Callable[[], None]],
+    scale: Scale[WhenT, WhenT],
+) -> tuple[Group[WhenT], Scheduler[WhenT, Callable[[], None]]]:
     """
     Derive a branch (child) scheduler from a trunk (trunk) scheduler.
     """
-    driver = _BranchDriver(trunk)
-    driver.scaleFactor = scaleFactor
-    branchScheduler: Scheduler[float, Callable[[], None]] = Scheduler(driver)
+    driver: _BranchDriver[WhenT, WhenT] = _BranchDriver(trunk, scale, scale.zero())
+    driver.scale = scale
+    branchScheduler: Scheduler[WhenT, Callable[[], None]] = Scheduler(driver)
     driver.unpause()
     return driver, branchScheduler
 
@@ -66,13 +147,13 @@ def _subtract(someFloat: _F, other: _F) -> _F:
 
 
 @dataclass
-class _BranchDriver:
+class _BranchDriver(Generic[_TrunkTime, _BranchTime]):
     """
     Implementation of L{TimeDriver} for L{Scheduler} that is stacked on top of
     another L{Scheduler}.
     """
 
-    trunk: Scheduler[float, Callable[[], None]]
+    trunk: Scheduler[_TrunkTime, Callable[[], None]]
     """
     The scheduler that this driver is a branch of.
     """
@@ -87,7 +168,7 @@ class _BranchDriver:
     #    with the trunk scheduler, and so we couldn't meaningfully integrate
     #    with a higher-level persistent scheduler.
 
-    _scaleFactor: float = 1.0
+    _scale: Scale[_BranchTime, _TrunkTime]
     """
     How much faster the branch time coordinate system is within this scheduler?
     i.e.: with a scale factor of 2, that means time is running 2 times faster
@@ -95,43 +176,17 @@ class _BranchDriver:
     X)} will run C{X} when the trunk's current timestamp is 1.5.
     """
 
-    _call: Optional[FutureCall[_TrunkTime, Callable[[], None]]] = None
-
-    _offset: _TrunkTime = _TrunkTime(0.0)
-    """
-    Amount to subtract from trunk's timestamp to get to this driver's base
-    relative timestamp - in trunk's (unscaled, not branch) time-scale.  When a
-    L{_BranchDriver} is created, it has a default offset of 0, which means that
-    the moment '.start()' is called, that is time 0 in branch time.
-    """
-
-    _running: bool = False
-    _pauseTime: _BranchTime = _BranchTime(0.0)
+    _pauseTime: _BranchTime
     """
     Timestamp at which we were last paused.
     """
-    _fudge: _BranchTime = _BranchTime(0.0)
 
-    _scheduleWhenStarted: Optional[
-        Tuple[_BranchTime, Callable[[], None]]
-    ] = None
+    _scheduleWhenStarted: Optional[Tuple[_BranchTime, Callable[[], None]]] = None
 
-    def _branchToTrunk(self, branchTime: _BranchTime) -> _TrunkTime:
-        return _TrunkTime((branchTime / self._scaleFactor) + self._offset)
+    _call: Optional[FutureCall[_TrunkTime, Callable[[], None]]] = None
+    _running: bool = False
 
-    def _trunkToBranch(self, trunkTime: _TrunkTime) -> _BranchTime:
-        return _BranchTime((trunkTime - self._offset) * self._scaleFactor)
-
-    @property
-    def _trunk(self) -> Scheduler[_TrunkTime, Callable[[], None]]:
-        return self.trunk  # type:ignore[return-value]
-
-    def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
-        self._reschedule(_BranchTime(desiredTime), work)
-
-    def _reschedule(
-        self, desiredTime: _BranchTime, work: Callable[[], None]
-    ) -> None:
+    def reschedule(self, desiredTime: _BranchTime, work: Callable[[], None]) -> None:
         assert (
             self._call is None or self._running
         ), f"we weren't running, call should be None not {self._call}"
@@ -142,16 +197,12 @@ class _BranchDriver:
         if self._call is not None:
             self._call.cancel()
 
-        trunkTimestamp = self._branchToTrunk(desiredTime)
-        roundTripped: _BranchTime = self._trunkToBranch(trunkTimestamp)
-        self._fudge = _subtract(desiredTime, roundTripped)
-
         def clearAndRun() -> None:
             self._scheduleWhenStarted = None
             self._call = None
             work()
 
-        self._call = self._trunk.callAt(trunkTimestamp, clearAndRun)
+        self._call = self.trunk.callAt(self._scale.up(desiredTime), clearAndRun)
 
     def unschedule(self) -> None:
         self._scheduleWhenStarted = None
@@ -159,12 +210,9 @@ class _BranchDriver:
             self._call.cancel()
             self._call = None
 
-    def now(self) -> float:
-        return self._now()
-
-    def _now(self) -> _BranchTime:
+    def now(self) -> _BranchTime:
         if self._running:
-            return _add(self._trunkToBranch(self._trunk.now()), self._fudge)
+            return self._scale.down(self.trunk.now())
         else:
             return self._pauseTime
 
@@ -175,48 +223,40 @@ class _BranchDriver:
             return
         # shift forward the offset to skip over the time during which we were
         # paused.
-        trunkTime: _TrunkTime = self._trunk.now()
-        trunkDelta: _TrunkTime = _TrunkTime(
-            self._pauseTime / self._scaleFactor
-        )
-
-        # We need to cast to the NewType again here because the results of
-        # NewType arithmetic are the base types.
-        self._offset = _TrunkTime(trunkTime - trunkDelta)
-        self._pauseTime = _BranchTime(0.0)
+        self._scale.shift(self._pauseTime, self.trunk.now())
         self._running = True
         scheduleWhenStarted = self._scheduleWhenStarted
         if scheduleWhenStarted is not None:
             desiredTime, work = scheduleWhenStarted
-            self._reschedule(desiredTime, work)
+            self.reschedule(desiredTime, work)
 
     def pause(self) -> None:
-        self._pauseTime = self._now()
+        self._pauseTime = self.now()
         self._running = False
         if self._call is not None:
             self._call.cancel()
             self._call = None
 
     @property
-    def scaleFactor(self) -> float:
+    def scale(self) -> Scale[_BranchTime, _TrunkTime]:
         """
         The scale factor is how much faster than its trunk time passes in this
         driver.
         """
-        return self._scaleFactor
+        return self._scale
 
-    @scaleFactor.setter
-    def scaleFactor(self, newScaleFactor: float) -> None:
+    @scale.setter
+    def scale(self, newScale: Scale[_BranchTime, _TrunkTime]) -> None:
         """
-        Change this recursive driver to be running at `newScaleFactor` times
-        its trunk scheduler's rate.  i.e. driver.changeScaleFactor(3.0) will
+        Change this recursive driver to be running at `newScale` times
+        versus trunk scheduler's rate.  i.e. C{driver.scale = FloatScale(3.0)} will
         change this driver's rate of time passing to be 3x faster than its
         trunk.
         """
         wasRunning = self._running
         if wasRunning:
             self.pause()
-            self._scaleFactor = newScaleFactor
+            self._scale = newScale
             self.unpause()
         else:
-            self._scaleFactor = newScaleFactor
+            self._scale = newScale
