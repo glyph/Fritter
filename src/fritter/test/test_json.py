@@ -229,6 +229,11 @@ class PersistentSchedulerTests(TestCase):
         dt = aware(datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT), ZoneInfo)
         memoryDriver.advance(dt.timestamp() + 1)
         s = Stoppable()
+        self.assertEqual(s.ran, False)
+        s.runme()
+        self.assertEqual(s.ran, True)
+
+        s = Stoppable()
         s.scheduleme(scheduler)
         jsonobj = dumps(registry.save(scheduler))
         saved = loads(jsonobj)
@@ -237,7 +242,11 @@ class PersistentSchedulerTests(TestCase):
         registry.load(memory2, saved, ri)
         [(name, loadedStoppable)] = ri.identityMap.items()
         assert isinstance(loadedStoppable, Stoppable)
+        self.assertEqual(loadedStoppable.ran, False)
+        self.assertIsNot(loadedStoppable.runcall, None)
         memory2.advance(dt.timestamp() + 3.0)
+        self.assertEqual(loadedStoppable.ran, False)
+        self.assertIs(loadedStoppable.runcall, None)
 
     def test_noSuchCallID(self) -> None:
         mem = MemoryDriver()
