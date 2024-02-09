@@ -184,20 +184,25 @@ def branch(
     trunk: Scheduler[WhenT, Callable[[], None]],
     scale: Scale[WhenT, WhenT, _TrunkDelta],
 ) -> tuple[
-    BranchManager[WhenT, _TrunkDelta], Scheduler[WhenT, Callable[[], None]]
+    BranchManager[WhenT, _TrunkDelta],
+    Scheduler[WhenT, Callable[[], None]],
 ]: ...
 
 
 @overload
-def branch(
-    trunk: Scheduler[WhenT, Callable[[], None]]
-) -> tuple[BranchManager[WhenT, WhenT], Scheduler[WhenT, Callable[[], None]]]: ...
+def branch(trunk: Scheduler[WhenT, Callable[[], None]]) -> tuple[
+    BranchManager[WhenT, WhenT],
+    Scheduler[WhenT, Callable[[], None]],
+]: ...
 
 
 def branch(
     trunk: Scheduler[WhenT, Callable[[], None]],
     scale: Scale[WhenT, WhenT, _TrunkDelta] | None = None,
-) -> tuple[BranchManager[WhenT, _TrunkDelta], Scheduler[WhenT, Callable[[], None]]]:
+) -> tuple[
+    BranchManager[WhenT, _TrunkDelta],
+    Scheduler[WhenT, Callable[[], None]],
+]:
     """
     Derive a branch (child) scheduler from a C{trunk} (parent) scheduler.
     """
