@@ -349,6 +349,50 @@ class PersistentSchedulerTests(TestCase):
         self.assertLess(amount, 0.0001)
         self.assertEqual(calls, ["repeatable 4"])
 
+    def test_repeatLoadError(self) -> None:
+        dt = aware(
+            datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
+            ZoneInfo,
+        )
+        memoryDriver = MemoryDriver()
+        memoryDriver.advance(dt.timestamp())
+        with self.assertRaises(KeyError) as ke:
+            registry.load(
+                memoryDriver,
+                {
+                    "scheduledCalls": [
+                        {
+                            "when": "2023-07-22T08:01:01",
+                            "tz": "Etc/UTC",
+                            "what": {
+                                "type": "fritter:repetition.repeat",
+                                "data": {
+                                    "ts": "2023-07-22T08:01:01",
+                                    "tz": "Etc/UTC",
+                                    "rule": {
+                                        "type": "incorrect rule type",
+                                        "data": {"delta": (1, 0, 0)},
+                                    },
+                                    "callable": {
+                                        "type": "instanceWithMethods.repeatMethod",
+                                        "data": {
+                                            "value": "sample",
+                                            "identity": 4335201296,
+                                        },
+                                    },
+                                },
+                            },
+                            "called": False,
+                            "canceled": False,
+                            "id": 1,
+                        }
+                    ],
+                    "counter": "1",
+                },
+                RegInfo([]),
+            )
+        self.assertEqual(str(ke.exception), repr("cannot interpret rule type code 'incorrect rule type'"))
+
     def test_repeatableMethod(self) -> None:
         dt = aware(
             datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
