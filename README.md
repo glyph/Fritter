@@ -1,6 +1,6 @@
 # FRITTer
 
-## (Frame Rate Independent Timer Tree-er)
+## Frame-Rate IndependenT TimEr tRee
 
 Welcome to Fritter, a generalized Python library for interacting with work that
 needs to occur over time, whether physical time (i.e. numbers of seconds) or
@@ -11,13 +11,11 @@ civil time (i.e. numbers of days, weeks, months, or years).
 - Install from PyPI with [`pip install fritter`](https://pypi.org/project/fritter/).
 - Read the documentation at [fritter.readthedocs.io](https://fritter.readthedocs.io/).
 
-## The Pitch
+## What Is It, and Why Do I Need It?
 
 Fritter is a one-stop clock shop, allowing you to schedule over very short or
 very long periods of time.  Wherever you need something to happen in the
-future, Fritter has something for you.
-
-Here are just some of the use-cases:
+future, Fritter has something for you.  Here are just some of the use-cases:
 
 - If you have an algorithm that processes work over time and you want a unified
   interface to be able to deploy it across a variety of event loops, take a

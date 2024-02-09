@@ -7,7 +7,11 @@ name = "fritter"
 authors = [{name = "Glyph", email = "glyph@glyph.im"}]
 readme = "README.md"
 license = {file = "LICENSE"}
-classifiers = ["License :: OSI Approved :: MIT License"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Development Status :: 2 - Pre-Alpha",
+  "Operating System :: OS Independent",
+]
 dynamic = ["version", "description"]
 requires-python = ">=3.9"
 dependencies = [
