@@ -1,6 +1,10 @@
+from datetime import datetime, timedelta
 from typing import Callable, List, Tuple
 from unittest import TestCase
+from zoneinfo import ZoneInfo
 
+from datetype import DateTime
+from fritter.drivers.datetime import DateTimeDriver
 from fritter.scheduler import Scheduler
 
 from ..drivers.memory import MemoryDriver
@@ -44,6 +48,39 @@ class RecursiveTest(TestCase):
         recursive.scale = timesFaster(4.0)
         self.assertEqual(driver.advance(), 1 / 8)
         self.assertEqual(calls, [((1 / 4) + (1 / 8), 1.0)])
+
+    def test_datetime(self) -> None:
+        scheduler1: Scheduler[DateTime[ZoneInfo], Callable[[], None]] = (
+            Scheduler(DateTimeDriver(driver := MemoryDriver()))
+        )
+        recursive, scheduler2 = branch(scheduler1)
+        TZ = ZoneInfo("Etc/UTC")
+        ts = datetime(2024, 2, 9, tzinfo=TZ).timestamp()
+        driver.advance(ts)
+        called = False
+        called2 = False
+
+        def callme() -> None:
+            nonlocal called
+            called = True
+        def callme2() -> None:
+            nonlocal called2
+            called2 = True
+        scheduler2.callAt(DateTime.fromtimestamp(ts, TZ) + timedelta(days=1), callme)
+        scheduler2.callAt(DateTime.fromtimestamp(ts, TZ) + timedelta(days=3), callme2)
+        driver.advance(86400)
+        self.assertTrue(called)
+        called = False
+        recursive.pause()
+        driver.advance(86400)
+        recursive.unpause()
+        self.assertFalse(called2)
+        driver.advance(86400)
+        self.assertFalse(called2)
+        driver.advance(86400)
+        self.assertTrue(called2)
+        self.assertEqual(scheduler1.now() - scheduler2.now(), timedelta(days=1))
+
 
     def test_unscheduleNoOp(self) -> None:
         """

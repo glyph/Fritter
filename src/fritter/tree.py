@@ -18,8 +18,7 @@ from typing import (
     TypeVar,
     overload,
 )
-
-from fritter.boundaries import PriorityComparable
+from .boundaries import PriorityComparable
 
 from .scheduler import FutureCall, Scheduler
 
@@ -55,22 +54,22 @@ class Scale(Protocol[_BranchTime, _TrunkTime, _TrunkDelta]):
 DT = TypeVar("DT")
 
 
-class Deltable(PriorityComparable, Protocol[DT]):
+class _Deltable(PriorityComparable, Protocol[DT]):
     def __add__(self, addend: DT) -> Self: ...
-
-    @overload
-    def __sub__(self, subtrahend: Self) -> DT: ...
 
     @overload
     def __sub__(self, subtrahend: DT) -> Self: ...
 
+    @overload
+    def __sub__(self, subtrahend: Self) -> DT: ...
 
-WhenT = TypeVar("WhenT", bound=Deltable[Any])
+
+WhenT = TypeVar("WhenT", bound=_Deltable[Any])
 
 
 @dataclass
 class NoScale(Generic[DT]):
-    T = TypeVar("T", bound=Deltable[DT])
+    T = TypeVar("T", bound=_Deltable[DT])
 
     def up(self, offset: DT, time: T) -> T:
         if offset is None:
@@ -92,8 +91,13 @@ _BranchFloat = TypeVar("_BranchFloat", bound=float)
 _TrunkFloat = TypeVar("_TrunkFloat", bound=float)
 
 
+
 @dataclass
 class _FloatScale(Generic[_BranchFloat, _TrunkFloat]):
+    """
+    @see: L{timesFaster}
+    """
+
     _factor: float
 
     """
@@ -182,8 +186,8 @@ def branch(
 
 @overload
 def branch(
-    trunk: Scheduler[float, Callable[[], None]]
-) -> tuple[Group[float, float], Scheduler[float, Callable[[], None]]]: ...
+    trunk: Scheduler[WhenT, Callable[[], None]]
+) -> tuple[Group[WhenT, WhenT], Scheduler[WhenT, Callable[[], None]]]: ...
 
 
 def branch(
@@ -334,3 +338,11 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
             self.unpause()
         else:
             self._scale = newScale
+
+
+__all__ = [
+    "Group",
+    "branch",
+    "timesFaster",
+    "Scale",
+]
