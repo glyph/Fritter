@@ -9,7 +9,7 @@ interface with an external timekeeping system that can actually invoke your
 code.
 
 The simplest driver you can use is the memory driver, in
-``fritter.drivers.memory``.  Getting one is simple enough:
+:py:mod:`fritter.drivers.memory`.  Getting one is simple enough:
 
 .. code-block:: python
 
