@@ -2,7 +2,6 @@ from typing import Callable, List, Tuple
 from unittest import TestCase
 
 from fritter.scheduler import Scheduler
-from fritter.tree import FloatScale, Group
 
 from ..drivers.memory import MemoryDriver
 from ..scheduler import SimpleScheduler
@@ -16,11 +15,7 @@ class RecursiveTest(TestCase):
         scheduler1: Scheduler[float, Callable[[], None]] = SimpleScheduler(
             driver := MemoryDriver()
         )
-        result: tuple[Group[float], Scheduler[float, Callable[[], None]]]
-        result = branch(
-            scheduler1, FloatScale[float, float](scaleFactor)
-        )
-        recursive, scheduler2 = result
+        recursive, scheduler2 = branch(scheduler1, timesFaster(scaleFactor))
         calls = []
         scheduler2.callAt(
             1.0,
@@ -54,11 +49,13 @@ class RecursiveTest(TestCase):
         """
         Unscheduling when not scheduled is a no-op.
         """
-        _BranchDriver(SimpleScheduler(MemoryDriver())).unschedule()
+        _BranchDriver(
+            SimpleScheduler(MemoryDriver()), timesFaster(1.0), 0.0
+        ).unschedule()
 
     def test_unpausePauseUnpause(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
-        recursive, scheduler2 = branch(scheduler1, scaleFactor=2)
+        recursive, scheduler2 = branch(scheduler1, timesFaster(2))
         recursive.pause()
         self.assertEqual(scheduler2.now(), 0.0)
         driver.advance(500)
@@ -117,7 +114,7 @@ class RecursiveTest(TestCase):
     def test_doubleUnpause(self) -> None:
         scheduler1 = SimpleScheduler(driver := MemoryDriver())
         scaleFactor = 2.0
-        recursive, scheduler2 = branch(scheduler1, scaleFactor)
+        recursive, scheduler2 = branch(scheduler1, timesFaster(scaleFactor))
         recursive.pause()
         baseTime = 1000.0
         driver.advance(baseTime)

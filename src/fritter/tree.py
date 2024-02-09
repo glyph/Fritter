@@ -8,15 +8,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import (
+    Any,
     Callable,
     Generic,
     Optional,
     Protocol,
+    Self,
     Tuple,
     TypeVar,
+    overload,
 )
 
-from fritter.boundaries import PriorityComparable, WhenT
+from fritter.boundaries import PriorityComparable
 
 from .scheduler import FutureCall, Scheduler
 
@@ -25,46 +28,73 @@ _TrunkTime = TypeVar("_TrunkTime", bound=PriorityComparable)
 _TrunkDelta = TypeVar("_TrunkDelta")
 
 
-class Scale(Protocol[_BranchTime, _TrunkTime]):
-    def up(self, time: _BranchTime) -> _TrunkTime:
-        ...
+class Scale(Protocol[_BranchTime, _TrunkTime, _TrunkDelta]):
+    """
+    A L{Scale} defines a translation between a child, or "branch" time scale,
+    and a parent, or "trunk" time scale.
+    """
 
-    def down(self, time: _TrunkTime) -> _BranchTime:
-        ...
+    def up(self, offset: _TrunkDelta, time: _BranchTime) -> _TrunkTime:
+        """
+        Translate C{time} from the branch time scale into the trunk time scale.
+        """
 
-    def zero(self) -> _TrunkTime:
-        ...
+    def down(self, offset: _TrunkDelta, time: _TrunkTime) -> _BranchTime:
+        """
+        Translate C{time} from the trunk time scale into the branch time scale.
+        """
 
-    def shift(self, pauseTime: _BranchTime, currentTime: _TrunkTime) -> None:
-        ...
+    def shift(
+        self, pauseTime: _BranchTime | None, currentTime: _TrunkTime
+    ) -> _TrunkDelta:
+        """
+        Shift the current scale forward to incorporate
+        """
 
-T = TypeVar("T")
+
+DT = TypeVar("DT")
+
+
+class Deltable(PriorityComparable, Protocol[DT]):
+    def __add__(self, addend: DT) -> Self: ...
+
+    @overload
+    def __sub__(self, subtrahend: Self) -> DT: ...
+
+    @overload
+    def __sub__(self, subtrahend: DT) -> Self: ...
+
+
+WhenT = TypeVar("WhenT", bound=Deltable[Any])
 
 
 @dataclass
-class NoScale(Generic[T]):
-    _zero: T
+class NoScale(Generic[DT]):
+    T = TypeVar("T", bound=Deltable[DT])
 
-    def up(self, time: T) -> T:
-        return time
+    def up(self, offset: DT, time: T) -> T:
+        if offset is None:
+            return time
+        return time + offset
 
-    def down(self, time: T) -> T:
-        return time
+    def down(self, offset: DT, time: T) -> T:
+        if offset is None:
+            return time
+        return time - offset
 
-    def zero(self) -> T:
-        return self._zero
-
+    def shift(self, pauseTime: T | None, currentTime: T) -> DT:
+        if pauseTime is None:
+            return None  # type:ignore[return-value]
+        return currentTime - pauseTime
 
 
 _BranchFloat = TypeVar("_BranchFloat", bound=float)
 _TrunkFloat = TypeVar("_TrunkFloat", bound=float)
 
-@dataclass
-class FloatScale(Generic[_BranchFloat, _TrunkFloat]):
-    factor: float
 
-    _offset: _TrunkFloat = 0.0  # type:ignore[assignment]
-    _fudge: float = 0.0
+@dataclass
+class _FloatScale(Generic[_BranchFloat, _TrunkFloat]):
+    _factor: float
 
     """
     Amount to subtract from trunk's timestamp to get to this driver's base
@@ -73,40 +103,56 @@ class FloatScale(Generic[_BranchFloat, _TrunkFloat]):
     the moment '.start()' is called, that is time 0 in branch time.
     """
 
-    def up(self, time: _BranchFloat) -> _TrunkFloat:
-        trunk: _TrunkFloat
-        computed = ((time / self.factor) + self._offset)
-        trunk = computed        # type:ignore[assignment]
+    _fudge: _BranchFloat = 0.0  # type:ignore[assignment]
+    """
+    An epsilon value computed to always be large enough that the conversion up
+    to trunk and down to branch time scale will not result in time going
+    backwards.
+    """
 
-        roundTripped: _BranchFloat = self.down(trunk)
+    def up(self, offset: _TrunkFloat, time: _BranchFloat) -> _TrunkFloat:
+        computed = (time / self._factor) + offset
+        trunk: _TrunkFloat
+        trunk = computed  # type:ignore[assignment]
+        roundTripped: _BranchFloat = self.down(offset, trunk)
         self._fudge = _subtract(time, roundTripped)
         return trunk
 
-    def down(self, trunkTime: _TrunkFloat) -> _BranchFloat:
-        computed  = ((trunkTime - self._offset) * self.factor) + self._fudge
+    def down(
+        self, offset: _TrunkFloat, trunkTime: _TrunkFloat
+    ) -> _BranchFloat:
+        computed = ((trunkTime - offset) * self._factor) + self._fudge
         branch: _BranchFloat = computed  # type:ignore[assignment]
         return branch
 
-    def shift(self, pauseTime: _BranchFloat, currentTime: _TrunkTime) -> None:
-        trunkDelta = pauseTime / self.factor
-        self._offset = currentTime - trunkDelta  # type:ignore[assignment,operator]
-
-    def zero(self) -> _BranchFloat:
-        return 0.0              # type:ignore[return-value]
-
-
-def timesFaster(factor: float) -> FloatScale[float,float]:
-    return FloatScale(factor)
+    def shift(
+        self, pauseTime: _BranchFloat | None, currentTime: _TrunkFloat
+    ) -> _TrunkFloat:
+        delta = (pauseTime / self._factor) if pauseTime else 0.0
+        trunkDelta: _TrunkFloat
+        trunkDelta = delta  # type:ignore[assignment]
+        return _subtract(currentTime, trunkDelta)
 
 
-class Group(Protocol[WhenT]):
+def timesFaster(factor: float) -> Scale[float, float, float]:
+    """
+    Scale a C{float} time-scale by C{factor}.  e.g., in ::
+
+        group, child = branch(parent, timesFaster(3.0))
+
+    C{child} will be a child scheduler running 3 times faster than C{parent}.
+    """
+    return _FloatScale(factor)
+
+
+class Group(Protocol[WhenT, _TrunkDelta]):
     """
     A L{Group} presents an interface to control a group of timers collected
     into a scheduler; pausing the group, unpausing it, or making its relative
     rate of progress faster or slower.
     """
 
-    scale: Scale[WhenT, WhenT]
+    scale: Scale[WhenT, WhenT, _TrunkDelta]
     """
     How much faster the branch time coordinate system is within this scheduler?
     i.e.: with a scale factor of 2, that means time is running 2 times faster
@@ -125,14 +171,35 @@ class Group(Protocol[WhenT]):
         """
 
 
+@overload
 def branch(
     trunk: Scheduler[WhenT, Callable[[], None]],
-    scale: Scale[WhenT, WhenT],
-) -> tuple[Group[WhenT], Scheduler[WhenT, Callable[[], None]]]:
+    scale: Scale[WhenT, WhenT, _TrunkDelta],
+) -> tuple[
+    Group[WhenT, _TrunkDelta], Scheduler[WhenT, Callable[[], None]]
+]: ...
+
+
+@overload
+def branch(
+    trunk: Scheduler[float, Callable[[], None]]
+) -> tuple[Group[float, float], Scheduler[float, Callable[[], None]]]: ...
+
+
+def branch(
+    trunk: Scheduler[WhenT, Callable[[], None]],
+    scale: Scale[WhenT, WhenT, _TrunkDelta] | None = None,
+) -> tuple[Group[WhenT, _TrunkDelta], Scheduler[WhenT, Callable[[], None]]]:
     """
     Derive a branch (child) scheduler from a trunk (trunk) scheduler.
     """
-    driver: _BranchDriver[WhenT, WhenT] = _BranchDriver(trunk, scale, scale.zero())
+    if scale is None:
+        scale = NoScale[_TrunkDelta]()
+        # scale = timesFaster(1)  # type:ignore
+    assert scale is not None
+    driver: _BranchDriver[WhenT, WhenT, _TrunkDelta] = _BranchDriver(
+        trunk, scale, scale.shift(None, trunk.now())
+    )
     driver.scale = scale
     branchScheduler: Scheduler[WhenT, Callable[[], None]] = Scheduler(driver)
     driver.unpause()
@@ -151,7 +218,7 @@ def _subtract(someFloat: _F, other: _F) -> _F:
 
 
 @dataclass
-class _BranchDriver(Generic[_TrunkTime, _BranchTime]):
+class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
     """
     Implementation of L{TimeDriver} for L{Scheduler} that is stacked on top of
     another L{Scheduler}.
@@ -161,36 +228,34 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime]):
     """
     The scheduler that this driver is a branch of.
     """
+    # TODO: support for a generic WhatT would be nice here, but we have our own
+    # function that needs to be scheduled with the trunk scheduler, and so we
+    # couldn't meaningfully integrate with a higher-level persistent scheduler.
 
-    # TODO: support for generic types would be nice here, but:
-
-    # 1. for the time type, things have to be multiplied and divided by the
-    #    scaling factor, which means it needs to be a float. Even using a
-    #    TypeVar bound to `float` here creates a ton of awkward casts below.
-
-    # 2. for the work type, we have our own function that needs to be scheduled
-    #    with the trunk scheduler, and so we couldn't meaningfully integrate
-    #    with a higher-level persistent scheduler.
-
-    _scale: Scale[_BranchTime, _TrunkTime]
+    _scale: Scale[_BranchTime, _TrunkTime, _TrunkDelta]
     """
     How much faster the branch time coordinate system is within this scheduler?
     i.e.: with a scale factor of 2, that means time is running 2 times faster
-    in this branch temporal coordinate system, and C{self.callAt(3.0,
-    X)} will run C{X} when the trunk's current timestamp is 1.5.
+    in this branch temporal coordinate system, and C{self.callAt(3.0, X)} will
+    run C{X} when the trunk's current timestamp is 1.5.
+    """
+    _offset: _TrunkDelta
+
+    _pauseTime: _BranchTime | None = None
+    """
+    Timestamp at which we were last paused, if we were last paused.
     """
 
-    _pauseTime: _BranchTime
-    """
-    Timestamp at which we were last paused.
-    """
-
-    _scheduleWhenStarted: Optional[Tuple[_BranchTime, Callable[[], None]]] = None
+    _scheduleWhenStarted: Optional[Tuple[_BranchTime, Callable[[], None]]] = (
+        None
+    )
 
     _call: Optional[FutureCall[_TrunkTime, Callable[[], None]]] = None
     _running: bool = False
 
-    def reschedule(self, desiredTime: _BranchTime, work: Callable[[], None]) -> None:
+    def reschedule(
+        self, desiredTime: _BranchTime, work: Callable[[], None]
+    ) -> None:
         assert (
             self._call is None or self._running
         ), f"we weren't running, call should be None not {self._call}"
@@ -206,7 +271,9 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime]):
             self._call = None
             work()
 
-        self._call = self.trunk.callAt(self._scale.up(desiredTime), clearAndRun)
+        self._call = self.trunk.callAt(
+            self._scale.up(self._offset, desiredTime), clearAndRun
+        )
 
     def unschedule(self) -> None:
         self._scheduleWhenStarted = None
@@ -216,9 +283,11 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime]):
 
     def now(self) -> _BranchTime:
         if self._running:
-            return self._scale.down(self.trunk.now())
-        else:
-            return self._pauseTime
+            return self._scale.down(self._offset, self.trunk.now())
+        assert (
+            self._pauseTime is not None
+        ), "If a timer has been paused, _pauseTime must have been set"
+        return self._pauseTime
 
     # implementation of 'Group' interface
 
@@ -227,7 +296,7 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime]):
             return
         # shift forward the offset to skip over the time during which we were
         # paused.
-        self._scale.shift(self._pauseTime, self.trunk.now())
+        self._offset = self._scale.shift(self._pauseTime, self.trunk.now())
         self._running = True
         scheduleWhenStarted = self._scheduleWhenStarted
         if scheduleWhenStarted is not None:
@@ -242,20 +311,21 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime]):
             self._call = None
 
     @property
-    def scale(self) -> Scale[_BranchTime, _TrunkTime]:
+    def scale(self) -> Scale[_BranchTime, _TrunkTime, _TrunkDelta]:
         """
-        The scale factor is how much faster than its trunk time passes in this
-        driver.
+        @see: L{Scale}
         """
         return self._scale
 
     @scale.setter
-    def scale(self, newScale: Scale[_BranchTime, _TrunkTime]) -> None:
+    def scale(
+        self, newScale: Scale[_BranchTime, _TrunkTime, _TrunkDelta]
+    ) -> None:
         """
-        Change this recursive driver to be running at `newScale` times
-        versus trunk scheduler's rate.  i.e. C{driver.scale = FloatScale(3.0)} will
-        change this driver's rate of time passing to be 3x faster than its
-        trunk.
+        Change this recursive driver to be running at the time scale of
+        C{newScale}.  i.e. C{driver.scale = timesFaster(3.0)} will change this
+        driver's rate of time passing to be 3x faster than its trunk, presuming
+        it is a float-based timer.
         """
         wasRunning = self._running
         if wasRunning:
