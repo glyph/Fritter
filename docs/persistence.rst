@@ -22,8 +22,7 @@ our serializable objects, we will use a :py:class:`JSONRegistry
    :end-before: end-registry
 
 Don't worry about the ``[object]`` there just yet; that tells us the type of
-the "load context" for this registry.  We'll get to that a little later, but we
-don't need it yet.
+the "load context" for this registry.  We'll get to it later.
 
 Next, we'll make a Reminder class, which just holds a bit of text to remind us
 about.
@@ -33,7 +32,7 @@ about.
    :end-before: reminder-methods
 
 To make this class serializable by our JSON serializer, we have to add a few
-instance and class methods to conform to its interfaces:
+instance and class methods to conform to its required `Protocol`:
 
 - a ``typeCodeForJSON`` classmethod to provide a type-code string that uniquely
   identifies this class within the context of this specific ``JSONRegistry``
@@ -61,20 +60,14 @@ from the ``JSONRegistry`` that we instantiated before.
    :start-after: app-method
    :end-before: end-reminder
 
-So that's it for our "object model" for this application.  Next we need to add
-the functions to perform the tasks that we need.
+Now, we need to schedule the reminder.  For that, we'll have a function that
+schedules our ``show`` method with a given scheduler, which takes:
+- a scheduler,
+- some number of seconds into the future, and
+- a message to show.
 
-First, we need to actually schedule the reminder.  For that, we'll have a
-function that schedules our ``show`` method with a given scheduler.  To do
-this, we'll take a scheduler, some number of seconds into the future, and a
-message to show.  We'll instantiate a ``Reminder``, and create a
-``datetype.DateTime`` with a ``ZoneInfo`` time zone.
-
-Since the user probably wants their reminders scheduled in their *own* time
-zone, Fritter provides a convenience function, :py:func:`guessLocalZone
-<fritter.drivers.datetime.guessLocalZone>`\ , which uses platform-specific
-heuristics to determine the local machine's IANA timezone identifier and use
-that.
+We'll instantiate a ``Reminder``, and create a ``datetype.DateTime`` with a
+``ZoneInfo`` time zone.
 
 .. note::
 
@@ -92,6 +85,12 @@ that.
 
 .. |datetype| replace:: ``datetype``
 .. _datetype: https://pypi.org/project/datetype
+
+Since the user probably wants their reminders scheduled in their *own* time
+zone, Fritter provides a convenience function, :py:func:`guessLocalZone
+<fritter.drivers.datetime.guessLocalZone>`\ , which uses platform-specific
+heuristics to determine the local machine's IANA timezone identifier and use
+that.
 
 .. literalinclude:: json_basic_reminder.py
    :pyobject: remind
@@ -121,21 +120,36 @@ Otherwise, just run the scheduler to catch up to the current time.
 .. literalinclude:: json_basic_reminder.py
    :start-at: __main__
 
-And that's it!  On the command line, you can set yourself some reminders:
+And that's it!  On the command line, you can set yourself some reminders.  Now,
+in a real application, you'd probably want significant amounts of time to pass,
+and run the script every day, or at most every few hours, to check on your
+reminders.  But to simulate that for a quick example, here's a little shell
+script that will set one reminder at 5 seconds, another at 10, then wait for
+them each to trigger:
 
 .. code-block::
 
-   $ python json_basic_reminder.py 5 hello
-   $ python json_basic_reminder.py 10 goodbye
+    python docs/json_basic_reminder.py 5 hello &&
+        python docs/json_basic_reminder.py 10 goodbye &&
+        echo 'one...' &&
+        sleep 6 &&
+        python docs/json_basic_reminder.py &&
+        echo 'two...' &&
+        sleep 6 && python
+        docs/json_basic_reminder.py
 
-And if you run ``python json_basic_reminder.py`` with no arguments after 5 and
-10 seconds respectively, you'll see your reminders print out.
+which will produce output that looks like this:
 
-With the techniques in this section, you can:
+.. code-block::
 
-- persist your timed events to a JSON blob
-- save them for the future
-- schedule bound methods on those objects to save state associated with your timers
+   one...
+   Reminder! hello
+   two...
+   Reminder! goodbye
+
+With the techniques that we reviewed in the section above, you should now be
+able to write a class whose methods can be scheduled with a persistent
+scheduler via ``schedulerAtPath``.
 
 Next, we will move on to a slightly more complex application with more
 interactions.
@@ -143,10 +157,13 @@ interactions.
 Adding Recurrences And Counts: Friendminder Example
 ---------------------------------------------------
 
-To illustrate some slightly more complex uses of ``JSONRegistry``, let's build
-a little application that can help you keep in touch with friends.  It's all
-too easy to just forget to send a message to keep in touch, so let's make a
-tool to remind ourselves.
+Saving and loading scheduled calls with a bit of associated state is nice, but
+not generally useful if we can't save the relationships *between* those bits of
+associated state.  So next, we'll build a little application that can help you
+keep in touch with friends.
+
+It's all too easy to just forget to send a message to keep in touch every so
+often, so let's make a tool to remind ourselves.
 
 In this tool, we want to:
 
@@ -160,6 +177,8 @@ In this tool, we want to:
 
 This means we have two kinds of repeating call; the general "get in touch"
 reminder, which would need to be a method on some shared object that can
-reference the full list of friends, as well as the birthday-specific reminder,
-which should probably be a method on a ``Friend`` class itself.
+reference the full list of friends as we move from one to the next, as well as
+the birthday-specific reminder, which should probably be a method on a
+``Friend`` class itself.
+
 

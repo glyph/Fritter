@@ -55,7 +55,7 @@ from ..boundaries import (
 )
 from ..drivers.datetime import DateTimeDriver
 from ..repeat import Repeater
-from ..repeat.rules.datetimes import EveryDelta
+from ..repeat.rules.datetimes import EveryDelta, EachYear
 from ..scheduler import FutureCall, Scheduler
 
 LoadContext = TypeVar("LoadContext", contravariant=True)
@@ -819,8 +819,29 @@ class _EveryDeltaJSONifier:
     def ruleAsJSON(self, rule: EveryDelta) -> JSONObject:
         return {"delta": rule.delta.__reduce__()[1]}
 
+class _YearlyJSONifier:
+    def typeCodeForJSON(self) -> str:
+        return "fritter:yearly"
+
+    def ruleFromJSON(self, json: JSONObject) -> EachYear:
+        return EachYear(json["years"])
+
+    def ruleAsJSON(self, rule: EachYear) -> JSONObject:
+        return {"years": rule.years}
 
 _universal._registerRRule(EveryDelta, _EveryDeltaJSONifier())
+_universal._registerRRule(EachYear, _YearlyJSONifier())
+
+
+def dateTypeAsJSON(dt: DateTime[ZoneInfo]) -> dict[str, str]:
+    return {
+        "ts": dt.replace(tzinfo=None).isoformat(),
+        "tz": dt.tzinfo.key,
+    }
+
+
+def dateTypeFromJSON(dtjs: dict[str, str]) -> DateTime[ZoneInfo]:
+    return fromisoformat(dtjs["ts"]).replace(tzinfo=ZoneInfo(dtjs["tz"]))
 
 
 @dataclass
@@ -867,7 +888,7 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
         )
         what = json["callable"]
         one = load.registry._loadOne(what, load.registry._repeatable, load)
-        ref = fromisoformat(json["ts"]).replace(tzinfo=ZoneInfo(json["tz"]))
+        ref = dateTypeFromJSON(json)
         rep = Repeater(
             load.scheduler, rule, one, load.registry._repeaterToJSONable, ref
         )
@@ -880,17 +901,15 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
         including its time, IANA timezone identifier, rule function, and
         underlying repeating callable.
         """
-        when = self.repeater.reference
         # because StepsT is parameterizable in Repeater.work, we can't make
         # Repeater.work itself be a TypeVar.
         work: JSONable[object] = self.repeater.work  # type:ignore[assignment]
         return {
-            "ts": when.replace(tzinfo=None).isoformat(),
-            "tz": when.tzinfo.key,
             "rule": registry._saveRRule(self.repeater.rule),
             "callable": _whatJSON(registry, work),
             # "convert": is implicitly L{registry._repeaterToJSONable}
             # "scheduler": is what's doing the serializing
+            **dateTypeAsJSON(self.repeater.reference),
         }
 
     @_universal.method
@@ -926,4 +945,6 @@ __all__ = [
     "JSONRegistry",
     "JSONableRepeatable",
     "schedulerAtPath",
+    "dateTypeAsJSON",
+    "dateTypeFromJSON",
 ]
