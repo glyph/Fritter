@@ -819,6 +819,7 @@ class _EveryDeltaJSONifier:
     def ruleAsJSON(self, rule: EveryDelta) -> JSONObject:
         return {"delta": rule.delta.__reduce__()[1]}
 
+
 class _YearlyJSONifier:
     def typeCodeForJSON(self) -> str:
         return "fritter:yearly"
@@ -828,6 +829,7 @@ class _YearlyJSONifier:
 
     def ruleAsJSON(self, rule: EachYear) -> JSONObject:
         return {"years": rule.years}
+
 
 _universal._registerRRule(EveryDelta, _EveryDeltaJSONifier())
 _universal._registerRRule(EachYear, _YearlyJSONifier())

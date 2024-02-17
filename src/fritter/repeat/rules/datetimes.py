@@ -148,9 +148,7 @@ Hourly datetime-based rule.
 
 
 if TYPE_CHECKING:
-    _isRule: EachDTRule = (
-        EachWeekOn({Day.MONDAY}, 1, 1, 1)
-    )
+    _isRule: EachDTRule = EachWeekOn({Day.MONDAY}, 1, 1, 1)
 
 
 __all__ = [

@@ -182,7 +182,9 @@ class Friend:
         if delta > timedelta(days=GRACE_DAYS * 2):
             print(f"Never mind, missed {self.name}'s birthday")
             return
-        print(f"Remember to wish {self.name} a happy birthday on {steps[-1].date()} (it's {now.date()})")
+        print(
+            f"Remember to wish {self.name} a happy birthday on {steps[-1].date()} (it's {now.date()})"
+        )
         self.lastContact = now
 
 

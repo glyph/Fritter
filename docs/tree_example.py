@@ -16,6 +16,8 @@ def show(name: str) -> Callable[[], None]:
         print(f"{name} trunk={trunk.now()} branch={branched.now()}")
 
     return _
+
+
 # end showfunc
 
 
