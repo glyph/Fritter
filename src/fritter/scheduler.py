@@ -8,7 +8,7 @@ causes them to actually be called.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Generic, Iterator
+from typing import Callable, Generic
 
 from .boundaries import PriorityQueue, TimeDriver, WhenT, WhatT
 from .heap import Heap
