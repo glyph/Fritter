@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from json import dumps, loads
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, Type
+from typing import Any, Callable, Type
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
@@ -73,7 +73,9 @@ class InstanceWithMethods:
     ) -> InstanceWithMethods:
         key = json["identity"]
         if key in load.context.identityMap:
-            load.context.madeCalls.append("InstanceWithMethods.fromJSON (cached)")
+            load.context.madeCalls.append(
+                "InstanceWithMethods.fromJSON (cached)"
+            )
             self: InstanceWithMethods = load.context.identityMap[key]
             return self
         load.context.madeCalls.append("InstanceWithMethods.fromJSON")
@@ -176,7 +178,9 @@ class Stoppable:
 stp: Type[JSONableInstance[RegInfo]] = Stoppable
 
 
-def jsonScheduler(driver: TimeDriver[float]) -> JSONableScheduler[RegInfo]:
+def jsonScheduler(
+    driver: TimeDriver[float],
+) -> tuple[JSONableScheduler[RegInfo], Callable[[], JSONObject]]:
     return registry.new(DateTimeDriver(driver))
 
 
@@ -189,7 +193,7 @@ class PersistentSchedulerTests(TestCase):
         Test scheduling module-level functions and instance methods.
         """
         memoryDriver = MemoryDriver()
-        scheduler = jsonScheduler(memoryDriver)
+        scheduler, saver = jsonScheduler(memoryDriver)
         dt = aware(
             datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
             ZoneInfo,
@@ -207,13 +211,15 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(dt.timestamp() + 1)
         self.assertEqual(globalCalls, ["hello"])
         del globalCalls[:]
-        saved = registry.save(scheduler)
+        saved = saver()
         memory2 = MemoryDriver()
         ri = RegInfo([])
         registry.load(memory2, saved, ri)
         memory2.advance(dt2.timestamp() + 1)
         self.assertEqual(globalCalls, ["goodbye"])
-        self.assertEqual(ri0.madeCalls, ["test_scheduleRunSaveRun value/method1"])
+        self.assertEqual(
+            ri0.madeCalls, ["test_scheduleRunSaveRun value/method1"]
+        )
         self.assertEqual(
             ri.madeCalls,
             [
@@ -228,7 +234,7 @@ class PersistentSchedulerTests(TestCase):
         instances and stuff
         """
         memoryDriver = MemoryDriver()
-        scheduler = jsonScheduler(memoryDriver)
+        scheduler, saver = jsonScheduler(memoryDriver)
         dt = aware(datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT), ZoneInfo)
         memoryDriver.advance(dt.timestamp() + 1)
         s = Stoppable()
@@ -238,7 +244,7 @@ class PersistentSchedulerTests(TestCase):
 
         s = Stoppable()
         s.scheduleme(scheduler)
-        jsonobj = dumps(registry.save(scheduler))
+        jsonobj = dumps(saver())
         saved = loads(jsonobj)
         memory2 = MemoryDriver()
         ri = RegInfo([])
@@ -301,7 +307,7 @@ class PersistentSchedulerTests(TestCase):
 
     def test_idling(self) -> None:
         memoryDriver = MemoryDriver()
-        scheduler = jsonScheduler(memoryDriver)
+        scheduler, saver = jsonScheduler(memoryDriver)
         dt = aware(
             datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
             ZoneInfo,
@@ -325,7 +331,7 @@ class PersistentSchedulerTests(TestCase):
         )
         memoryDriver = MemoryDriver()
         memoryDriver.advance(dt.timestamp())
-        scheduler = jsonScheduler(memoryDriver)
+        scheduler, saver = jsonScheduler(memoryDriver)
         registry.repeatedly(scheduler, daily, repeatable, dt)
         self.assertEqual(globalCalls, ["repeatable 1"])
         del globalCalls[:]
@@ -342,7 +348,7 @@ class PersistentSchedulerTests(TestCase):
         mem2.advance(dt.timestamp())
         mem2.advance(days(7))
         self.assertEqual(mem2.isScheduled(), False)
-        registry.load(mem2, loads(dumps(registry.save(scheduler))), newInfo)
+        registry.load(mem2, loads(dumps(saver())), newInfo)
         self.assertEqual(mem2.isScheduled(), True)
         amount = mem2.advance()
         assert amount is not None
@@ -402,7 +408,7 @@ class PersistentSchedulerTests(TestCase):
         )
         memoryDriver = MemoryDriver()
         memoryDriver.advance(dt.timestamp())
-        scheduler = jsonScheduler(memoryDriver)
+        scheduler, saver = jsonScheduler(memoryDriver)
         info = RegInfo([])
         inst = InstanceWithMethods("sample", info)
         method = inst.repeatMethod
@@ -446,9 +452,11 @@ class PersistentSchedulerTests(TestCase):
         mem3 = atTimeDriver()
 
         self.assertEqual(mem2.isScheduled(), False)
-        persistent = dumps(registry.save(scheduler))
-        loadedScheduler = registry.load(mem2, loads(persistent), newInfo)
-        repersistent = dumps(registry.save(loadedScheduler))
+        persistent = dumps(saver())
+        loadedScheduler, saver2 = registry.load(
+            mem2, loads(persistent), newInfo
+        )
+        repersistent = dumps(saver2())
         registry.load(mem3, loads(repersistent), newNewInfo)
         loaded = loads(persistent)
         with self.assertRaises(KeyError):

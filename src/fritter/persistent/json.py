@@ -44,18 +44,19 @@ from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
 from fritter.boundaries import StepsTCon
+from fritter.heap import Heap
 
 from ..boundaries import (
     Cancellable,
     RecurrenceRule,
+    RepeatingWork,
     StepsT,
     StepsTInv,
     TimeDriver,
-    RepeatingWork,
 )
 from ..drivers.datetime import DateTimeDriver
 from ..repeat import Repeater
-from ..repeat.rules.datetimes import EveryDelta, EachYear
+from ..repeat.rules.datetimes import EachYear, EveryDelta
 from ..scheduler import FutureCall, Scheduler
 
 LoadContext = TypeVar("LoadContext", contravariant=True)
@@ -724,14 +725,18 @@ class JSONRegistry(Generic[LoadContext]):
         runtimeDriver: TimeDriver[float],
         serializedJSON: JSONObject,
         loadContext: LoadContext,
-    ) -> JSONableScheduler[LoadContext]:
+    ) -> tuple[JSONableScheduler[LoadContext], Callable[[], JSONObject]]:
         """
         Load a JSON object in the format serialized from L{JSONRegistry.save}
         and a runtime L{TimeDriver}C{[float]}, returning a
         L{JSONableScheduler}.
         """
+        h: Heap[
+            FutureCall[DateTime[ZoneInfo], JSONableCallable[LoadContext]]
+        ] = Heap()
         new: JSONableScheduler[LoadContext] = Scheduler(
             DateTimeDriver(runtimeDriver),
+            h,
             counter=int(serializedJSON.get("counter", "0")),
         )
         load = LoadProcess(self, new, loadContext)
@@ -754,39 +759,20 @@ class JSONRegistry(Generic[LoadContext]):
 
         for ph, wt in loads:
             ph.what = self._loadOne(wt, self._functions, load)
-        return new
+        return new, self._saverFor(h, new)
 
     def new(
         self, driver: TimeDriver[DateTime[ZoneInfo]]
-    ) -> JSONableScheduler[LoadContext]:
+    ) -> tuple[JSONableScheduler[LoadContext], Callable[[], JSONObject]]:
         """
         Create a new L{JSONableScheduler} with the same type as if it had been
         loaded by this L{JSONRegistry}.
         """
-        return Scheduler(driver)
-
-    def save(self, scheduler: JSONableScheduler[LoadContext]) -> JSONObject:
-        """
-        Serialize the given L{JSONableScheduler} to a single L{JSONObject}
-        which can be passed to L{json.dumps} or L{json.loads}.
-        """
-        # TODO: `self` not used yet here because we're not validating that all
-        # the serializable callables here are present in this specific
-        # registry, but that would be a good check to have.
-        return {
-            "scheduledCalls": [
-                {
-                    "when": item.when.replace(tzinfo=None).isoformat(),
-                    "tz": item.when.tzinfo.key,
-                    "what": _whatJSON(self, item.what),
-                    "called": item.called,
-                    "canceled": item.canceled,
-                    "id": item.id,
-                }
-                for item in scheduler.calls()
-            ],
-            "counter": str(scheduler.counter),
-        }
+        h: Heap[
+            FutureCall[DateTime[ZoneInfo], JSONableCallable[LoadContext]]
+        ] = Heap()
+        s = Scheduler(driver, h)
+        return s, self._saverFor(h, s)
 
     def saveFutureCall(
         self,
@@ -798,6 +784,36 @@ class JSONRegistry(Generic[LoadContext]):
         Convert a L{FutureCall} into a JSON-serializable object.
         """
         return {"id": futureCall.id}
+
+    def _saverFor(
+        self,
+        h: Heap[FutureCall[DateTime[ZoneInfo], JSONableCallable[LoadContext]]],
+        s: JSONableScheduler[LoadContext],
+    ) -> Callable[[], JSONObject]:
+        def save() -> JSONObject:
+            """
+            Serialize the given L{JSONableScheduler} to a single L{JSONObject}
+            which can be passed to L{json.dumps} or L{json.loads}.
+            """
+            # TODO: `self` not used yet here because we're not validating that
+            # all the serializable callables here are present in this specific
+            # registry, but that would be a good check to have.
+            return {
+                "scheduledCalls": [
+                    {
+                        "when": item.when.replace(tzinfo=None).isoformat(),
+                        "tz": item.when.tzinfo.key,
+                        "what": _whatJSON(self, item.what),
+                        "called": item.called,
+                        "canceled": item.canceled,
+                        "id": item.id,
+                    }
+                    for item in h
+                ],
+                "counter": str(s.counter),
+            }
+
+        return save
 
 
 _universal = JSONRegistry(
@@ -933,12 +949,12 @@ def schedulerAtPath(
 ) -> Iterator[JSONableScheduler[LoadContext]]:
     if path.exists():
         with path.open() as rf:
-            scheduler = registry.load(driver, load_json(rf), context)
+            scheduler, saver = registry.load(driver, load_json(rf), context)
     else:
-        scheduler = registry.new(DateTimeDriver(driver))
+        scheduler, saver = registry.new(DateTimeDriver(driver))
     yield scheduler
     with path.open("w") as wf:
-        save_json(registry.save(scheduler), wf)
+        save_json(saver(), wf)
 
 
 __all__ = [

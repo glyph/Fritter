@@ -81,13 +81,6 @@ class Scheduler(Generic[WhenT, WhatT]):
         """
         return self.driver.now()
 
-    def calls(self) -> Iterator[FutureCall[WhenT, WhatT]]:
-        """
-        Iterate through all the L{FutureCall}s previously scheduled by this
-        L{Scheduler}'s L{callAt <Scheduler.callAt>} method.
-        """
-        return iter(self._q)
-
     def callAt(self, when: WhenT, what: WhatT) -> FutureCall[WhenT, WhatT]:
         """
         Call C{what} at the time C{when} according to the L{TimeDriver}
