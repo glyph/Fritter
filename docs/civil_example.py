@@ -8,7 +8,6 @@ from fritter.boundaries import TimeDriver
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.datetime import DateTimeDriver
 from fritter.scheduler import Scheduler
-
 # set up memory driver
 advancer = MemoryDriver()
 base: TimeDriver[float] = advancer
