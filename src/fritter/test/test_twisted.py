@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from twisted.internet.task import Clock
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -100,7 +102,7 @@ class TestTimeDriver(SynchronousTestCase):
         self.assertEqual(clock.getDelayedCalls(), [])
 
     def test_schedulerDefault(self) -> None:
-        sched = scheduler()
+        sched: Any = scheduler()
         self.assertIsInstance(sched.driver, TwistedTimeDriver)
 
     def test_scheduler(self) -> None:

@@ -106,7 +106,7 @@ class InstanceWithMethods:
         )
 
 
-Handle = ScheduledCall[DateTime[ZoneInfo], JSONableCallable[RegInfo], str]
+Handle = ScheduledCall[DateTime[ZoneInfo], JSONableCallable[RegInfo], int]
 
 
 @dataclass

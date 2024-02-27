@@ -8,23 +8,19 @@ timing accuracy when timers cannot always be invoked promptly.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Generic,
-    TypeVar,
-)
+from typing import Any, Callable, Coroutine, Generic, TypeVar
 
 from ..boundaries import (
     AsyncDriver,
     AsyncType,
+    Scheduler,
     Cancellable,
-    RepeatingWork,
     RecurrenceRule,
+    RepeatingWork,
     StepsT,
+    WhatT,
+    WhenT,
 )
-from ..scheduler import Scheduler, WhatT, WhenT
 
 StepsTInv = TypeVar("StepsTInv")
 
@@ -62,7 +58,7 @@ class Repeater(Generic[WhenT, WhatT, StepsT]):
         next invocation of C{work} I{should} occur.
     """
 
-    scheduler: Scheduler[WhenT, WhatT]
+    scheduler: Scheduler[WhenT, WhatT, Cancellable]
     rule: RecurrenceRule[WhenT, StepsT]
     work: RepeatingWork[StepsT]
     convert: Callable[[Repeater[WhenT, WhatT, StepsT]], WhatT]
@@ -71,7 +67,7 @@ class Repeater(Generic[WhenT, WhatT, StepsT]):
     @classmethod
     def new(
         cls,
-        scheduler: Scheduler[WhenT, WhatT],
+        scheduler: Scheduler[WhenT, WhatT, Cancellable],
         rule: RecurrenceRule[WhenT, StepsT],
         work: RepeatingWork[StepsT],
         convert: Callable[[Repeater[WhenT, WhatT, StepsT]], WhatT],
@@ -104,7 +100,7 @@ class Repeater(Generic[WhenT, WhatT, StepsT]):
 
 
 def repeatedly(
-    scheduler: Scheduler[WhenT, Callable[[], None]],
+    scheduler: Scheduler[WhenT, Callable[[], None], Cancellable],
     work: RepeatingWork[StepsT],
     rule: RecurrenceRule[WhenT, StepsT],
 ) -> None:
@@ -164,7 +160,7 @@ class Async(Generic[AsyncType]):
 
     def repeatedly(
         self,
-        scheduler: Scheduler[WhenT, Callable[[], None]],
+        scheduler: Scheduler[WhenT, Callable[[], None], Cancellable],
         rule: RecurrenceRule[WhenT, StepsTInv],
         work: Callable[
             [StepsTInv, Cancellable],

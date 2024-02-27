@@ -2,7 +2,7 @@ from datetime import timedelta
 from json import dump
 
 from datetype import DateTime
-from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
+from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.repeat.rules.datetimes import EveryDelta
 

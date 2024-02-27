@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
 from fritter.boundaries import Cancellable, TimeDriver
-from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
+from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.sleep import SleepDriver
 from fritter.persistent.json import (
@@ -58,9 +58,6 @@ class FriendList:
         scheduler, saver = registry.load(driver, json["scheduler"], self)
         self.saver = saver
         self.scheduler = scheduler
-        afterLoad = LoadProcess(registry, scheduler, self)
-        for name in list(self.loadingFriends):
-            self.getFriendNamed(name, afterLoad)
         assert not self.loadingFriends
         return self
 

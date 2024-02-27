@@ -1,10 +1,12 @@
+from asyncio import Future, run
+
+from fritter.boundaries import PhysicalScheduler
 from fritter.drivers.asyncio import AsyncioTimeDriver
-from fritter.scheduler import SimpleScheduler
-from asyncio import run, Future
+from fritter.scheduler import newScheduler
 
 
 async def example() -> None:
-    s = SimpleScheduler(AsyncioTimeDriver())
+    s: PhysicalScheduler = newScheduler(AsyncioTimeDriver())
     f = Future[None]()
 
     def bye() -> None:
