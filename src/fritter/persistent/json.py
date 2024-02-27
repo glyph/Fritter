@@ -752,7 +752,9 @@ class JSONRegistry(Generic[LoadContext]):
             return counter
 
         new: JSONableScheduler[LoadContext] = newScheduler(
-            DateTimeDriver(runtimeDriver), carefulCounter, queue=h,
+            DateTimeDriver(runtimeDriver),
+            carefulCounter,
+            queue=h,
         )
         load = LoadProcess(self, new, loadContext, h)
         loads = []

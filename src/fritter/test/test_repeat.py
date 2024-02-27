@@ -181,7 +181,9 @@ class RepeatTestCase(TestCase):
 
         TZ = ZoneInfo("America/Los_Angeles")
         dtd = DateTimeDriver(mem, TZ)
-        sch: CallScheduler[DateTime[ZoneInfo], Callable[[], None], int] = newScheduler(dtd)
+        sch: CallScheduler[DateTime[ZoneInfo], Callable[[], None], int] = (
+            newScheduler(dtd)
+        )
         x = []
 
         async def record(

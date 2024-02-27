@@ -48,8 +48,8 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [((1 / 4) + (1 / 8), 1.0)])
 
     def test_datetime(self) -> None:
-        scheduler1: CivilScheduler = (
-            newScheduler(DateTimeDriver(driver := MemoryDriver()))
+        scheduler1: CivilScheduler = newScheduler(
+            DateTimeDriver(driver := MemoryDriver())
         )
         recursive, scheduler2 = branch(scheduler1)
         TZ = ZoneInfo("Etc/UTC")
