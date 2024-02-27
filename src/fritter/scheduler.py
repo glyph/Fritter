@@ -38,9 +38,9 @@ class ScheduledCall(Generic[WhenT, WhatT, IDT]):
 
     def cancel(self) -> None:
         """
-        Cancel this L{ScheduledCall}, making it so that it will not be invoked in
-        the future.  If the work described by C{when} has already been called,
-        or this call has already been cancelled, do nothing.
+        Cancel this L{ScheduledCall}, making it so that it will not be invoked
+        in the future.  If the work described by C{when} has already been
+        called, or this call has already been cancelled, do nothing.
         """
         if self.called:
             # nope
@@ -85,8 +85,8 @@ class _HeapSchedulerImpl(Generic[WhenT, WhatT, IDT]):
         Call C{what} at the time C{when} according to the L{TimeDriver}
         associated with this L{Scheduler}.
 
-        @return: a L{ScheduledCall} that describes the pending call and allows for
-            cancelling it.
+        @return: a L{ScheduledCall} that describes the pending call and allows
+            for cancelling it.
         """
 
         def advanceToNow() -> None:
@@ -146,12 +146,16 @@ def newScheduler(
     nextID: Callable[[], IDT],
     queue: PriorityQueue[ScheduledCall[WhenT, WhatT, IDT]] | None = None,
 ) -> CallScheduler[WhenT, WhatT, IDT]: ...
+
+
 @overload
 def newScheduler(
     driver: TimeDriver[WhenT],
     *,
     queue: PriorityQueue[ScheduledCall[WhenT, WhatT, int]] | None = None,
 ) -> CallScheduler[WhenT, WhatT, int]: ...
+
+
 def newScheduler(
     driver: TimeDriver[WhenT],
     nextID: Callable[[], IDT] | None = None,

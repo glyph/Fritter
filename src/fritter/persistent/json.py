@@ -762,8 +762,8 @@ class JSONRegistry(Generic[LoadContext]):
                 tzinfo=ZoneInfo(callJSON["tz"])
             )
 
-            # Establish the ScheduledCall to allow for circular reference to its
-            # 'what', with a fake callable.
+            # Establish the ScheduledCall to allow for circular reference to
+            # its 'what', with a fake callable.
             fakeWhat: JSONableCallable[LoadContext]
             fakeWhat = None  # type:ignore[assignment]
 
