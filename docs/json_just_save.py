@@ -8,11 +8,11 @@ from fritter.drivers.memory import MemoryDriver
 from json_instance import MyClass, registry
 
 memoryDriver = MemoryDriver()
-scheduler = registry.new(DateTimeDriver(memoryDriver))
+scheduler, saver = registry.new(DateTimeDriver(memoryDriver))
 dt = DateTime.now(guessLocalZone())
 handle = scheduler.callAt(dt + timedelta(seconds=5), MyClass(3).later)
 myInstance = MyClass(3)
 
 
 with open("saved-schedule.json", "w") as f:
-    dump(registry.save(scheduler), f)
+    dump(saver(), f)

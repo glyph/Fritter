@@ -9,7 +9,7 @@ from fritter.repeat.rules.datetimes import EveryDelta
 from json_identity import MyClass, registry
 
 memoryDriver = MemoryDriver()
-scheduler = registry.new(DateTimeDriver(memoryDriver))
+scheduler, saver = registry.new(DateTimeDriver(memoryDriver))
 dt = DateTime.now(guessLocalZone())
 memoryDriver.advance(dt.timestamp())
 myInstance = MyClass(3)
@@ -20,4 +20,4 @@ registry.repeatedly(
 
 
 with open("saved-id-schedule.json", "w") as f:
-    dump(registry.save(scheduler), f)
+    dump(saver(), f)

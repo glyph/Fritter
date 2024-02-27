@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from json import dumps, loads
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
@@ -30,6 +30,7 @@ class FriendList:
     friendsByName: dict[str, Friend] = field(default_factory=dict)
     loadingFriends: dict[str, dict[str, object]] = field(default_factory=dict)
     scheduler: JSONableScheduler[FriendList] = field(init=False)
+    saver: Callable[[], JSONObject] = field(init=False)
 
     def getFriendNamed(
         self, name: str, load: LoadProcess[FriendList]
@@ -46,7 +47,7 @@ class FriendList:
                 (blob := friend.asFriendListJSON())["name"]: blob
                 for friend in self.friendsByName.values()
             },
-            "scheduler": registry.save(self.scheduler),
+            "scheduler": self.saver(),
         }
 
     @classmethod
@@ -54,7 +55,8 @@ class FriendList:
         cls, driver: TimeDriver[float], json: dict[str, Any]
     ) -> FriendList:
         self = cls(loadingFriends=json["friends"])
-        scheduler = registry.load(driver, json["scheduler"], self)
+        scheduler, saver = registry.load(driver, json["scheduler"], self)
+        self.saver = saver
         self.scheduler = scheduler
         afterLoad = LoadProcess(registry, scheduler, self)
         for name in list(self.loadingFriends):
@@ -103,7 +105,7 @@ class FriendList:
     @classmethod
     def new(cls, driver: TimeDriver[float]) -> FriendList:
         self = cls()
-        self.scheduler = registry.new(DateTimeDriver(driver))
+        self.scheduler, self.saver = registry.new(DateTimeDriver(driver))
         registry.repeatedly(self.scheduler, weekly, self.weeklyReminder)
         return self
 
