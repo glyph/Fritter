@@ -8,13 +8,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, Optional
 
+from fritter.scheduler import newScheduler
+
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
 
-from ..boundaries import AsyncDriver, PriorityQueue, TimeDriver
+from ..boundaries import (
+    AsyncDriver,
+    PhysicalScheduler,
+    PriorityQueue,
+    TimeDriver,
+)
 from ..heap import Heap
-from ..scheduler import FutureCall, Scheduler, SimpleScheduler
+from ..scheduler import ScheduledCall
 
 log = Logger()
 
@@ -91,8 +98,10 @@ _AsyncDriverCheck: type[AsyncDriver[Deferred[None]]] = TwistedAsyncDriver
 
 def scheduler(
     reactor: IReactorTime | None = None,
-    queue: PriorityQueue[FutureCall[float, Callable[[], None]]] | None = None,
-) -> SimpleScheduler:
+    queue: (
+        PriorityQueue[ScheduledCall[float, Callable[[], None], int]] | None
+    ) = None,
+) -> PhysicalScheduler:
     """
     Create a scheduler that uses Twisted.
     """
@@ -100,7 +109,7 @@ def scheduler(
         from twisted.internet import reactor  # type:ignore[assignment]
 
         assert reactor is not None
-    return Scheduler(
+    return newScheduler(
         TwistedTimeDriver(reactor),
-        queue if queue is not None else Heap(),
+        queue=queue if queue is not None else Heap(),
     )

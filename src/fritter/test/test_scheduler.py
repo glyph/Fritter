@@ -1,9 +1,12 @@
 from typing import Callable
 from unittest import TestCase
 
+from fritter.boundaries import PhysicalScheduler
+from fritter.scheduler import CallScheduler, newScheduler
+
 from ..drivers.memory import MemoryDriver
 from ..heap import Heap
-from ..scheduler import FutureCall, SimpleScheduler
+from ..scheduler import ScheduledCall
 
 
 class SchedulerTests(TestCase):
@@ -16,7 +19,9 @@ class SchedulerTests(TestCase):
         Scheduling a call
         """
         driver = MemoryDriver()
-        scheduler = SimpleScheduler(driver)
+        scheduler: CallScheduler[float, Callable[[], None], int] = (
+            newScheduler(driver)
+        )
         called = 0
 
         def callme() -> None:
@@ -33,7 +38,9 @@ class SchedulerTests(TestCase):
 
     def test_moveSooner(self) -> None:
         driver = MemoryDriver()
-        scheduler = SimpleScheduler(driver)
+        scheduler: CallScheduler[float, Callable[[], None], int] = (
+            newScheduler(driver)
+        )
         called = 0
 
         def callme() -> None:
@@ -54,7 +61,9 @@ class SchedulerTests(TestCase):
         """
         CallHandle.cancel() cancels an outstanding call.
         """
-        scheduler = SimpleScheduler(driver := MemoryDriver())
+        scheduler: CallScheduler[float, Callable[[], None], int] = (
+            newScheduler(driver := MemoryDriver())
+        )
         callTimes = []
 
         def record(event: str) -> Callable[[], None]:
@@ -87,12 +96,6 @@ class SchedulerTests(TestCase):
         self.assertEqual(didCancel, [True])
         driver.advance()
         self.assertEqual(callTimes, [(1.0, "a"), (3.0, "c")])
-
-    def test_queueMustBeEmpty(self) -> None:
-        driver = MemoryDriver()
-        q = Heap([FutureCall(1.0, noop, 1, False, False, nocancel)])
-        with self.assertRaises(ValueError):
-            SimpleScheduler(driver, q)
 
 
 def noop() -> None: ...

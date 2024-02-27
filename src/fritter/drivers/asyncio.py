@@ -12,9 +12,11 @@ from contextvars import Context
 from dataclasses import dataclass, field
 from typing import Any, Callable, Coroutine, Protocol
 
+from fritter.scheduler import CallScheduler, newScheduler
+
 from ..boundaries import AsyncDriver, Cancellable, PriorityQueue, TimeDriver
 from ..heap import Heap
-from ..scheduler import FutureCall, Scheduler, SimpleScheduler
+from ..scheduler import ScheduledCall
 
 
 class LoopTimeInterface(Protocol):
@@ -113,12 +115,14 @@ _AsyncioDriverCheck: type[AsyncDriver[Future[None]]] = AsyncioAsyncDriver
 
 def scheduler(
     loop: LoopTimeInterface | None = None,
-    queue: PriorityQueue[FutureCall[float, Callable[[], None]]] | None = None,
-) -> SimpleScheduler:
+    queue: (
+        PriorityQueue[ScheduledCall[float, Callable[[], None], int]] | None
+    ) = None,
+) -> CallScheduler[float, Callable[[], None], int]:
     """
     Create a scheduler that uses Asyncio.
     """
-    return Scheduler(
+    return newScheduler(
         AsyncioTimeDriver(loop if loop is not None else get_event_loop()),
-        queue if queue is not None else Heap(),
+        queue=queue if queue is not None else Heap(),
     )

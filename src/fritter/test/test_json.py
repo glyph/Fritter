@@ -13,7 +13,7 @@ from datetype import DateTime, aware
 from fritter.persistent.json import schedulerAtPath
 
 from ..boundaries import Cancellable, TimeDriver
-from ..drivers.datetime import DateTimeDriver
+from ..drivers.datetimes import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..persistent.json import (
     JSONableCallable,
@@ -25,7 +25,7 @@ from ..persistent.json import (
     MissingPersistentCall,
 )
 from ..repeat.rules.datetimes import daily
-from ..scheduler import FutureCall
+from ..scheduler import ScheduledCall
 
 
 @dataclass
@@ -106,7 +106,7 @@ class InstanceWithMethods:
         )
 
 
-Handle = FutureCall[DateTime[ZoneInfo], JSONableCallable[RegInfo]]
+Handle = ScheduledCall[DateTime[ZoneInfo], JSONableCallable[RegInfo], str]
 
 
 @dataclass
@@ -132,7 +132,7 @@ class Stoppable:
 
     def toJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
         def save(it: Handle | None) -> object:
-            return registry.saveFutureCall(it) if it is not None else it
+            return registry.saveScheduledCall(it) if it is not None else it
 
         return {
             "runcall": save(self.runcall),
@@ -153,7 +153,7 @@ class Stoppable:
             name: str,
         ) -> Handle | None:
             it = json[name]
-            return it if it is None else load.loadFutureCall(it)
+            return it if it is None else load.loadScheduledCall(it)
 
         self = cls(
             runcall=get("runcall"), stopcall=get("stopcall"), ran=json["ran"]
@@ -430,14 +430,13 @@ class PersistentSchedulerTests(TestCase):
             return 60 * 60 * 24 * n
 
         memoryDriver.advance(days(3))
-        self.assertEqual(
-            info.madeCalls,
-            [
-                "repeatMethod 3 self.value='sample' self.callCount=2",
-                "repeatMethod 3 self.value='shared' self.callCount=3",
-                "repeatMethod 3 self.value='shared' self.callCount=4",
-            ],
-        )
+        expected = [
+            "repeatMethod 3 self.value='sample' self.callCount=2",
+            "repeatMethod 3 self.value='shared' self.callCount=3",
+            "repeatMethod 3 self.value='shared' self.callCount=4",
+        ]
+
+        self.assertEqual(info.madeCalls, expected)
 
         newInfo = RegInfo([])
         newNewInfo = RegInfo([])

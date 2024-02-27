@@ -4,11 +4,11 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
-from fritter.drivers.datetime import DateTimeDriver
-from fritter.scheduler import Scheduler
 
+from ..boundaries import CivilScheduler, PhysicalScheduler
+from ..drivers.datetimes import DateTimeDriver
 from ..drivers.memory import MemoryDriver
-from ..scheduler import SimpleScheduler
+from ..scheduler import newScheduler
 from ..tree import _BranchDriver, branch, timesFaster
 
 
@@ -16,9 +16,7 @@ class RecursiveTest(TestCase):
     def _oneRecursiveCall(
         self, scaleFactor: float
     ) -> List[Tuple[float, float]]:
-        scheduler1: Scheduler[float, Callable[[], None]] = SimpleScheduler(
-            driver := MemoryDriver()
-        )
+        scheduler1: PhysicalScheduler = newScheduler(driver := MemoryDriver())
         recursive, scheduler2 = branch(scheduler1, timesFaster(scaleFactor))
         calls = []
         scheduler2.callAt(
@@ -37,7 +35,7 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [(3.0, 1.0)])
 
     def test_changeScaling(self) -> None:
-        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler1: PhysicalScheduler = newScheduler(driver := MemoryDriver())
         recursive, scheduler2 = branch(scheduler1, timesFaster(2.0))
         calls = []
         scheduler2.callAt(
@@ -50,8 +48,8 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [((1 / 4) + (1 / 8), 1.0)])
 
     def test_datetime(self) -> None:
-        scheduler1: Scheduler[DateTime[ZoneInfo], Callable[[], None]] = (
-            Scheduler(DateTimeDriver(driver := MemoryDriver()))
+        scheduler1: CivilScheduler = (
+            newScheduler(DateTimeDriver(driver := MemoryDriver()))
         )
         recursive, scheduler2 = branch(scheduler1)
         TZ = ZoneInfo("Etc/UTC")
@@ -94,11 +92,11 @@ class RecursiveTest(TestCase):
         Unscheduling when not scheduled is a no-op.
         """
         _BranchDriver(
-            SimpleScheduler(MemoryDriver()), timesFaster(1.0), 0.0
+            newScheduler(MemoryDriver()), timesFaster(1.0), 0.0
         ).unschedule()
 
     def test_unpausePauseUnpause(self) -> None:
-        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler1: PhysicalScheduler = newScheduler(driver := MemoryDriver())
         recursive, scheduler2 = branch(scheduler1, timesFaster(2))
         recursive.pause()
         self.assertEqual(scheduler2.now(), 0.0)
@@ -114,7 +112,7 @@ class RecursiveTest(TestCase):
         self.assertEqual(scheduler2.now(), 40.0)
 
     def test_moveSooner(self) -> None:
-        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler1: PhysicalScheduler = newScheduler(driver := MemoryDriver())
         recursive, scheduler2 = branch(scheduler1)
         calls: list[tuple[float, float]] = []
         recursive.unpause()
@@ -127,7 +125,7 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [(0.6, 0.6)])
 
     def test_pausing(self) -> None:
-        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler1: PhysicalScheduler = newScheduler(driver := MemoryDriver())
         recursive, scheduler2 = branch(scheduler1)
         calls = []
         scheduler2.callAt(
@@ -156,7 +154,7 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [(2.7 + 1.5 + 0.5, 2.0)])
 
     def test_doubleUnpause(self) -> None:
-        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler1: PhysicalScheduler = newScheduler(driver := MemoryDriver())
         scaleFactor = 2.0
         recursive, scheduler2 = branch(scheduler1, timesFaster(scaleFactor))
         recursive.pause()
@@ -180,7 +178,7 @@ class RecursiveTest(TestCase):
         self.assertEqual(calls, [(baseTime + scaledDelta, localDelta)])
 
     def test_idling(self) -> None:
-        scheduler1 = SimpleScheduler(driver := MemoryDriver())
+        scheduler1: PhysicalScheduler = newScheduler(driver := MemoryDriver())
         recursive, scheduler2 = branch(scheduler1)
         calls: list[tuple[float, float]] = []
         recordTimestamp = timestampRecorder(calls, scheduler1, scheduler2)
@@ -192,8 +190,8 @@ class RecursiveTest(TestCase):
 
 def timestampRecorder(
     calls: list[tuple[float, float]],
-    scheduler1: SimpleScheduler,
-    scheduler2: SimpleScheduler,
+    scheduler1: PhysicalScheduler,
+    scheduler2: PhysicalScheduler,
 ) -> Callable[[], None]:
     def recorder() -> None:
         calls.append((scheduler1.now(), scheduler2.now()))

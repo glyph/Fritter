@@ -1,7 +1,7 @@
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
-from ..drivers.datetime import guessLocalZone
+from ..drivers.datetimes import guessLocalZone
 
 
 class ZoneSmokeTest(TestCase):

@@ -6,6 +6,7 @@ L{TypeVar}s, and constant values, but no logic of its own.
 
 from __future__ import annotations
 
+import sys
 from typing import (
     Any,
     Callable,
@@ -16,8 +17,9 @@ from typing import (
     Protocol,
     TypeVar,
 )
+from zoneinfo import ZoneInfo
 
-import sys
+from datetype import DateTime
 
 if sys.version_info >= (3, 12):
     from calendar import Day
@@ -168,10 +170,24 @@ WhenT = TypeVar("WhenT", bound=PriorityComparable)
 TypeVar for representing a time at which something can occur; a temporal
 coordinate in a timekeeping system.
 """
+WhenTCo = TypeVar("WhenTCo", bound=PriorityComparable, covariant=True)
 WhatT = TypeVar("WhatT", bound=Callable[[], None])
 """
 TypeVar for representing a unit of work that can take place within the context
 of a L{Scheduler}.
+"""
+WhatTContra = TypeVar(
+    "WhatTContra", bound=Callable[[], None], contravariant=True
+)
+
+IDT = TypeVar("IDT")
+"""
+TypeVar for representing the opaque identifier of ScheduledCall objects.
+"""
+
+CallTCo = TypeVar("CallTCo", bound=Cancellable, covariant=True)
+"""
+TypeVar for representing a cancelable call handle.
 """
 
 
@@ -273,3 +289,17 @@ class AsyncDriver(Protocol[AsyncType]):
         @note: Whether this starts the given coroutine synchronously or waits
             until the next event-loop tick is implementation-defined.
         """
+
+
+class Scheduler(Protocol[WhenT, WhatTContra, CallTCo]):
+    """
+    A L{Scheduler} is an object that allows for scheduling of timed calls.
+    """
+
+    def now(self) -> WhenT: ...
+
+    def callAt(self, when: WhenT, what: WhatTContra) -> CallTCo: ...
+
+
+PhysicalScheduler = Scheduler[float, Callable[[], None], Cancellable]
+CivilScheduler = Scheduler[DateTime[ZoneInfo], Callable[[], None], Cancellable]

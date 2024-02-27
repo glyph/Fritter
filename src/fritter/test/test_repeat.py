@@ -5,16 +5,16 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
+from fritter.scheduler import CallScheduler, newScheduler
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
 from ..boundaries import Cancellable, Day, RecurrenceRule
-from ..drivers.datetime import DateTimeDriver
+from ..drivers.datetimes import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
 from ..repeat import Async, repeatedly
 from ..repeat.rules.datetimes import EachWeekOn
 from ..repeat.rules.seconds import EverySecond
-from ..scheduler import Scheduler
 
 
 class RepeatTestCase(TestCase):
@@ -28,7 +28,7 @@ class RepeatTestCase(TestCase):
                 stopper.cancel()
             calls.append((steps, now))
 
-        repeatedly(Scheduler(mem), work, EverySecond(5))
+        repeatedly(newScheduler(mem), work, EverySecond(5))
 
         self.assertTrue(mem.isScheduled())
         self.assertEqual(calls, [(1, 0.0)])
@@ -57,7 +57,7 @@ class RepeatTestCase(TestCase):
             count += 1
 
         Async(tad).repeatedly(
-            Scheduler(mem),
+            newScheduler(mem),
             EverySecond(15),
             lambda times, stopper: tick(times),
         )
@@ -96,7 +96,9 @@ class RepeatTestCase(TestCase):
 
         async def task() -> None:
             nonlocal done
-            await Async(tad).repeatedly(Scheduler(mem), EverySecond(1), step)
+            await Async(tad).repeatedly(
+                newScheduler(mem), EverySecond(1), step
+            )
             done = True
 
         tad.runAsync(task())
@@ -136,7 +138,7 @@ class RepeatTestCase(TestCase):
         def go(how: Callable[[], Any]) -> None:
             nonlocal repeatCall
             repeatCall = Async(tad).repeatedly(
-                Scheduler(mem),
+                newScheduler(mem),
                 EverySecond(1),
                 lambda times, stopper: how(),
             )
@@ -179,7 +181,7 @@ class RepeatTestCase(TestCase):
 
         TZ = ZoneInfo("America/Los_Angeles")
         dtd = DateTimeDriver(mem, TZ)
-        sch = Scheduler[DateTime[ZoneInfo], Callable[[], None]](dtd)
+        sch: CallScheduler[DateTime[ZoneInfo], Callable[[], None], int] = newScheduler(dtd)
         x = []
 
         async def record(

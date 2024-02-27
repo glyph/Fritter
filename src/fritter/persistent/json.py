@@ -27,6 +27,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
+from itertools import count
 from json import dump as save_json
 from json import load as load_json
 from pathlib import Path
@@ -43,21 +44,22 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
-from fritter.boundaries import StepsTCon
-from fritter.heap import Heap
 
 from ..boundaries import (
     Cancellable,
     RecurrenceRule,
     RepeatingWork,
+    Scheduler,
     StepsT,
+    StepsTCon,
     StepsTInv,
     TimeDriver,
 )
-from ..drivers.datetime import DateTimeDriver
+from ..drivers.datetimes import DateTimeDriver
+from ..heap import Heap
 from ..repeat import Repeater
 from ..repeat.rules.datetimes import EachYear, EveryDelta
-from ..scheduler import FutureCall, Scheduler
+from ..scheduler import ScheduledCall, newScheduler
 
 LoadContext = TypeVar("LoadContext", contravariant=True)
 LoadContextCo = TypeVar("LoadContextCo", covariant=True)
@@ -113,8 +115,13 @@ class JSONableCallable(JSONable[LoadContextCo], Protocol):
         """
 
 
+JSONHandle = ScheduledCall[
+    DateTime[ZoneInfo], JSONableCallable[LoadContextInv], int
+]
 JSONableScheduler = Scheduler[
-    DateTime[ZoneInfo], JSONableCallable[LoadContextInv]
+    DateTime[ZoneInfo],
+    JSONableCallable[LoadContextInv],
+    JSONHandle[LoadContextInv],
 ]
 """
 A JSONable scheduler is a L{Scheduler} which tracks time as a L{ZoneInfo}-aware
@@ -154,12 +161,11 @@ class LoadProcess(Generic[LoadContextInv]):
     registry: JSONRegistry[LoadContextInv]
     scheduler: JSONableScheduler[LoadContextInv]
     context: LoadContextInv
+    _heap: Heap[JSONHandle[LoadContextInv]]
 
-    def loadFutureCall(
-        self, obj: Any
-    ) -> FutureCall[DateTime[ZoneInfo], JSONableCallable[LoadContextInv]]:
+    def loadScheduledCall(self, obj: Any) -> JSONHandle[LoadContextInv]:
         callID = obj["id"]
-        for call in self.scheduler._q:
+        for call in self._heap:
             if call.id == callID:
                 return call
         raise MissingPersistentCall(callID)
@@ -731,28 +737,38 @@ class JSONRegistry(Generic[LoadContext]):
         and a runtime L{TimeDriver}C{[float]}, returning a
         L{JSONableScheduler}.
         """
-        h: Heap[
-            FutureCall[DateTime[ZoneInfo], JSONableCallable[LoadContext]]
-        ] = Heap()
-        new: JSONableScheduler[LoadContext] = Scheduler(
-            DateTimeDriver(runtimeDriver),
-            h,
-            counter=int(serializedJSON.get("counter", "0")),
+        h: Heap[JSONHandle[LoadContext]] = Heap()
+        setID: int | None = None
+        counter: int = 0
+
+        def carefulCounter() -> int:
+            nonlocal counter
+            if setID is not None:
+                # during the load process, allow IDs to be set to their old
+                # values, but make sure future IDs don't collide.
+                counter = max([setID + 1, counter])
+                return setID
+            counter += 1
+            return counter
+
+        new: JSONableScheduler[LoadContext] = newScheduler(
+            DateTimeDriver(runtimeDriver), carefulCounter, queue=h,
         )
-        load = LoadProcess(self, new, loadContext)
+        load = LoadProcess(self, new, loadContext, h)
         loads = []
         for callJSON in serializedJSON["scheduledCalls"]:
             when = fromisoformat(callJSON["when"]).replace(
                 tzinfo=ZoneInfo(callJSON["tz"])
             )
 
-            # Establish the FutureCall to allow for circular reference to its
+            # Establish the ScheduledCall to allow for circular reference to its
             # 'what', with a fake callable.
             fakeWhat: JSONableCallable[LoadContext]
             fakeWhat = None  # type:ignore[assignment]
 
+            setID = callJSON["id"]
             placeholder = new.callAt(when, fakeWhat)
-            placeholder.id = callJSON["id"]
+            setID = None
 
             loads.append((placeholder, callJSON["what"]))
             # callAt needs a way to communicate future call counters (IDs)
@@ -768,26 +784,21 @@ class JSONRegistry(Generic[LoadContext]):
         Create a new L{JSONableScheduler} with the same type as if it had been
         loaded by this L{JSONRegistry}.
         """
-        h: Heap[
-            FutureCall[DateTime[ZoneInfo], JSONableCallable[LoadContext]]
-        ] = Heap()
-        s = Scheduler(driver, h)
+        h: Heap[JSONHandle[LoadContext]] = Heap()
+        s: JSONableScheduler[LoadContext] = newScheduler(driver, queue=h)
         return s, self._saverFor(h, s)
 
-    def saveFutureCall(
-        self,
-        futureCall: FutureCall[
-            DateTime[ZoneInfo], JSONableCallable[LoadContextInv]
-        ],
+    def saveScheduledCall(
+        self, futureCall: JSONHandle[LoadContextInv]
     ) -> dict[str, object]:
         """
-        Convert a L{FutureCall} into a JSON-serializable object.
+        Convert a L{ScheduledCall} into a JSON-serializable object.
         """
         return {"id": futureCall.id}
 
     def _saverFor(
         self,
-        h: Heap[FutureCall[DateTime[ZoneInfo], JSONableCallable[LoadContext]]],
+        h: Heap[JSONHandle[LoadContext]],
         s: JSONableScheduler[LoadContext],
     ) -> Callable[[], JSONObject]:
         def save() -> JSONObject:
@@ -810,7 +821,6 @@ class JSONRegistry(Generic[LoadContext]):
                     }
                     for item in h
                 ],
-                "counter": str(s.counter),
             }
 
         return save
