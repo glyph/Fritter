@@ -1,12 +1,9 @@
 from typing import Callable
 from unittest import TestCase
 
-from fritter.boundaries import PhysicalScheduler
 from fritter.scheduler import CallScheduler, newScheduler
 
 from ..drivers.memory import MemoryDriver
-from ..heap import Heap
-from ..scheduler import ScheduledCall
 
 
 class SchedulerTests(TestCase):

@@ -27,7 +27,6 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
-from itertools import count
 from json import dump as save_json
 from json import load as load_json
 from pathlib import Path
