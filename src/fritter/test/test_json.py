@@ -30,7 +30,7 @@ from ..scheduler import FutureCall
 
 @dataclass
 class RegInfo:
-    calls: list[str]
+    madeCalls: list[str]
     identityMap: dict[str, Any] = field(default_factory=dict)
 
 
@@ -38,29 +38,29 @@ registry = JSONRegistry[RegInfo]()
 emptyRegistry = JSONRegistry[RegInfo]()
 PT = ZoneInfo(key="America/Los_Angeles")
 
-calls = []
+globalCalls = []
 
 
 @registry.function
 def call1() -> None:
-    calls.append("hello")
+    globalCalls.append("hello")
 
 
 @registry.function
 def call2() -> None:
-    calls.append("goodbye")
+    globalCalls.append("goodbye")
 
 
 @registry.repeatFunction
 def repeatable(steps: int, stopper: Cancellable) -> None:
-    calls.append(f"repeatable {steps}")
+    globalCalls.append(f"repeatable {steps}")
 
 
 @dataclass
 class InstanceWithMethods:
     value: str
     info: RegInfo
-    calls: int = 0
+    callCount: int = 0
     stoppers: list[Cancellable] = field(default_factory=list)
 
     @classmethod
@@ -73,10 +73,10 @@ class InstanceWithMethods:
     ) -> InstanceWithMethods:
         key = json["identity"]
         if key in load.context.identityMap:
-            load.context.calls.append("InstanceWithMethods.fromJSON (cached)")
+            load.context.madeCalls.append("InstanceWithMethods.fromJSON (cached)")
             self: InstanceWithMethods = load.context.identityMap[key]
             return self
-        load.context.calls.append("InstanceWithMethods.fromJSON")
+        load.context.madeCalls.append("InstanceWithMethods.fromJSON")
         new = cls(json["value"], load.context)
         load.context.identityMap[key] = new
         return new
@@ -89,18 +89,18 @@ class InstanceWithMethods:
 
     @registry.method
     def method1(self) -> None:
-        self.info.calls.append(f"{self.value}/method1")
+        self.info.madeCalls.append(f"{self.value}/method1")
 
     @registry.method
     def method2(self) -> None:
-        self.info.calls.append(f"{self.value}/method2")
+        self.info.madeCalls.append(f"{self.value}/method2")
 
     @registry.repeatMethod
     def repeatMethod(self, steps: int, stopper: Cancellable) -> None:
-        self.calls += 1
+        self.callCount += 1
         self.stoppers.append(stopper)
-        self.info.calls.append(
-            f"repeatMethod {steps} {self.value=} {self.calls=}"
+        self.info.madeCalls.append(
+            f"repeatMethod {steps} {self.value=} {self.callCount=}"
         )
 
 
@@ -182,7 +182,7 @@ def jsonScheduler(driver: TimeDriver[float]) -> JSONableScheduler[RegInfo]:
 
 class PersistentSchedulerTests(TestCase):
     def tearDown(self) -> None:
-        del calls[:]
+        del globalCalls[:]
 
     def test_scheduleRunSaveRun(self) -> None:
         """
@@ -205,17 +205,17 @@ class PersistentSchedulerTests(TestCase):
         scheduler.callAt(dt2, call2)
         scheduler.callAt(dt2, iwm.method2)
         memoryDriver.advance(dt.timestamp() + 1)
-        self.assertEqual(calls, ["hello"])
-        del calls[:]
+        self.assertEqual(globalCalls, ["hello"])
+        del globalCalls[:]
         saved = registry.save(scheduler)
         memory2 = MemoryDriver()
         ri = RegInfo([])
         registry.load(memory2, saved, ri)
         memory2.advance(dt2.timestamp() + 1)
-        self.assertEqual(calls, ["goodbye"])
-        self.assertEqual(ri0.calls, ["test_scheduleRunSaveRun value/method1"])
+        self.assertEqual(globalCalls, ["goodbye"])
+        self.assertEqual(ri0.madeCalls, ["test_scheduleRunSaveRun value/method1"])
         self.assertEqual(
-            ri.calls,
+            ri.madeCalls,
             [
                 "InstanceWithMethods.fromJSON",
                 "test_scheduleRunSaveRun value/method2",
@@ -266,7 +266,7 @@ class PersistentSchedulerTests(TestCase):
         with schedulerAtPath(registry, mem2, p, ri1):
             mem2.advance()
         self.assertEqual(
-            ri1.calls, ["InstanceWithMethods.fromJSON", "A/method1"]
+            ri1.madeCalls, ["InstanceWithMethods.fromJSON", "A/method1"]
         )
 
     def test_noSuchCallID(self) -> None:
@@ -311,7 +311,7 @@ class PersistentSchedulerTests(TestCase):
         handle.cancel()
         self.assertEqual(memoryDriver.isScheduled(), False)
         memoryDriver.advance(dt.timestamp() + 1)
-        self.assertEqual(calls, [])
+        self.assertEqual(globalCalls, [])
 
     def test_emptyScheduler(self) -> None:
         memory = MemoryDriver()
@@ -327,15 +327,15 @@ class PersistentSchedulerTests(TestCase):
         memoryDriver.advance(dt.timestamp())
         scheduler = jsonScheduler(memoryDriver)
         registry.repeatedly(scheduler, daily, repeatable, dt)
-        self.assertEqual(calls, ["repeatable 1"])
-        del calls[:]
+        self.assertEqual(globalCalls, ["repeatable 1"])
+        del globalCalls[:]
 
         def days(n: int) -> float:
             return 60 * 60 * 24 * n
 
         memoryDriver.advance(days(3))
-        self.assertEqual(calls, ["repeatable 3"])
-        del calls[:]
+        self.assertEqual(globalCalls, ["repeatable 3"])
+        del globalCalls[:]
 
         newInfo = RegInfo([])
         mem2 = MemoryDriver()
@@ -347,7 +347,7 @@ class PersistentSchedulerTests(TestCase):
         amount = mem2.advance()
         assert amount is not None
         self.assertLess(amount, 0.0001)
-        self.assertEqual(calls, ["repeatable 4"])
+        self.assertEqual(globalCalls, ["repeatable 4"])
 
     def test_repeatLoadError(self) -> None:
         dt = aware(
@@ -411,25 +411,25 @@ class PersistentSchedulerTests(TestCase):
         registry.repeatedly(scheduler, daily, shared.repeatMethod)
         registry.repeatedly(scheduler, daily, shared.repeatMethod)
         self.assertEqual(
-            info.calls,
+            info.madeCalls,
             [
-                "repeatMethod 1 self.value='sample' self.calls=1",
-                "repeatMethod 1 self.value='shared' self.calls=1",
-                "repeatMethod 1 self.value='shared' self.calls=2",
+                "repeatMethod 1 self.value='sample' self.callCount=1",
+                "repeatMethod 1 self.value='shared' self.callCount=1",
+                "repeatMethod 1 self.value='shared' self.callCount=2",
             ],
         )
-        del info.calls[:]
+        del info.madeCalls[:]
 
         def days(n: int) -> float:
             return 60 * 60 * 24 * n
 
         memoryDriver.advance(days(3))
         self.assertEqual(
-            info.calls,
+            info.madeCalls,
             [
-                "repeatMethod 3 self.value='sample' self.calls=2",
-                "repeatMethod 3 self.value='shared' self.calls=3",
-                "repeatMethod 3 self.value='shared' self.calls=4",
+                "repeatMethod 3 self.value='sample' self.callCount=2",
+                "repeatMethod 3 self.value='shared' self.callCount=3",
+                "repeatMethod 3 self.value='shared' self.callCount=4",
             ],
         )
 
@@ -461,13 +461,13 @@ class PersistentSchedulerTests(TestCase):
             "InstanceWithMethods.fromJSON",
             "InstanceWithMethods.fromJSON",
             "InstanceWithMethods.fromJSON (cached)",
-            "repeatMethod 4 self.value='sample' self.calls=1",
-            "repeatMethod 4 self.value='shared' self.calls=1",
-            "repeatMethod 4 self.value='shared' self.calls=2",
+            "repeatMethod 4 self.value='sample' self.callCount=1",
+            "repeatMethod 4 self.value='shared' self.callCount=1",
+            "repeatMethod 4 self.value='shared' self.callCount=2",
         ]
-        self.assertEqual(newInfo.calls, expectedCalls)
+        self.assertEqual(newInfo.madeCalls, expectedCalls)
         self.assertEqual(mem3.isScheduled(), True)
         mem3.advance()
-        self.assertEqual(newNewInfo.calls, expectedCalls)
+        self.assertEqual(newNewInfo.madeCalls, expectedCalls)
 
         # round trip:
