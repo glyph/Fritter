@@ -14,7 +14,13 @@ from typing import Any, Callable, Coroutine, Protocol
 
 from ..scheduler import newScheduler, ConcreteScheduledCall
 
-from ..boundaries import AsyncDriver, Cancellable, PriorityQueue, TimeDriver, Scheduler
+from ..boundaries import (
+    AsyncDriver,
+    Cancellable,
+    PriorityQueue,
+    TimeDriver,
+    Scheduler,
+)
 from ..heap import Heap
 
 
@@ -115,7 +121,8 @@ _AsyncioDriverCheck: type[AsyncDriver[Future[None]]] = AsyncioAsyncDriver
 def scheduler(
     loop: LoopTimeInterface | None = None,
     queue: (
-        PriorityQueue[ConcreteScheduledCall[float, Callable[[], None], int]] | None
+        PriorityQueue[ConcreteScheduledCall[float, Callable[[], None], int]]
+        | None
     ) = None,
 ) -> Scheduler[float, Callable[[], None], int]:
     """

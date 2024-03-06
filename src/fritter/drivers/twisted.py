@@ -99,7 +99,8 @@ _AsyncDriverCheck: type[AsyncDriver[Deferred[None]]] = TwistedAsyncDriver
 def scheduler(
     reactor: IReactorTime | None = None,
     queue: (
-        PriorityQueue[ConcreteScheduledCall[float, Callable[[], None], int]] | None
+        PriorityQueue[ConcreteScheduledCall[float, Callable[[], None], int]]
+        | None
     ) = None,
 ) -> PhysicalScheduler:
     """

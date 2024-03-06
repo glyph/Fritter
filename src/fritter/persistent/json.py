@@ -737,9 +737,7 @@ class JSONRegistry(Generic[BootstrapT]):
             scheduler, rule, work, self._repeaterToJSONable, reference
         ).repeat()
 
-    def function(
-        self, cb: Callable[[], None]
-    ) -> JSONableCallable[BootstrapT]:
+    def function(self, cb: Callable[[], None]) -> JSONableCallable[BootstrapT]:
         """
         Mark the given 0-argument, None-returning, top-level function as
         possible to serialize within this registry.  It will be serialized by

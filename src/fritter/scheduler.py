@@ -227,7 +227,9 @@ def newScheduler(
         # are the same but only in this case), but we'll have to wait for
         # Python 3.13.
         nextID = nextCounter  # type:ignore[assignment]
-        assert nextID is not None, "itertools.count.__next__ just isn't None, but mypy can't tell"
+        assert (
+            nextID is not None
+        ), "itertools.count.__next__ just isn't None, but mypy can't tell"
     return _PriorityQueueBackedSchedulerImpl[WhenT, WhatT, IDT](
         driver, nextID, Heap() if queue is None else queue
     )
