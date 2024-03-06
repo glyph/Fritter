@@ -20,7 +20,7 @@ from typing import (
 
 from typing_extensions import Self
 
-from fritter.boundaries import CallTCo, Cancellable
+from fritter.boundaries import Cancellable
 
 from .boundaries import PriorityComparable, Scheduler
 from .scheduler import newScheduler
@@ -184,27 +184,27 @@ class BranchManager(Protocol[WhenT, _TrunkDelta]):
 
 @overload
 def branch(
-    trunk: Scheduler[WhenT, Callable[[], None], CallTCo],
+    trunk: Scheduler[WhenT, Callable[[], None], object],
     scale: Scale[WhenT, WhenT, _TrunkDelta],
 ) -> tuple[
     BranchManager[WhenT, _TrunkDelta],
-    Scheduler[WhenT, Callable[[], None], CallTCo],
+    Scheduler[WhenT, Callable[[], None], int],
 ]: ...
 
 
 @overload
-def branch(trunk: Scheduler[WhenT, Callable[[], None], CallTCo]) -> tuple[
+def branch(trunk: Scheduler[WhenT, Callable[[], None], object]) -> tuple[
     BranchManager[WhenT, WhenT],
-    Scheduler[WhenT, Callable[[], None], CallTCo],
+    Scheduler[WhenT, Callable[[], None], int],
 ]: ...
 
 
 def branch(
-    trunk: Scheduler[WhenT, Callable[[], None], CallTCo],
+    trunk: Scheduler[WhenT, Callable[[], None], object],
     scale: Scale[WhenT, WhenT, _TrunkDelta] | None = None,
 ) -> tuple[
     BranchManager[WhenT, _TrunkDelta],
-    Scheduler[WhenT, Callable[[], None], Cancellable],
+    Scheduler[WhenT, Callable[[], None], int],
 ]:
     """
     Derive a branch (child) scheduler from a C{trunk} (parent) scheduler.
@@ -217,11 +217,9 @@ def branch(
         trunk, scale, scale.shift(None, trunk.now())
     )
     driver.changeScale(scale)
-    branchScheduler: Scheduler[
-        WhenT,
-        Callable[[], None],
-        Cancellable,
-    ] = newScheduler(driver)
+    branchScheduler: Scheduler[WhenT, Callable[[], None], int] = newScheduler(
+        driver
+    )
     driver.unpause()
     return driver, branchScheduler
 
@@ -240,7 +238,7 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
     another L{Scheduler}.
     """
 
-    trunk: Scheduler[_TrunkTime, Callable[[], None], Cancellable]
+    trunk: Scheduler[_TrunkTime, Callable[[], None], object]
     """
     The scheduler that this driver is a branch of.
     """

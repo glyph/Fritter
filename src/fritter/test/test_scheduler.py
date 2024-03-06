@@ -1,8 +1,8 @@
 from typing import Callable
 from unittest import TestCase
 
-from fritter.scheduler import CallScheduler, newScheduler
-
+from ..boundaries import ScheduledState, Scheduler
+from ..scheduler import newScheduler
 from ..drivers.memory import MemoryDriver
 
 
@@ -16,8 +16,8 @@ class SchedulerTests(TestCase):
         Scheduling a call
         """
         driver = MemoryDriver()
-        scheduler: CallScheduler[float, Callable[[], None], int] = (
-            newScheduler(driver)
+        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
+            driver
         )
         called = 0
 
@@ -30,13 +30,13 @@ class SchedulerTests(TestCase):
         self.assertEqual(0, called)
         driver.advance(2.0)
         self.assertEqual(1, called)
-        self.assertEqual(handle.called, True)
+        self.assertEqual(handle.state, ScheduledState.called)
         handle.cancel()  # no-op
 
     def test_moveSooner(self) -> None:
         driver = MemoryDriver()
-        scheduler: CallScheduler[float, Callable[[], None], int] = (
-            newScheduler(driver)
+        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
+            driver
         )
         called = 0
 
@@ -58,8 +58,8 @@ class SchedulerTests(TestCase):
         """
         CallHandle.cancel() cancels an outstanding call.
         """
-        scheduler: CallScheduler[float, Callable[[], None], int] = (
-            newScheduler(driver := MemoryDriver())
+        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
+            driver := MemoryDriver()
         )
         callTimes = []
 

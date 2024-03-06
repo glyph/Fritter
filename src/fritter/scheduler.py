@@ -9,32 +9,85 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from itertools import count
-from typing import Callable, Generic, TypeAlias, overload
+from typing import Callable, Generic, overload
 
-from .boundaries import IDT, PriorityQueue, Scheduler, TimeDriver, WhatT, WhenT
+from .boundaries import (
+    IDT,
+    PriorityQueue,
+    Scheduler,
+    TimeDriver,
+    WhatT,
+    WhenT,
+    ScheduledCall,
+    ScheduledState,
+)
 from .heap import Heap
 
 
 @dataclass(eq=True, order=True)
-class ScheduledCall(Generic[WhenT, WhatT, IDT]):
+class ConcreteScheduledCall(Generic[WhenT, WhatT, IDT]):
     """
-    A handle to a future call.
-
-    @ivar when: When will this call be run?
-
-    @ivar what: What work will this call perform?
-
-    @ivar id: An identifier unique to the scheduler for identifying this call.
+    A handle to a call that has been scheduled.
     """
 
-    when: WhenT = field(compare=True)
-    what: WhatT = field(compare=False)
-    id: IDT = field(compare=True)
-    called: bool = field(compare=False)
-    canceled: bool = field(compare=False)
-    _canceller: Callable[[ScheduledCall[WhenT, WhatT, IDT]], None] = field(
-        compare=False
-    )
+    _when: WhenT = field(compare=True)
+    _what: WhatT | None = field(compare=False)
+    _id: IDT = field(compare=True)
+
+    _called: bool = field(compare=False)
+    _cancelled: bool = field(compare=False)
+    _canceller: (
+        Callable[[ConcreteScheduledCall[WhenT, WhatT, IDT]], None] | None
+    ) = field(compare=False)
+
+    def _call(self) -> None:
+        """
+        Invoke the callable and adjust the state.
+        """
+        assert self._what is not None, "ScheduledCall invoked twice."
+        self._called = True
+        try:
+            self._what()
+        finally:
+            self._what = None
+
+    @property
+    def id(self) -> IDT:
+        """
+        Return a unique identifier for this scheduled call.
+        """
+        return self._id
+
+    @property
+    def when(self) -> WhenT:
+        """
+        Return the original time at which the call will be scheduled.
+        """
+        return self._when
+
+    @property
+    def what(self) -> WhatT | None:
+        """
+        If this has not been called or cancelled, return the original callable
+        that was scheduled.
+
+        @note: To break cycles, this will only have a non-C{None} value when in
+            L{ScheduledState.pending}.
+        """
+        return self._what
+
+    @property
+    def state(self) -> ScheduledState:
+        """
+        Is this call still waiting to be called, or has it been called or
+        cancelled?
+        """
+        if self._cancelled:
+            return ScheduledState.cancelled
+        if self._called:
+            return ScheduledState.called
+        assert self._what is not None
+        return ScheduledState.pending
 
     def cancel(self) -> None:
         """
@@ -42,23 +95,16 @@ class ScheduledCall(Generic[WhenT, WhatT, IDT]):
         in the future.  If the work described by C{when} has already been
         called, or this call has already been cancelled, do nothing.
         """
-        if self.called:
-            # nope
+        if self._canceller is None:
             return
-        if self.canceled:
-            # nope
-            return
-        self.canceled = True
-        self._canceller(self)
-
-
-CallScheduler: TypeAlias = Scheduler[
-    WhenT, WhatT, ScheduledCall[WhenT, WhatT, IDT]
-]
+        try:
+            self._canceller(self)
+        finally:
+            self._canceller = None
 
 
 @dataclass
-class _HeapSchedulerImpl(Generic[WhenT, WhatT, IDT]):
+class _PriorityQueueBackedSchedulerImpl(Generic[WhenT, WhatT, IDT]):
     """
     A L{Scheduler} allows for scheduling work (of the type C{WhatT}, which must
     be at least a 0-argument None-returning callable) at a given time
@@ -69,7 +115,7 @@ class _HeapSchedulerImpl(Generic[WhenT, WhatT, IDT]):
 
     driver: TimeDriver[WhenT]
     _newID: Callable[[], IDT]
-    _q: PriorityQueue[ScheduledCall[WhenT, WhatT, IDT]]
+    _q: PriorityQueue[ConcreteScheduledCall[WhenT, WhatT, IDT]]
     _maxWorkBatch: int = 0xFF
 
     def now(self) -> WhenT:
@@ -94,31 +140,30 @@ class _HeapSchedulerImpl(Generic[WhenT, WhatT, IDT]):
             workPerformed = 0
             while (
                 (each := self._q.peek()) is not None
-                and each.when <= timestamp
+                and each._when <= timestamp
                 and workPerformed < self._maxWorkBatch
             ):
                 popped = self._q.get()
                 assert popped is each
-                # not sure if there's a more graceful way to put this
-                # todo: failure handling
-                each.called = True
-                each.what()
+                each._call()
                 workPerformed += 1
             upNext = self._q.peek()
             if upNext is not None:
-                self.driver.reschedule(upNext.when, advanceToNow)
+                self.driver.reschedule(upNext._when, advanceToNow)
 
-        def _cancelCall(toRemove: ScheduledCall[WhenT, WhatT, IDT]) -> None:
+        def _cancelCall(
+            toRemove: ConcreteScheduledCall[WhenT, WhatT, IDT]
+        ) -> None:
             old = self._q.peek()
             self._q.remove(toRemove)
             new = self._q.peek()
             if new is None:
                 self.driver.unschedule()
             elif old is None or new is not old:
-                self.driver.reschedule(new.when, advanceToNow)
+                self.driver.reschedule(new._when, advanceToNow)
 
         previously = self._q.peek()
-        call = ScheduledCall(
+        call = ConcreteScheduledCall(
             when, what, self._newID(), False, False, _cancelCall
         )
         self._q.add(call)
@@ -126,41 +171,43 @@ class _HeapSchedulerImpl(Generic[WhenT, WhatT, IDT]):
         # We just added a thing it can't be None even though peek has that
         # signature
         assert currently is not None
-        if previously is None or previously.when != currently.when:
-            self.driver.reschedule(currently.when, advanceToNow)
+        if previously is None or previously._when != currently._when:
+            self.driver.reschedule(currently._when, advanceToNow)
         return call
 
 
-_TypeCheck: type[
-    Scheduler[
-        float,
-        Callable[[], None],
-        ScheduledCall[float, Callable[[], None], int],
-    ]
-] = _HeapSchedulerImpl
+_TypeCheck: type[Scheduler[float, Callable[[], None], int]] = (
+    _PriorityQueueBackedSchedulerImpl
+)
 
 
 @overload
 def newScheduler(
     driver: TimeDriver[WhenT],
     nextID: Callable[[], IDT],
-    queue: PriorityQueue[ScheduledCall[WhenT, WhatT, IDT]] | None = None,
-) -> CallScheduler[WhenT, WhatT, IDT]: ...
+    queue: (
+        PriorityQueue[ConcreteScheduledCall[WhenT, WhatT, IDT]] | None
+    ) = None,
+) -> Scheduler[WhenT, WhatT, IDT]: ...
 
 
 @overload
 def newScheduler(
     driver: TimeDriver[WhenT],
     *,
-    queue: PriorityQueue[ScheduledCall[WhenT, WhatT, int]] | None = None,
-) -> CallScheduler[WhenT, WhatT, int]: ...
+    queue: (
+        PriorityQueue[ConcreteScheduledCall[WhenT, WhatT, int]] | None
+    ) = None,
+) -> Scheduler[WhenT, WhatT, int]: ...
 
 
 def newScheduler(
     driver: TimeDriver[WhenT],
     nextID: Callable[[], IDT] | None = None,
-    queue: PriorityQueue[ScheduledCall[WhenT, WhatT, IDT]] | None = None,
-) -> CallScheduler[WhenT, WhatT, IDT]:
+    queue: (
+        PriorityQueue[ConcreteScheduledCall[WhenT, WhatT, IDT]] | None
+    ) = None,
+) -> Scheduler[WhenT, WhatT, IDT]:
     """
     Create a new in-memory scheduler.
 
@@ -174,15 +221,19 @@ def newScheduler(
     """
     if nextID is None:
         nextCounter = count().__next__
+        # I really just want https://peps.python.org/pep-0696/ here (the
+        # default type for "IDT" is "int", "nextCounter" is Callable[, int]
+        # where we want a Callable[, IDT] and there's no way to tell mypy those
+        # are the same but only in this case), but we'll have to wait for
+        # Python 3.13.
         nextID = nextCounter  # type:ignore[assignment]
-        assert nextID is not None
-    if queue is None:
-        queue = Heap()
-    return _HeapSchedulerImpl(driver, nextID, queue)
+        assert nextID is not None, "itertools.count.__next__ just isn't None, but mypy can't tell"
+    return _PriorityQueueBackedSchedulerImpl[WhenT, WhatT, IDT](
+        driver, nextID, Heap() if queue is None else queue
+    )
 
 
 __all__ = [
-    "ScheduledCall",
+    "ConcreteScheduledCall",
     "newScheduler",
-    "CallScheduler",
 ]

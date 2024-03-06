@@ -58,7 +58,7 @@ class Repeater(Generic[WhenT, WhatT, StepsT]):
         next invocation of C{work} I{should} occur.
     """
 
-    scheduler: Scheduler[WhenT, WhatT, Cancellable]
+    scheduler: Scheduler[WhenT, WhatT, object]
     rule: RecurrenceRule[WhenT, StepsT]
     work: RepeatingWork[StepsT]
     convert: Callable[[Repeater[WhenT, WhatT, StepsT]], WhatT]
@@ -67,7 +67,7 @@ class Repeater(Generic[WhenT, WhatT, StepsT]):
     @classmethod
     def new(
         cls,
-        scheduler: Scheduler[WhenT, WhatT, Cancellable],
+        scheduler: Scheduler[WhenT, WhatT, object],
         rule: RecurrenceRule[WhenT, StepsT],
         work: RepeatingWork[StepsT],
         convert: Callable[[Repeater[WhenT, WhatT, StepsT]], WhatT],
@@ -100,7 +100,7 @@ class Repeater(Generic[WhenT, WhatT, StepsT]):
 
 
 def repeatedly(
-    scheduler: Scheduler[WhenT, Callable[[], None], Cancellable],
+    scheduler: Scheduler[WhenT, Callable[[], None], object],
     work: RepeatingWork[StepsT],
     rule: RecurrenceRule[WhenT, StepsT],
 ) -> None:
@@ -160,7 +160,7 @@ class Async(Generic[AsyncType]):
 
     def repeatedly(
         self,
-        scheduler: Scheduler[WhenT, Callable[[], None], Cancellable],
+        scheduler: Scheduler[WhenT, Callable[[], None], object],
         rule: RecurrenceRule[WhenT, StepsTInv],
         work: Callable[
             [StepsTInv, Cancellable],

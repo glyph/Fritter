@@ -7,6 +7,7 @@ L{TypeVar}s, and constant values, but no logic of its own.
 from __future__ import annotations
 
 import sys
+from enum import Enum, auto
 from typing import (
     Any,
     Callable,
@@ -72,19 +73,25 @@ Return TypeVar for generators and coroutines.
 """
 
 
-class CancellableAwaitable(Protocol[Yield, Send, Return]):
+class Cancellable(Protocol):
     """
-    An object which can be both awaited and canceled.
+    An object that can be cancelled.
+    """
+
+    def cancel(self) -> object:
+        """
+        Cancel an operation in progress.
+        """
+
+
+class CancellableAwaitable(Cancellable, Protocol[Yield, Send, Return]):
+    """
+    An object which can be both awaited and cancelled.
     """
 
     def __await__(self) -> Generator[Yield, Send, Return]:
         """
         This object may be awaited.
-        """
-
-    def cancel(self) -> object:
-        """
-        This object may be canceled.
         """
 
 
@@ -150,17 +157,6 @@ class TimeDriver(Protocol[Prioritized]):
         """
 
 
-class Cancellable(Protocol):
-    """
-    An object that can be cancelled.
-    """
-
-    def cancel(self) -> object:
-        """
-        Cancel an operation in progress.
-        """
-
-
 StepsT = TypeVar("StepsT", covariant=True)
 StepsTCon = TypeVar("StepsTCon", contravariant=True)
 StepsTInv = TypeVar("StepsTInv")
@@ -172,6 +168,7 @@ coordinate in a timekeeping system.
 """
 WhenTCo = TypeVar("WhenTCo", bound=PriorityComparable, covariant=True)
 WhatT = TypeVar("WhatT", bound=Callable[[], None])
+WhatTCo = TypeVar("WhatTCo", bound=Callable[[], None], covariant=True)
 """
 TypeVar for representing a unit of work that can take place within the context
 of a L{Scheduler}.
@@ -184,6 +181,7 @@ IDT = TypeVar("IDT")
 """
 TypeVar for representing the opaque identifier of ScheduledCall objects.
 """
+IDTCo = TypeVar("IDTCo", covariant=True)
 
 CallTCo = TypeVar("CallTCo", bound=Cancellable, covariant=True)
 """
@@ -291,15 +289,73 @@ class AsyncDriver(Protocol[AsyncType]):
         """
 
 
-class Scheduler(Protocol[WhenT, WhatTContra, CallTCo]):
+class ScheduledState(Enum):
+    pending = auto()
+    """
+    The call is currently scheduled to be run at some point in the future.
+    """
+
+    called = auto()
+    """
+    The call was successfully invoked by the scheduler.
+    """
+
+    cancelled = auto()
+    """
+    The call was successfully invoked by the scheduler.
+    """
+
+
+class ScheduledCall(Cancellable, Protocol[WhenTCo, WhatTCo, IDTCo]):
+
+    @property
+    def id(self) -> IDTCo:
+        """
+        Return a unique identifier for this scheduled call.
+        """
+
+    @property
+    def when(self) -> WhenTCo:
+        """
+        Return the original time at which the call will be scheduled.
+        """
+
+    @property
+    def what(self) -> WhatTCo | None:
+        """
+        If this has not been called or cancelled, return the original callable
+        that was scheduled.
+
+        @note: To break cycles, this will only have a non-C{None} value when in
+            L{ScheduledState.pending}.
+        """
+
+    @property
+    def state(self) -> ScheduledState:
+        """
+        Is this call still waiting to be called, or has it been called or
+        cancelled?
+        """
+
+    def cancel(self) -> None:
+        """
+        Cancel this L{ScheduledCall}, making it so that it will not be invoked
+        in the future.  If the work described by C{when} has already been
+        called, or this call has already been cancelled, do nothing.
+        """
+
+
+class Scheduler(Protocol[WhenT, WhatT, IDTCo]):
     """
     A L{Scheduler} is an object that allows for scheduling of timed calls.
     """
 
     def now(self) -> WhenT: ...
 
-    def callAt(self, when: WhenT, what: WhatTContra) -> CallTCo: ...
+    def callAt(
+        self, when: WhenT, what: WhatT
+    ) -> ScheduledCall[WhenT, WhatT, IDTCo]: ...
 
 
-PhysicalScheduler = Scheduler[float, Callable[[], None], Cancellable]
-CivilScheduler = Scheduler[DateTime[ZoneInfo], Callable[[], None], Cancellable]
+PhysicalScheduler = Scheduler[float, Callable[[], None], object]
+CivilScheduler = Scheduler[DateTime[ZoneInfo], Callable[[], None], object]

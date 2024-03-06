@@ -12,11 +12,10 @@ from contextvars import Context
 from dataclasses import dataclass, field
 from typing import Any, Callable, Coroutine, Protocol
 
-from fritter.scheduler import CallScheduler, newScheduler
+from ..scheduler import newScheduler, ConcreteScheduledCall
 
-from ..boundaries import AsyncDriver, Cancellable, PriorityQueue, TimeDriver
+from ..boundaries import AsyncDriver, Cancellable, PriorityQueue, TimeDriver, Scheduler
 from ..heap import Heap
-from ..scheduler import ScheduledCall
 
 
 class LoopTimeInterface(Protocol):
@@ -86,7 +85,7 @@ class AsyncioAsyncDriver:
     def newWithCancel(self, cancel: Callable[[], None]) -> Future[None]:
         """
         Create a new L{Future} with the given callback to execute when
-        canceled.
+        cancelled.
         """
         f = Future[None](loop=self._loop)
 
@@ -116,9 +115,9 @@ _AsyncioDriverCheck: type[AsyncDriver[Future[None]]] = AsyncioAsyncDriver
 def scheduler(
     loop: LoopTimeInterface | None = None,
     queue: (
-        PriorityQueue[ScheduledCall[float, Callable[[], None], int]] | None
+        PriorityQueue[ConcreteScheduledCall[float, Callable[[], None], int]] | None
     ) = None,
-) -> CallScheduler[float, Callable[[], None], int]:
+) -> Scheduler[float, Callable[[], None], int]:
     """
     Create a scheduler that uses Asyncio.
     """

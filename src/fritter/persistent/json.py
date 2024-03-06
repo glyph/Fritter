@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import (
     Any,
     Callable,
+    ContextManager,
     Generic,
     Iterator,
     ParamSpec,
@@ -53,12 +54,14 @@ from ..boundaries import (
     StepsTCon,
     StepsTInv,
     TimeDriver,
+    ScheduledCall,
+    ScheduledState,
 )
 from ..drivers.datetimes import DateTimeDriver
 from ..heap import Heap
 from ..repeat import Repeater
 from ..repeat.rules.datetimes import EachYear, EveryDelta
-from ..scheduler import ScheduledCall, newScheduler
+from ..scheduler import newScheduler, ConcreteScheduledCall
 
 LoadContext = TypeVar("LoadContext", contravariant=True)
 LoadContextCo = TypeVar("LoadContextCo", covariant=True)
@@ -114,14 +117,11 @@ class JSONableCallable(JSONable[LoadContextCo], Protocol):
         """
 
 
-JSONHandle = ScheduledCall[
-    DateTime[ZoneInfo], JSONableCallable[LoadContextInv], int
-]
-JSONableScheduler = Scheduler[
-    DateTime[ZoneInfo],
-    JSONableCallable[LoadContextInv],
-    JSONHandle[LoadContextInv],
-]
+DTZI = DateTime[ZoneInfo]
+
+JSONHandle = ScheduledCall[DTZI, JSONableCallable[LoadContextInv], int]
+JSONableScheduler = Scheduler[DTZI, JSONableCallable[LoadContextInv], int]
+
 """
 A JSONable scheduler is a L{Scheduler} which tracks time as a L{ZoneInfo}-aware
 C{datetype.DateTime} and only accepts L{JSONableCallable} objects as work to be
@@ -151,6 +151,61 @@ class MissingPersistentCall(Exception):
 
 
 @dataclass
+class _SelfReferentialCall(Generic[LoadContextInv]):
+    _id: int
+    _wrapped: ScheduledCall[DTZI, JSONableCallable[LoadContextInv], int] | None = None
+
+    @property
+    def id(self) -> int:
+        """
+        Return a unique identifier for this scheduled call.
+        """
+        return self._id
+
+    @property
+    def when(self) -> DTZI:
+        """
+        Return the original time at which the call will be scheduled.
+        """
+        assert self._wrapped is not None
+        return self._wrapped.when
+
+    @property
+    def what(self) -> JSONableCallable[LoadContextInv] | None:
+        """
+        If this has not been called or cancelled, return the original callable
+        that was scheduled.
+
+        @note: To break cycles, this will only have a non-C{None} value when in
+            L{ScheduledState.pending}.
+        """
+        assert self._wrapped is not None
+        return self._wrapped.what
+
+    @property
+    def state(self) -> ScheduledState:
+        """
+        Is this call still waiting to be called, or has it been called or
+        cancelled?
+        """
+        if self._wrapped is None:
+            return ScheduledState.pending
+        else:
+            return self._wrapped.state
+
+    def cancel(self) -> None:
+        """
+        Cancel this L{ScheduledCall}, making it so that it will not be invoked
+        in the future.  If the work described by C{when} has already been
+        called, or this call has already been cancelled, do nothing.
+        """
+        assert self._wrapped is not None
+        self._wrapped.cancel()
+
+
+_typeCheck: type[ScheduledCall[DTZI, JSONableCallable[object], int]] = _SelfReferentialCall
+
+@dataclass
 class LoadProcess(Generic[LoadContextInv]):
     """
     A L{LoadProcess} collects the parameters to one top-level call to
@@ -160,14 +215,42 @@ class LoadProcess(Generic[LoadContextInv]):
     registry: JSONRegistry[LoadContextInv]
     scheduler: JSONableScheduler[LoadContextInv]
     context: LoadContextInv
-    _heap: Heap[JSONHandle[LoadContextInv]]
+    _unloaded: dict[str, JSONObject]
+    _loaded: dict[str, ScheduledCall[DTZI, JSONableCallable[LoadContextInv], int]]
+    _selfrefs: dict[str, _SelfReferentialCall[LoadContextInv]]
+    _forceID: Callable[[int], ContextManager[None]]
 
-    def loadScheduledCall(self, obj: Any) -> JSONHandle[LoadContextInv]:
-        callID = obj["id"]
-        for call in self._heap:
-            if call.id == callID:
-                return call
-        raise MissingPersistentCall(callID)
+    def _begin(self) -> None:
+        while self._unloaded:
+            k, callJSON = self._unloaded.popitem()
+            lookupID = callJSON["id"]
+            when = fromisoformat(callJSON["when"]).replace(
+                tzinfo=ZoneInfo(callJSON["tz"])
+            )
+            if lookupID in self._selfrefs:
+                src = self._selfrefs[lookupID]
+            else:
+                src = self._selfrefs[lookupID] = _SelfReferentialCall(lookupID)
+            what = self.registry._loadOne(
+                callJSON["what"], self.registry._functions, self
+            )
+            with self._forceID(lookupID):
+                loaded = src._wrapped = self.scheduler.callAt(when, what)
+            self._loaded[lookupID] = loaded
+
+    def loadScheduledCall(
+        self, idobj: Any
+    ) -> ScheduledCall[DTZI, JSONableCallable[LoadContextInv], int]:
+        callID = idobj["id"]
+        if callID in self._loaded:
+            return self._loaded[callID]
+        elif callID in self._selfrefs:
+            return self._selfrefs[callID]
+        elif callID in self._unloaded:
+            src = self._selfrefs[callID] = _SelfReferentialCall(callID)
+            return src
+        else:
+            raise MissingPersistentCall(callID)
 
 
 class JSONableInstance(JSONable[LoadContextInv], Protocol):
@@ -214,7 +297,7 @@ _JSONableType = TypeVar("_JSONableType", bound=HasTypeCode)
 "Binding for internal generic tracking of JSONable types."
 
 JSONRepeater = Repeater[
-    DateTime[ZoneInfo],
+    DTZI,
     JSONableCallable[LoadContext],
     StepsT,
 ]
@@ -494,10 +577,10 @@ _JSONableCallableT = TypeVar(
     bound=JSONableCallable[Any] | JSONableRepeatable[Any, Any],
 )
 
-RRuleT = TypeVar("RRuleT", bound=RecurrenceRule[DateTime[ZoneInfo], Any])
+RRuleT = TypeVar("RRuleT", bound=RecurrenceRule[DTZI, Any])
 RRuleTx = TypeVar(
     "RRuleTx",
-    bound=RecurrenceRule[DateTime[ZoneInfo], Any],
+    bound=RecurrenceRule[DTZI, Any],
     contravariant=True,
 )
 
@@ -541,16 +624,14 @@ class JSONRegistry(Generic[LoadContext]):
         Type[JSONableInstance[LoadContext]]
     ] = field(default_factory=_copyUniversal("_instances"))
     _rules: _SpecificTypeRegistration[
-        RuleJSONIfier[RecurrenceRule[DateTime[ZoneInfo], Any]]
+        RuleJSONIfier[RecurrenceRule[DTZI, Any]]
     ] = field(default_factory=_copyUniversal("_rules"))
     _ruletype2jsonifier: dict[
-        type[RecurrenceRule[DateTime[ZoneInfo], object]],
-        RuleJSONIfier[RecurrenceRule[DateTime[ZoneInfo], Any]],
+        type[RecurrenceRule[DTZI, object]],
+        RuleJSONIfier[RecurrenceRule[DTZI, Any]],
     ] = field(default_factory=lambda: _universal._ruletype2jsonifier.copy())
 
-    def _loadRRule(
-        self, json: JSONObject
-    ) -> RecurrenceRule[DateTime[ZoneInfo], Any]:
+    def _loadRRule(self, json: JSONObject) -> RecurrenceRule[DTZI, Any]:
         typeCode = json["type"]
         blob = json["data"]
 
@@ -559,9 +640,7 @@ class JSONRegistry(Generic[LoadContext]):
 
         raise KeyError(f"cannot interpret rule type code {repr(typeCode)}")
 
-    def _saveRRule(
-        self, rule: RecurrenceRule[DateTime[ZoneInfo], Any]
-    ) -> JSONObject:
+    def _saveRRule(self, rule: RecurrenceRule[DTZI, Any]) -> JSONObject:
         ser = self._ruletype2jsonifier[type(rule)]
         return {
             "type": ser.typeCodeForJSON(),
@@ -605,6 +684,7 @@ class JSONRegistry(Generic[LoadContext]):
             # _instances live on SpecificTypeRegistration rather than be shared
             # between both repeatable/non-repeatable types
 
+
             instance = instanceType.fromJSON(load, blob)
             result: _JSONableCallableT = getattr(instance, methodName)
             return result
@@ -629,9 +709,9 @@ class JSONRegistry(Generic[LoadContext]):
     def repeatedly(
         self,
         scheduler: JSONableScheduler[LoadContext],
-        rule: RecurrenceRule[DateTime[ZoneInfo], StepsT],
+        rule: RecurrenceRule[DTZI, StepsT],
         work: JSONableRepeatable[LoadContext, StepsT],
-        reference: DateTime[ZoneInfo] | None = None,
+        reference: DTZI | None = None,
     ) -> None:
         """
         Call C{work} repeatedly, according to C{rule}, with intervals computed
@@ -736,7 +816,7 @@ class JSONRegistry(Generic[LoadContext]):
         and a runtime L{TimeDriver}C{[float]}, returning a
         L{JSONableScheduler}.
         """
-        h: Heap[JSONHandle[LoadContext]] = Heap()
+        h: Heap[ConcreteScheduledCall[DTZI, JSONableCallable[LoadContext], int]] = Heap()
         setID: int | None = None
         counter: int = 0
 
@@ -755,38 +835,45 @@ class JSONRegistry(Generic[LoadContext]):
             carefulCounter,
             queue=h,
         )
-        load = LoadProcess(self, new, loadContext, h)
-        loads = []
-        for callJSON in serializedJSON["scheduledCalls"]:
-            when = fromisoformat(callJSON["when"]).replace(
-                tzinfo=ZoneInfo(callJSON["tz"])
-            )
 
-            # Establish the ScheduledCall to allow for circular reference to
-            # its 'what', with a fake callable.
-            fakeWhat: JSONableCallable[LoadContext]
-            fakeWhat = None  # type:ignore[assignment]
+        @contextmanager
+        def idForcer(forcedID: int) -> Iterator[None]:
+            nonlocal setID
+            setID = forcedID
+            try:
+                yield
+            finally:
+                setID = None
 
-            setID = callJSON["id"]
-            placeholder = new.callAt(when, fakeWhat)
-            setID = None
+        load = LoadProcess(
+            self,
+            new,
+            loadContext,
+            {
+                callJSON["id"]: callJSON
+                # Reverse the order so that popitem()'s LIFO behavior gives us
+                # the calls in the original order.
+                for callJSON in reversed(serializedJSON["scheduledCalls"])
+            },
+            {},
+            {},
+            idForcer,
+        )
+        load._begin()
 
-            loads.append((placeholder, callJSON["what"]))
-            # callAt needs a way to communicate future call counters (IDs)
-
-        for ph, wt in loads:
-            ph.what = self._loadOne(wt, self._functions, load)
         return new, self._saverFor(h, new)
 
     def new(
-        self, driver: TimeDriver[DateTime[ZoneInfo]]
+        self, driver: TimeDriver[DTZI]
     ) -> tuple[JSONableScheduler[LoadContext], Callable[[], JSONObject]]:
         """
         Create a new L{JSONableScheduler} with the same type as if it had been
         loaded by this L{JSONRegistry}.
         """
-        h: Heap[JSONHandle[LoadContext]] = Heap()
-        s: JSONableScheduler[LoadContext] = newScheduler(driver, queue=h)
+        h: Heap[ConcreteScheduledCall[DTZI, JSONableCallable[LoadContext], int]] = Heap()
+        s: JSONableScheduler[LoadContext] = newScheduler(
+            driver, queue=h
+        )
         return s, self._saverFor(h, s)
 
     def saveScheduledCall(
@@ -799,7 +886,7 @@ class JSONRegistry(Generic[LoadContext]):
 
     def _saverFor(
         self,
-        h: Heap[JSONHandle[LoadContext]],
+        h: Heap[Any],
         s: JSONableScheduler[LoadContext],
     ) -> Callable[[], JSONObject]:
         def save() -> JSONObject:
@@ -816,11 +903,10 @@ class JSONRegistry(Generic[LoadContext]):
                         "when": item.when.replace(tzinfo=None).isoformat(),
                         "tz": item.when.tzinfo.key,
                         "what": _whatJSON(self, item.what),
-                        "called": item.called,
-                        "canceled": item.canceled,
                         "id": item.id,
                     }
                     for item in h
+                    if item.what is not None
                 ],
             }
 
@@ -862,14 +948,14 @@ _universal._registerRRule(EveryDelta, _EveryDeltaJSONifier())
 _universal._registerRRule(EachYear, _YearlyJSONifier())
 
 
-def dateTypeAsJSON(dt: DateTime[ZoneInfo]) -> dict[str, str]:
+def dateTypeAsJSON(dt: DTZI) -> dict[str, str]:
     return {
         "ts": dt.replace(tzinfo=None).isoformat(),
         "tz": dt.tzinfo.key,
     }
 
 
-def dateTypeFromJSON(dtjs: dict[str, str]) -> DateTime[ZoneInfo]:
+def dateTypeFromJSON(dtjs: dict[str, str]) -> DTZI:
     return fromisoformat(dtjs["ts"]).replace(tzinfo=ZoneInfo(dtjs["tz"]))
 
 
@@ -912,8 +998,8 @@ class _JSONableRepeaterWrapper(Generic[LoadContext, StepsT]):
         Deserialize a L{_JSONableRepeaterWrapper} from a JSON-dumpable dict
         previously produced by L{_JSONableRepeaterWrapper.toJSON}.
         """
-        rule: RecurrenceRule[DateTime[ZoneInfo], StepsT] = (
-            load.registry._loadRRule(json["rule"])
+        rule: RecurrenceRule[DTZI, StepsT] = load.registry._loadRRule(
+            json["rule"]
         )
         what = json["callable"]
         one = load.registry._loadOne(what, load.registry._repeatable, load)

@@ -5,7 +5,8 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime
-from fritter.scheduler import CallScheduler, newScheduler
+from fritter.boundaries import Scheduler
+from fritter.scheduler import newScheduler
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
 from ..boundaries import Cancellable, Day, RecurrenceRule
@@ -114,10 +115,10 @@ class RepeatTestCase(TestCase):
         repeatCall: Deferred[None] | None = None
         pending: Deferred[None]
 
-        def canceled(d: Deferred[None]) -> None:
+        def cancelled(d: Deferred[None]) -> None:
             return
 
-        pending = Deferred(canceled)
+        pending = Deferred(cancelled)
 
         async def bonk(d: Deferred[None]) -> None:
             # odd idiom for suppressing cancellation to work around
@@ -154,13 +155,13 @@ class RepeatTestCase(TestCase):
 
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())
-        pending = Deferred(canceled)
+        pending = Deferred(cancelled)
         succeeding += 1
         tad.runAsync(run(asynchronously))
         self.assertTrue(mem.isScheduled())
         mem.advance()
         self.assertFalse(mem.isScheduled())
-        p, pending = pending, Deferred(canceled)
+        p, pending = pending, Deferred(cancelled)
         p.callback(None)
         self.assertTrue(mem.isScheduled())
         mem.advance()
@@ -181,7 +182,7 @@ class RepeatTestCase(TestCase):
 
         TZ = ZoneInfo("America/Los_Angeles")
         dtd = DateTimeDriver(mem, TZ)
-        sch: CallScheduler[DateTime[ZoneInfo], Callable[[], None], int] = (
+        sch: Scheduler[DateTime[ZoneInfo], Callable[[], None], int] = (
             newScheduler(dtd)
         )
         x = []

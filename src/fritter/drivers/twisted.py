@@ -21,7 +21,7 @@ from ..boundaries import (
     TimeDriver,
 )
 from ..heap import Heap
-from ..scheduler import ScheduledCall
+from ..scheduler import ConcreteScheduledCall
 
 log = Logger()
 
@@ -77,7 +77,7 @@ class TwistedAsyncDriver:
     def newWithCancel(self, cancel: Callable[[], None]) -> Deferred[None]:
         """
         Create a new future-ish object with the given callback to execute when
-        canceled.
+        cancelled.
         """
         return Deferred(lambda d: cancel())
 
@@ -99,7 +99,7 @@ _AsyncDriverCheck: type[AsyncDriver[Deferred[None]]] = TwistedAsyncDriver
 def scheduler(
     reactor: IReactorTime | None = None,
     queue: (
-        PriorityQueue[ScheduledCall[float, Callable[[], None], int]] | None
+        PriorityQueue[ConcreteScheduledCall[float, Callable[[], None], int]] | None
     ) = None,
 ) -> PhysicalScheduler:
     """

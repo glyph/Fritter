@@ -10,6 +10,7 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
+from fritter.boundaries import ScheduledCall
 from fritter.persistent.json import schedulerAtPath
 
 from ..boundaries import Cancellable, TimeDriver
@@ -25,7 +26,6 @@ from ..persistent.json import (
     MissingPersistentCall,
 )
 from ..repeat.rules.datetimes import daily
-from ..scheduler import ScheduledCall
 
 
 @dataclass
@@ -74,11 +74,13 @@ class InstanceWithMethods:
         key = json["identity"]
         if key in load.context.identityMap:
             load.context.madeCalls.append(
-                "InstanceWithMethods.fromJSON (cached)"
+                f"InstanceWithMethods.fromJSON: {json['value']} (cached)"
             )
             self: InstanceWithMethods = load.context.identityMap[key]
             return self
-        load.context.madeCalls.append("InstanceWithMethods.fromJSON")
+        load.context.madeCalls.append(
+            f"InstanceWithMethods.fromJSON: {json['value']}"
+        )
         new = cls(json["value"], load.context)
         load.context.identityMap[key] = new
         return new
@@ -145,8 +147,9 @@ class Stoppable:
     def fromJSON(
         cls, load: LoadProcess[RegInfo], json: JSONObject
     ) -> Stoppable:
-        if json["id"] in load.context.identityMap:
-            result: Stoppable = load.context.identityMap[json["id"]]
+        ckey = json["id"]
+        if ckey in load.context.identityMap:
+            result: Stoppable = load.context.identityMap[ckey]
             return result
 
         def get(
@@ -156,10 +159,12 @@ class Stoppable:
             return it if it is None else load.loadScheduledCall(it)
 
         self = cls(
-            runcall=get("runcall"), stopcall=get("stopcall"), ran=json["ran"]
+            runcall=get("runcall"),
+            stopcall=get("stopcall"),
+            ran=json["ran"],
         )
         # leave it there for the test to pick up
-        load.context.identityMap[json["id"]] = self
+        load.context.identityMap[ckey] = self
         return self
 
     @registry.method
@@ -203,7 +208,7 @@ class PersistentSchedulerTests(TestCase):
             ZoneInfo,
         )
         ri0 = RegInfo([])
-        iwm = InstanceWithMethods("test_scheduleRunSaveRun value", ri0)
+        iwm = InstanceWithMethods("test_scheduleRunSaveRun-value", ri0)
         scheduler.callAt(dt, call1)
         scheduler.callAt(dt, iwm.method1)
         scheduler.callAt(dt2, call2)
@@ -218,13 +223,13 @@ class PersistentSchedulerTests(TestCase):
         memory2.advance(dt2.timestamp() + 1)
         self.assertEqual(globalCalls, ["goodbye"])
         self.assertEqual(
-            ri0.madeCalls, ["test_scheduleRunSaveRun value/method1"]
+            ri0.madeCalls, ["test_scheduleRunSaveRun-value/method1"]
         )
         self.assertEqual(
             ri.madeCalls,
             [
-                "InstanceWithMethods.fromJSON",
-                "test_scheduleRunSaveRun value/method2",
+                "InstanceWithMethods.fromJSON: test_scheduleRunSaveRun-value",
+                "test_scheduleRunSaveRun-value/method2",
             ],
         )
 
@@ -253,7 +258,7 @@ class PersistentSchedulerTests(TestCase):
         assert isinstance(loadedStoppable, Stoppable)
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIsNot(loadedStoppable.runcall, None)
-        memory2.advance(dt.timestamp() + 3.0)
+        memory2.advance(dt.timestamp() + 4.0)
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIs(loadedStoppable.runcall, None)
 
@@ -272,7 +277,7 @@ class PersistentSchedulerTests(TestCase):
         with schedulerAtPath(registry, mem2, p, ri1):
             mem2.advance()
         self.assertEqual(
-            ri1.madeCalls, ["InstanceWithMethods.fromJSON", "A/method1"]
+            ri1.madeCalls, ["InstanceWithMethods.fromJSON: A", "A/method1"]
         )
 
     def test_noSuchCallID(self) -> None:
@@ -294,8 +299,6 @@ class PersistentSchedulerTests(TestCase):
                                     "id": 4411099664,
                                 },
                             },
-                            "called": False,
-                            "canceled": False,
                             "id": 2,
                         }
                     ],
@@ -384,7 +387,7 @@ class PersistentSchedulerTests(TestCase):
                 },
             },
             "called": False,
-            "canceled": False,
+            "cancelled": False,
             "id": 1,
         }
         with self.assertRaises(KeyError) as ke:
@@ -465,9 +468,9 @@ class PersistentSchedulerTests(TestCase):
         self.assertEqual(mem2.isScheduled(), True)
         mem2.advance()
         expectedCalls = [
-            "InstanceWithMethods.fromJSON",
-            "InstanceWithMethods.fromJSON",
-            "InstanceWithMethods.fromJSON (cached)",
+            "InstanceWithMethods.fromJSON: sample",
+            "InstanceWithMethods.fromJSON: shared",
+            "InstanceWithMethods.fromJSON: shared (cached)",
             "repeatMethod 4 self.value='sample' self.callCount=1",
             "repeatMethod 4 self.value='shared' self.callCount=1",
             "repeatMethod 4 self.value='shared' self.callCount=2",
