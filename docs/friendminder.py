@@ -72,7 +72,7 @@ class FriendList:
     def fromJSON(
         cls, load: LoadProcess[FriendList], json: JSONObject
     ) -> FriendList:
-        return load.context
+        return load.bootstrap
 
     @registry.repeatMethod
     def weeklyReminder(self, steps: int, stopper: Cancellable) -> None:
@@ -158,7 +158,7 @@ class Friend:
     def fromJSON(
         cls, load: LoadProcess[FriendList], json: JSONObject
     ) -> Friend:
-        return load.context.getFriendNamed(json["name"], load)
+        return load.bootstrap.getFriendNamed(json["name"], load)
 
     def birthdaySetup(self) -> None:
         now = self.scheduler.now()

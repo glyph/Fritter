@@ -24,11 +24,11 @@ class MyClass:
         cls, load: LoadProcess[dict[int, MyClass]], json: JSONObject
     ) -> MyClass:
         loadingID = int(json["id"])
-        if loadingID in load.context:
-            return load.context[loadingID]
+        if loadingID in load.bootstrap:
+            return load.bootstrap[loadingID]
         else:
             self = cls(json["value"])
-            load.context[loadingID] = self
+            load.bootstrap[loadingID] = self
             return self
 
     @registry.method

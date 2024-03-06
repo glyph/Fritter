@@ -72,17 +72,17 @@ class InstanceWithMethods:
         cls, load: LoadProcess[RegInfo], json: JSONObject
     ) -> InstanceWithMethods:
         key = json["identity"]
-        if key in load.context.identityMap:
-            load.context.madeCalls.append(
+        if key in load.bootstrap.identityMap:
+            load.bootstrap.madeCalls.append(
                 f"InstanceWithMethods.fromJSON: {json['value']} (cached)"
             )
-            self: InstanceWithMethods = load.context.identityMap[key]
+            self: InstanceWithMethods = load.bootstrap.identityMap[key]
             return self
-        load.context.madeCalls.append(
+        load.bootstrap.madeCalls.append(
             f"InstanceWithMethods.fromJSON: {json['value']}"
         )
-        new = cls(json["value"], load.context)
-        load.context.identityMap[key] = new
+        new = cls(json["value"], load.bootstrap)
+        load.bootstrap.identityMap[key] = new
         return new
 
     def toJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
@@ -148,8 +148,8 @@ class Stoppable:
         cls, load: LoadProcess[RegInfo], json: JSONObject
     ) -> Stoppable:
         ckey = json["id"]
-        if ckey in load.context.identityMap:
-            result: Stoppable = load.context.identityMap[ckey]
+        if ckey in load.bootstrap.identityMap:
+            result: Stoppable = load.bootstrap.identityMap[ckey]
             return result
 
         def get(
@@ -164,7 +164,7 @@ class Stoppable:
             ran=json["ran"],
         )
         # leave it there for the test to pick up
-        load.context.identityMap[ckey] = self
+        load.bootstrap.identityMap[ckey] = self
         return self
 
     @registry.method

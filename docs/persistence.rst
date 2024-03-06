@@ -21,8 +21,8 @@ our serializable objects, we will use a :py:class:`JSONRegistry
    :start-after: start-registry
    :end-before: end-registry
 
-Don't worry about the ``[object]`` there just yet; that tells us the type of
-the "load context" for this registry.  We'll get to it later.
+Don't worry about the ``[object]`` there just yet; it tells us the type of the
+"bootstrap" for this registry.  We'll get to that later.
 
 Next, we'll make a Reminder class, which just holds a bit of text to remind us
 about.
