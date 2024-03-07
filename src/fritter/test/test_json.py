@@ -471,9 +471,10 @@ class PersistentSchedulerTests(TestCase):
         LA = "zoneinfo.ZoneInfo(key='America/Los_Angeles')"
         expectedCalls = [
             "InstanceWithMethods.fromJSON: test_repeatEachYear",
-            f"repeatMethod [datetime.datetime(2023, 7, 21, 1, 1, 1, tzinfo={LA}), "
-            f"datetime.datetime(2025, 7, 21, 1, 1, 1, tzinfo={LA})] "
-            "self.value='test_repeatEachYear' self.callCount=1",
+            "repeatMethod ["
+            f"datetime.datetime(2023, 7, 21, 1, 1, 1, tzinfo={LA}), "
+            f"datetime.datetime(2025, 7, 21, 1, 1, 1, tzinfo={LA})"
+            "] self.value='test_repeatEachYear' self.callCount=1",
         ]
         self.assertEqual(newInfo.madeCalls, expectedCalls)
 
