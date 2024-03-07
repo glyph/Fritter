@@ -250,11 +250,11 @@ class RepeatTestCase(TestCase):
             aware(datetime(2020, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
             aware(datetime(2026, 3, 10, 9, 0, tzinfo=TZ), ZoneInfo),
         )
-        self.assertEquals(
+        self.assertEqual(
             newReference,
             aware(datetime(2026, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
         )
-        self.assertEquals(
+        self.assertEqual(
             steps,
             [
                 aware(datetime(2020, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
