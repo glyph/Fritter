@@ -474,6 +474,7 @@ class JSONableBoundRepeatable(Generic[JSONableSelf, BootstrapT, StepsTInv]):
             f"{self.descriptor.func.__name__}"
         )
 
+_TC: type[JSONableRepeatable[str, int]] = JSONableBoundRepeatable[JSONableInstance[object], str, int]
 
 @dataclass
 class JSONableRepeatableDescriptor(Generic[JSONableSelf, BootstrapT, StepsT]):

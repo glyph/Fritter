@@ -10,8 +10,8 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
-from fritter.boundaries import ScheduledCall, ScheduledState
-from fritter.persistent.json import schedulerAtPath
+from fritter.boundaries import RecurrenceRule, ScheduledCall, ScheduledState
+from fritter.persistent.json import JSONableRepeatable, schedulerAtPath
 
 from ..boundaries import Cancellable, TimeDriver
 from ..drivers.datetimes import DateTimeDriver
@@ -25,7 +25,7 @@ from ..persistent.json import (
     LoadProcess,
     MissingPersistentCall,
 )
-from ..repeat.rules.datetimes import daily
+from ..repeat.rules.datetimes import EachYear, daily
 
 
 @dataclass
@@ -102,6 +102,16 @@ class InstanceWithMethods:
 
     @registry.repeatMethod
     def repeatMethod(self, steps: int, stopper: Cancellable) -> None:
+        self.callCount += 1
+        self.stoppers.append(stopper)
+        self.info.madeCalls.append(
+            f"repeatMethod {steps} {self.value=} {self.callCount=}"
+        )
+
+    @registry.repeatMethod
+    def repeatMethodDTZIL(
+        self, steps: list[DateTime[ZoneInfo]], stopper: Cancellable
+    ) -> None:
         self.callCount += 1
         self.stoppers.append(stopper)
         self.info.madeCalls.append(
@@ -435,6 +445,37 @@ class PersistentSchedulerTests(TestCase):
         assert amount is not None
         self.assertLess(amount, 0.0001)
         self.assertEqual(globalCalls, ["repeatable 4"])
+
+    def test_repeatEachYear(self) -> None:
+        memoryDriver = MemoryDriver()
+        dt = aware(
+            datetime(2023, 7, 21, 1, 1, 1, tzinfo=PT),
+            ZoneInfo,
+        )
+        scheduler: JSONableScheduler[RegInfo]
+        scheduler, saver = jsonScheduler(memoryDriver)
+        ri = RegInfo([])
+        iwm = InstanceWithMethods("test_repeatEachYear", ri)
+        rrule: RecurrenceRule[DateTime[ZoneInfo], list[DateTime[ZoneInfo]]] = (
+            EachYear(2)
+        )
+        repeatMethod: JSONableRepeatable[RegInfo, list[DateTime[ZoneInfo]]] = (
+            iwm.repeatMethodDTZIL
+        )
+        registry.repeatedly(scheduler, rrule, repeatMethod, dt)
+        newInfo = RegInfo([])
+        mem2 = MemoryDriver()
+        mem2.advance(dt.timestamp())
+        registry.load(mem2, loads(dumps(saver())), newInfo)
+        mem2.advance(timedelta(days=365 * 4).total_seconds())
+        LA="zoneinfo.ZoneInfo(key='America/Los_Angeles')"
+        expectedCalls = [
+            "InstanceWithMethods.fromJSON: test_repeatEachYear",
+            f"repeatMethod [datetime.datetime(2023, 7, 21, 1, 1, 1, tzinfo={LA}), "
+            f"datetime.datetime(2025, 7, 21, 1, 1, 1, tzinfo={LA})] "
+            "self.value='test_repeatEachYear' self.callCount=1",
+        ]
+        self.assertEqual(newInfo.madeCalls, expectedCalls)
 
     def test_repeatLoadError(self) -> None:
         dt = aware(
