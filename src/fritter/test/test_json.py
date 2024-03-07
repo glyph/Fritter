@@ -298,7 +298,10 @@ class PersistentSchedulerTests(TestCase):
         last = scheduler.callAt(
             aware(datetime(2029, 1, 4, tzinfo=PT), ZoneInfo), s5.stop
         )
-        scheduler.callAt(aware(datetime(2029, 1, 5, tzinfo=PT), ZoneInfo), LaterStopper(last).stop)
+        scheduler.callAt(
+            aware(datetime(2029, 1, 5, tzinfo=PT), ZoneInfo),
+            LaterStopper(last).stop,
+        )
         jsonobj = dumps(saver())
         saved = loads(jsonobj)
         memory2 = MemoryDriver()
