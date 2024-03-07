@@ -10,7 +10,7 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
-from fritter.boundaries import ScheduledCall
+from fritter.boundaries import ScheduledCall, ScheduledState
 from fritter.persistent.json import schedulerAtPath
 
 from ..boundaries import Cancellable, TimeDriver
@@ -257,10 +257,13 @@ class PersistentSchedulerTests(TestCase):
         [(name, loadedStoppable)] = ri.identityMap.items()
         assert isinstance(loadedStoppable, Stoppable)
         self.assertEqual(loadedStoppable.ran, False)
-        self.assertIsNot(loadedStoppable.runcall, None)
+        rc = loadedStoppable.runcall
+        assert rc is not None
+        self.assertEqual(rc.state, ScheduledState.pending)
         memory2.advance(dt.timestamp() + 4.0)
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIs(loadedStoppable.runcall, None)
+        self.assertEqual(rc.state, ScheduledState.cancelled)
 
     def test_schedulerAtPath(self) -> None:
         ri0 = RegInfo([])
