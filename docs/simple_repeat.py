@@ -1,7 +1,7 @@
-from fritter.boundaries import Cancellable
+from fritter.boundaries import SomeScheduledCall
+from fritter.drivers.sleep import SleepDriver
 from fritter.repeat import repeatedly
 from fritter.repeat.rules.seconds import EverySecond
-from fritter.drivers.sleep import SleepDriver
 from fritter.scheduler import newScheduler
 
 # driver setup
@@ -10,11 +10,11 @@ start = driver.now()
 
 
 # repeating work
-def work(steps: int, stopper: Cancellable) -> None:
+def work(steps: int, scheduled: SomeScheduledCall) -> None:
     elapsed = driver.now() - start
     print(f"took {steps} steps at {elapsed:0.2f}")
     if elapsed >= 2.0:
-        stopper.cancel()
+        scheduled.cancel()
 
 
 # kick off scheduler

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from fritter.boundaries import Cancellable
+from fritter.boundaries import SomeScheduledCall
 from fritter.persistent.json import JSONObject, JSONRegistry, LoadProcess
 
 registry: JSONRegistry[dict[int, MyClass]] = JSONRegistry()
@@ -36,8 +36,8 @@ class MyClass:
         print("my value is", self.value)
 
     @registry.repeatMethod
-    def repeat(self, steps: int, stopper: Cancellable) -> None:
+    def repeat(self, steps: int, scheduled: SomeScheduledCall) -> None:
         print(f"performing {steps} steps at {self.value}")
         self.value += steps
         if self.value > 10:
-            stopper.cancel()
+            scheduled.cancel()

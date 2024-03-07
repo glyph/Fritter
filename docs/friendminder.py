@@ -8,7 +8,7 @@ from typing import Any, Callable, Iterator
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
-from fritter.boundaries import Cancellable, TimeDriver
+from fritter.boundaries import SomeScheduledCall, TimeDriver
 from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.sleep import SleepDriver
@@ -75,7 +75,7 @@ class FriendList:
         return load.bootstrap
 
     @registry.repeatMethod
-    def weeklyReminder(self, steps: int, stopper: Cancellable) -> None:
+    def weeklyReminder(self, steps: int, scheduled: SomeScheduledCall) -> None:
         byContact = sorted(
             self.friendsByName.values(),
             key=lambda f: f.lastContact,
@@ -171,7 +171,7 @@ class Friend:
 
     @registry.repeatMethod
     def everyBirthday(
-        self, steps: list[DateTime[ZoneInfo]], stopper: Cancellable
+        self, steps: list[DateTime[ZoneInfo]], scheduled: SomeScheduledCall
     ) -> None:
         if not steps:
             print("just setting up")

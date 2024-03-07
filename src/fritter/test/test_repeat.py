@@ -5,7 +5,7 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
-from fritter.boundaries import Scheduler
+from fritter.boundaries import Scheduler, SomeScheduledCall
 from fritter.repeat.rules.datetimes import EachDTRule
 from fritter.scheduler import newScheduler
 from twisted.internet.defer import CancelledError, Deferred, succeed
@@ -18,7 +18,6 @@ from ..repeat import Async, repeatedly
 from ..repeat.rules.datetimes import EachWeekOn, EachYear
 from ..repeat.rules.seconds import EverySecond
 
-
 TZ = ZoneInfo("America/Los_Angeles")
 
 
@@ -27,10 +26,10 @@ class RepeatTestCase(TestCase):
         mem = MemoryDriver()
         calls = []
 
-        def work(steps: int, stopper: Cancellable) -> None:
+        def work(steps: int, scheduled: SomeScheduledCall) -> None:
             now = mem.now()
             if mem.now() >= 10.0:
-                stopper.cancel()
+                scheduled.cancel()
             calls.append((steps, now))
 
         repeatedly(newScheduler(mem), work, EverySecond(5))

@@ -10,7 +10,12 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
-from fritter.boundaries import RecurrenceRule, ScheduledCall, ScheduledState
+from fritter.boundaries import (
+    RecurrenceRule,
+    ScheduledCall,
+    ScheduledState,
+    SomeScheduledCall,
+)
 from fritter.persistent.json import JSONableRepeatable, schedulerAtPath
 
 from ..boundaries import Cancellable, TimeDriver
@@ -53,7 +58,7 @@ def call2() -> None:
 
 
 @registry.repeatFunction
-def repeatable(steps: int, stopper: Cancellable) -> None:
+def repeatable(steps: int, scheduled: SomeScheduledCall) -> None:
     globalCalls.append(f"repeatable {steps}")
 
 
@@ -101,19 +106,19 @@ class InstanceWithMethods:
         self.info.madeCalls.append(f"{self.value}/method2")
 
     @registry.repeatMethod
-    def repeatMethod(self, steps: int, stopper: Cancellable) -> None:
+    def repeatMethod(self, steps: int, scheduled: SomeScheduledCall) -> None:
         self.callCount += 1
-        self.stoppers.append(stopper)
+        self.stoppers.append(scheduled)
         self.info.madeCalls.append(
             f"repeatMethod {steps} {self.value=} {self.callCount=}"
         )
 
     @registry.repeatMethod
     def repeatMethodDTZIL(
-        self, steps: list[DateTime[ZoneInfo]], stopper: Cancellable
+        self, steps: list[DateTime[ZoneInfo]], scheduled: SomeScheduledCall
     ) -> None:
         self.callCount += 1
-        self.stoppers.append(stopper)
+        self.stoppers.append(scheduled)
         self.info.madeCalls.append(
             f"repeatMethod {steps} {self.value=} {self.callCount=}"
         )

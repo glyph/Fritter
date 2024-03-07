@@ -194,7 +194,7 @@ class RepeatingWork(Protocol[StepsTCon]):
     L{RepeatingWork} is work that can be performed repeatedly in a loop.
     """
 
-    def __call__(self, steps: StepsTCon, stopper: Cancellable) -> None:
+    def __call__(self, steps: StepsTCon, scheduled: SomeScheduledCall) -> None:
         """
         Do the work.
 
@@ -345,6 +345,11 @@ class ScheduledCall(Cancellable, Protocol[WhenTCo, WhatTCo, IDTCo]):
         """
 
 
+SomeScheduledCall = ScheduledCall[
+    PriorityComparable, Callable[[], None], object
+]
+
+
 class Scheduler(Protocol[WhenT, WhatT, IDTCo]):
     """
     A L{Scheduler} is an object that allows for scheduling of timed calls.
@@ -359,3 +364,21 @@ class Scheduler(Protocol[WhenT, WhatT, IDTCo]):
 
 PhysicalScheduler = Scheduler[float, Callable[[], None], object]
 CivilScheduler = Scheduler[DateTime[ZoneInfo], Callable[[], None], object]
+
+__all__ = [
+    "AsyncDriver",
+    "Cancellable",
+    "CancellableAwaitable",
+    "CivilScheduler",
+    "Day",
+    "PhysicalScheduler",
+    "PriorityComparable",
+    "PriorityQueue",
+    "RecurrenceRule",
+    "RepeatingWork",
+    "ScheduledCall",
+    "ScheduledState",
+    "Scheduler",
+    "SomeScheduledCall",
+    "TimeDriver",
+]

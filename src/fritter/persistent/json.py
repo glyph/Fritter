@@ -44,24 +44,24 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
+from fritter.boundaries import SomeScheduledCall
 
 from ..boundaries import (
-    Cancellable,
     RecurrenceRule,
     RepeatingWork,
+    ScheduledCall,
+    ScheduledState,
     Scheduler,
     StepsT,
     StepsTCon,
     StepsTInv,
     TimeDriver,
-    ScheduledCall,
-    ScheduledState,
 )
 from ..drivers.datetimes import DateTimeDriver
 from ..heap import Heap
 from ..repeat import Repeater
 from ..repeat.rules.datetimes import EachYear, EveryDelta
-from ..scheduler import newScheduler, ConcreteScheduledCall
+from ..scheduler import ConcreteScheduledCall, newScheduler
 
 BootstrapT = TypeVar("BootstrapT", contravariant=True)
 BootstrapTCo = TypeVar("BootstrapTCo", covariant=True)
@@ -453,11 +453,11 @@ class JSONableBoundRepeatable(Generic[JSONableSelf, BootstrapT, StepsTInv]):
     descriptor: JSONableRepeatableDescriptor[JSONableSelf, Any, StepsTInv]
     instance: JSONableSelf
 
-    def __call__(self, steps: StepsTInv, stopper: Cancellable) -> None:
+    def __call__(self, steps: StepsTInv, scheduled: SomeScheduledCall) -> None:
         """
         Call this bound method's function with its instance as C{self}.
         """
-        self.descriptor.func(self.instance, steps, stopper)
+        self.descriptor.func(self.instance, steps, scheduled)
 
     def toJSON(self, registry: JSONRegistry[BootstrapT]) -> JSONObject:
         """
@@ -479,6 +479,8 @@ _TC: type[JSONableRepeatable[str, int]] = JSONableBoundRepeatable[
     JSONableInstance[object], str, int
 ]
 
+_Repeater = Callable[[JSONableSelf, StepsT, SomeScheduledCall], None]
+
 
 @dataclass
 class JSONableRepeatableDescriptor(Generic[JSONableSelf, BootstrapT, StepsT]):
@@ -492,7 +494,7 @@ class JSONableRepeatableDescriptor(Generic[JSONableSelf, BootstrapT, StepsT]):
     """
 
     registry: JSONRegistry[BootstrapT]
-    func: Callable[[JSONableSelf, StepsT, Cancellable], None]
+    func: _Repeater[JSONableSelf, StepsT]
 
     def __set_name__(
         self, cls: Type[JSONableInstance[BootstrapT]], name: str
@@ -792,7 +794,7 @@ class JSONRegistry(Generic[BootstrapT]):
         return self._repeatable.add(func)
 
     def repeatMethod(
-        self, repeatable: Callable[[JSONableSelf, StepsT, Cancellable], None]
+        self, repeatable: _Repeater[JSONableSelf, StepsT]
     ) -> JSONableRepeatableDescriptor[JSONableSelf, BootstrapT, StepsT]:
         """
         Mark the given method that matches the signature of L{RepeatingWork},

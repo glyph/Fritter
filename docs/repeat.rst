@@ -6,7 +6,7 @@ like this:
 
 .. code-block::
 
-   def work(steps: StepsT, stopper: Cancellable) -> None: ...
+   def work(steps: StepsT, scheduled: SomeScheduledCall) -> None: ...
 
 The parameters are, respectively, the *steps* that ``work`` should perform in
 this invocation, and an object with a ``.cancel()`` method that will stop the

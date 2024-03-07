@@ -10,13 +10,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, Generic, TypeVar
 
+from fritter.boundaries import SomeScheduledCall
+
 from ..boundaries import (
     AsyncDriver,
     AsyncType,
-    Scheduler,
     Cancellable,
     RecurrenceRule,
     RepeatingWork,
+    Scheduler,
     StepsT,
     WhatT,
     WhenT,
@@ -198,8 +200,8 @@ class Async(Generic[AsyncType]):
             if asyncStopper.timeInProgress is None and not cancelled:
                 repeater.repeat()
 
-        def kickoff(steps: StepsTInv, stopper: Cancellable) -> None:
-            asyncStopper.timeInProgress = stopper
+        def kickoff(steps: StepsTInv, scheduled: SomeScheduledCall) -> None:
+            asyncStopper.timeInProgress = scheduled
             completedSynchronously: bool = False
 
             async def coro() -> None:
