@@ -160,6 +160,7 @@ class Stoppable:
                 return it
             loaded = load.loadScheduledCall(it)
             assert loaded.state is ScheduledState.pending
+            assert loaded is load.loadScheduledCall(it)
             return loaded
 
         self = cls(
