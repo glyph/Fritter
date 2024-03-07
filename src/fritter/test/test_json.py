@@ -295,15 +295,16 @@ class PersistentSchedulerTests(TestCase):
         scheduler.callAt(
             aware(datetime(2029, 1, 3, tzinfo=PT), ZoneInfo), s4.stop
         )
-        scheduler.callAt(
+        last = scheduler.callAt(
             aware(datetime(2029, 1, 4, tzinfo=PT), ZoneInfo), s5.stop
         )
+        scheduler.callAt(aware(datetime(2029, 1, 5, tzinfo=PT), ZoneInfo), LaterStopper(last).stop)
         jsonobj = dumps(saver())
         saved = loads(jsonobj)
         memory2 = MemoryDriver()
         ri = RegInfo([])
         registry.load(memory2, saved, ri)
-        [run1, stop1, run2, stop2] = ri.lookupLater
+        [run1, stop1, run2, stop2, loadedLast] = ri.lookupLater
         self.assertEqual(run1.handle.state, ScheduledState.pending)
         [(name, loadedStoppable)] = ri.identityMap.items()
         assert isinstance(loadedStoppable, Stoppable)
@@ -323,6 +324,9 @@ class PersistentSchedulerTests(TestCase):
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIs(loadedStoppable.runcall, None)
         self.assertEqual(rc.state, ScheduledState.cancelled)
+        self.assertEqual(loadedLast.handle.state, ScheduledState.pending)
+        loadedLast.stop()
+        self.assertEqual(loadedLast.handle.state, ScheduledState.cancelled)
 
         # These are loaded reentrantly and cannot be identical, but they map
         # their IDs and are the same
