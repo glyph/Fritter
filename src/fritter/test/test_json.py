@@ -260,6 +260,11 @@ class PersistentSchedulerTests(TestCase):
         rc = loadedStoppable.runcall
         assert rc is not None
         self.assertEqual(rc.state, ScheduledState.pending)
+        self.assertEqual(
+            rc.when,
+            datetime(2023, 7, 21, 8, 1, 4, tzinfo=ZoneInfo(key="Etc/UTC")),
+        )
+        self.assertIsNot(rc.what, None)
         memory2.advance(dt.timestamp() + 4.0)
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIs(loadedStoppable.runcall, None)
