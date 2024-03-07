@@ -1,11 +1,13 @@
 # setup
 from typing import Callable
+
+from fritter.boundaries import PhysicalScheduler
 from fritter.drivers.memory import MemoryDriver
-from fritter.scheduler import SimpleScheduler
+from fritter.scheduler import newScheduler
 from fritter.tree import branch
 
 driver = MemoryDriver()
-trunk = SimpleScheduler(driver)
+trunk: PhysicalScheduler = newScheduler(driver)
 manager, branched = branch(trunk)
 # end setup
 
@@ -16,6 +18,8 @@ def show(name: str) -> Callable[[], None]:
         print(f"{name} trunk={trunk.now()} branch={branched.now()}")
 
     return _
+
+
 # end showfunc
 
 

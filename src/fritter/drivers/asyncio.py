@@ -12,9 +12,16 @@ from contextvars import Context
 from dataclasses import dataclass, field
 from typing import Any, Callable, Coroutine, Protocol
 
-from ..boundaries import AsyncDriver, Cancellable, PriorityQueue, TimeDriver
+from ..scheduler import newScheduler, ConcreteScheduledCall
+
+from ..boundaries import (
+    AsyncDriver,
+    Cancellable,
+    PriorityQueue,
+    TimeDriver,
+    Scheduler,
+)
 from ..heap import Heap
-from ..scheduler import FutureCall, Scheduler, SimpleScheduler
 
 
 class LoopTimeInterface(Protocol):
@@ -84,7 +91,7 @@ class AsyncioAsyncDriver:
     def newWithCancel(self, cancel: Callable[[], None]) -> Future[None]:
         """
         Create a new L{Future} with the given callback to execute when
-        canceled.
+        cancelled.
         """
         f = Future[None](loop=self._loop)
 
@@ -113,12 +120,15 @@ _AsyncioDriverCheck: type[AsyncDriver[Future[None]]] = AsyncioAsyncDriver
 
 def scheduler(
     loop: LoopTimeInterface | None = None,
-    queue: PriorityQueue[FutureCall[float, Callable[[], None]]] | None = None,
-) -> SimpleScheduler:
+    queue: (
+        PriorityQueue[ConcreteScheduledCall[float, Callable[[], None], int]]
+        | None
+    ) = None,
+) -> Scheduler[float, Callable[[], None], int]:
     """
     Create a scheduler that uses Asyncio.
     """
-    return Scheduler(
+    return newScheduler(
         AsyncioTimeDriver(loop if loop is not None else get_event_loop()),
-        queue if queue is not None else Heap(),
+        queue=queue if queue is not None else Heap(),
     )

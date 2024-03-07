@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from twisted.internet.task import Clock
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -8,10 +10,10 @@ from ..drivers.twisted import TwistedAsyncDriver, TwistedTimeDriver, scheduler
 
 class TestAsyncDriver(SynchronousTestCase):
     def setUp(self) -> None:
-        self.calls = 0
+        self.callCount = 0
 
     def called(self) -> None:
-        self.calls += 1
+        self.callCount += 1
 
     def test_complete(self) -> None:
         driver = TwistedAsyncDriver()
@@ -51,10 +53,10 @@ class TestAsyncDriver(SynchronousTestCase):
 
 class TestTimeDriver(SynchronousTestCase):
     def setUp(self) -> None:
-        self.calls = 0
+        self.callCount = 0
 
     def called(self) -> None:
-        self.calls += 1
+        self.callCount += 1
 
     def test_now(self) -> None:
         clock = Clock()
@@ -68,9 +70,9 @@ class TestTimeDriver(SynchronousTestCase):
         driver = TwistedTimeDriver(clock)
         driver.reschedule(1.0, self.called)
         clock.advance(0.5)
-        self.assertEqual(self.calls, 0)
+        self.assertEqual(self.callCount, 0)
         clock.advance(0.6)
-        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.callCount, 1)
         self.assertEqual(clock.getDelayedCalls(), [])
 
     def test_reschedule(self) -> None:
@@ -78,12 +80,12 @@ class TestTimeDriver(SynchronousTestCase):
         driver = TwistedTimeDriver(clock)
         driver.reschedule(1.0, self.called)
         clock.advance(0.5)
-        self.assertEqual(self.calls, 0)
+        self.assertEqual(self.callCount, 0)
         driver.reschedule(2.0, self.called)
         clock.advance(0.6)
-        self.assertEqual(self.calls, 0)
+        self.assertEqual(self.callCount, 0)
         clock.advance(0.9)
-        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.callCount, 1)
         self.assertEqual(clock.getDelayedCalls(), [])
 
     def test_unschedule(self) -> None:
@@ -91,16 +93,16 @@ class TestTimeDriver(SynchronousTestCase):
         driver = TwistedTimeDriver(clock)
         driver.reschedule(1.0, self.called)
         clock.advance(0.5)
-        self.assertEqual(self.calls, 0)
+        self.assertEqual(self.callCount, 0)
         driver.unschedule()
-        self.assertEqual(self.calls, 0)
+        self.assertEqual(self.callCount, 0)
         clock.advance(0.9)
-        self.assertEqual(self.calls, 0)
+        self.assertEqual(self.callCount, 0)
         driver.unschedule()  # no-op, no exception
         self.assertEqual(clock.getDelayedCalls(), [])
 
     def test_schedulerDefault(self) -> None:
-        sched = scheduler()
+        sched: Any = scheduler()
         self.assertIsInstance(sched.driver, TwistedTimeDriver)
 
     def test_scheduler(self) -> None:

@@ -1,9 +1,9 @@
 from typing import Callable
 from unittest import TestCase
 
+from ..boundaries import ScheduledState, Scheduler
+from ..scheduler import newScheduler
 from ..drivers.memory import MemoryDriver
-from ..heap import Heap
-from ..scheduler import FutureCall, SimpleScheduler
 
 
 class SchedulerTests(TestCase):
@@ -16,7 +16,9 @@ class SchedulerTests(TestCase):
         Scheduling a call
         """
         driver = MemoryDriver()
-        scheduler = SimpleScheduler(driver)
+        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
+            driver
+        )
         called = 0
 
         def callme() -> None:
@@ -28,33 +30,43 @@ class SchedulerTests(TestCase):
         self.assertEqual(0, called)
         driver.advance(2.0)
         self.assertEqual(1, called)
-        self.assertEqual(handle.called, True)
+        self.assertEqual(handle.state, ScheduledState.called)
         handle.cancel()  # no-op
 
     def test_moveSooner(self) -> None:
         driver = MemoryDriver()
-        scheduler = SimpleScheduler(driver)
+        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
+            driver
+        )
         called = 0
 
         def callme() -> None:
             nonlocal called
             called += 1
 
-        scheduler.callAt(1.0, callme)
-        scheduler.callAt(0.5, callme)
+        first = scheduler.callAt(1.0, callme)
+        second = scheduler.callAt(0.5, callme)
+        self.assertEqual(first.state, ScheduledState.pending)
+        self.assertEqual(second.state, ScheduledState.pending)
         self.assertEqual(0, called)
         driver.advance(0.3)
         self.assertEqual(0, called)
         driver.advance(0.3)
+        self.assertEqual(first.state, ScheduledState.pending)
+        self.assertEqual(second.state, ScheduledState.called)
         self.assertEqual(1, called)
         driver.advance(0.6)
         self.assertEqual(2, called)
+        self.assertEqual(first.state, ScheduledState.called)
+        self.assertEqual(second.state, ScheduledState.called)
 
     def test_canceling(self) -> None:
         """
         CallHandle.cancel() cancels an outstanding call.
         """
-        scheduler = SimpleScheduler(driver := MemoryDriver())
+        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
+            driver := MemoryDriver()
+        )
         callTimes = []
 
         def record(event: str) -> Callable[[], None]:
@@ -73,6 +85,7 @@ class SchedulerTests(TestCase):
         def bCancel() -> None:
             didCancel.append(True)
             bHandle.cancel()
+            self.assertEqual(bHandle.state, ScheduledState.cancelled)
 
         scheduler.callAt(1.5, bCancel)
         self.assertEqual(callTimes, [])
@@ -87,12 +100,6 @@ class SchedulerTests(TestCase):
         self.assertEqual(didCancel, [True])
         driver.advance()
         self.assertEqual(callTimes, [(1.0, "a"), (3.0, "c")])
-
-    def test_queueMustBeEmpty(self) -> None:
-        driver = MemoryDriver()
-        q = Heap([FutureCall(1.0, noop, 1, False, False, nocancel)])
-        with self.assertRaises(ValueError):
-            SimpleScheduler(driver, q)
 
 
 def noop() -> None: ...

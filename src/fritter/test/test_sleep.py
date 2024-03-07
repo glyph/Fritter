@@ -1,7 +1,9 @@
 from unittest import TestCase
 
+from fritter.boundaries import PhysicalScheduler
+
 from ..drivers.sleep import SleepDriver
-from ..scheduler import SimpleScheduler
+from ..scheduler import newScheduler
 
 
 class TestSleeping(TestCase):
@@ -18,7 +20,7 @@ class TestSleeping(TestCase):
             return current
 
         driver = SleepDriver(sleep=sleep, time=time)
-        scheduler = SimpleScheduler(driver)
+        scheduler: PhysicalScheduler = newScheduler(driver)
 
         threeCalledAt = None
         sevenCalledAt = None
@@ -52,7 +54,7 @@ class TestSleeping(TestCase):
             return current
 
         driver = SleepDriver(sleep=sleep, time=time)
-        scheduler = SimpleScheduler(driver)
+        scheduler: PhysicalScheduler = newScheduler(driver)
 
         times = 0
 

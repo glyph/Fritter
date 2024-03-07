@@ -1,17 +1,18 @@
 # setup
 from fritter.drivers.memory import MemoryDriver
-from fritter.scheduler import SimpleScheduler
+from fritter.scheduler import newScheduler
 from fritter.tree import branch, timesFaster
+from fritter.boundaries import PhysicalScheduler
 
 driver = MemoryDriver()
-trunk = SimpleScheduler(driver)
+trunk: PhysicalScheduler = newScheduler(driver)
 rate = 3.0
 manager, branched = branch(trunk, timesFaster(rate))
 # end setup
 
 
 # showfunc
-def loop(scheduler: SimpleScheduler, name: str, interval: float = 1.0) -> None:
+def loop(scheduler: PhysicalScheduler, name: str, interval: float = 1.0) -> None:
     def _() -> None:
         print(name)
         scheduler.callAt(scheduler.now() + interval, _)

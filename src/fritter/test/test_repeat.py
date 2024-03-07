@@ -4,17 +4,22 @@ from typing import Any, Callable
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
-from datetype import DateTime
+from datetype import DateTime, aware
+from fritter.boundaries import Scheduler
+from fritter.repeat.rules.datetimes import EachDTRule
+from fritter.scheduler import newScheduler
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
 from ..boundaries import Cancellable, Day, RecurrenceRule
-from ..drivers.datetime import DateTimeDriver
+from ..drivers.datetimes import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
 from ..repeat import Async, repeatedly
-from ..repeat.rules.datetimes import EachWeekOn
+from ..repeat.rules.datetimes import EachWeekOn, EachYear
 from ..repeat.rules.seconds import EverySecond
-from ..scheduler import Scheduler
+
+
+TZ = ZoneInfo("America/Los_Angeles")
 
 
 class RepeatTestCase(TestCase):
@@ -28,7 +33,7 @@ class RepeatTestCase(TestCase):
                 stopper.cancel()
             calls.append((steps, now))
 
-        repeatedly(Scheduler(mem), work, EverySecond(5))
+        repeatedly(newScheduler(mem), work, EverySecond(5))
 
         self.assertTrue(mem.isScheduled())
         self.assertEqual(calls, [(1, 0.0)])
@@ -57,7 +62,7 @@ class RepeatTestCase(TestCase):
             count += 1
 
         Async(tad).repeatedly(
-            Scheduler(mem),
+            newScheduler(mem),
             EverySecond(15),
             lambda times, stopper: tick(times),
         )
@@ -96,7 +101,9 @@ class RepeatTestCase(TestCase):
 
         async def task() -> None:
             nonlocal done
-            await Async(tad).repeatedly(Scheduler(mem), EverySecond(1), step)
+            await Async(tad).repeatedly(
+                newScheduler(mem), EverySecond(1), step
+            )
             done = True
 
         tad.runAsync(task())
@@ -112,10 +119,10 @@ class RepeatTestCase(TestCase):
         repeatCall: Deferred[None] | None = None
         pending: Deferred[None]
 
-        def canceled(d: Deferred[None]) -> None:
+        def cancelled(d: Deferred[None]) -> None:
             return
 
-        pending = Deferred(canceled)
+        pending = Deferred(cancelled)
 
         async def bonk(d: Deferred[None]) -> None:
             # odd idiom for suppressing cancellation to work around
@@ -136,7 +143,7 @@ class RepeatTestCase(TestCase):
         def go(how: Callable[[], Any]) -> None:
             nonlocal repeatCall
             repeatCall = Async(tad).repeatedly(
-                Scheduler(mem),
+                newScheduler(mem),
                 EverySecond(1),
                 lambda times, stopper: how(),
             )
@@ -152,13 +159,13 @@ class RepeatTestCase(TestCase):
 
         repeatCall.cancel()
         self.assertFalse(mem.isScheduled())
-        pending = Deferred(canceled)
+        pending = Deferred(cancelled)
         succeeding += 1
         tad.runAsync(run(asynchronously))
         self.assertTrue(mem.isScheduled())
         mem.advance()
         self.assertFalse(mem.isScheduled())
-        p, pending = pending, Deferred(canceled)
+        p, pending = pending, Deferred(cancelled)
         p.callback(None)
         self.assertTrue(mem.isScheduled())
         mem.advance()
@@ -177,9 +184,10 @@ class RepeatTestCase(TestCase):
         mem = MemoryDriver()
         mem.advance(1706826915.372823)
 
-        TZ = ZoneInfo("America/Los_Angeles")
         dtd = DateTimeDriver(mem, TZ)
-        sch = Scheduler[DateTime[ZoneInfo], Callable[[], None]](dtd)
+        sch: Scheduler[DateTime[ZoneInfo], Callable[[], None], int] = (
+            newScheduler(dtd)
+        )
         x = []
 
         async def record(
@@ -229,6 +237,27 @@ class RepeatTestCase(TestCase):
             ],
             *[datetime(2024, 3, n, 15, 10, tzinfo=TZ) for n in [1, 4]],
         ]
-        self.maxDiff = 99999
         actual = list(chain(*[tries for (_, tries, _) in rest]))
         self.assertEqual(bigSkip, actual)
+
+    def test_eachYear(self) -> None:
+        """
+        L{EachYear} is a recurrence rule that repeats each year and records the
+        intervening steps as a list of DateType[ZoneInfo].
+        """
+        rule: EachDTRule = EachYear(3)
+        [steps, newReference] = rule(
+            aware(datetime(2020, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
+            aware(datetime(2026, 3, 10, 9, 0, tzinfo=TZ), ZoneInfo),
+        )
+        self.assertEqual(
+            newReference,
+            aware(datetime(2026, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
+        )
+        self.assertEqual(
+            steps,
+            [
+                aware(datetime(2020, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
+                aware(datetime(2023, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
+            ],
+        )

@@ -11,7 +11,13 @@ from ...boundaries import RecurrenceRule, Day
 DTRule = RecurrenceRule[DateTime[ZoneInfo], int]
 """
 A type alias to describe a recurrence rule function that operates on aware
-datetimes.
+datetimes and tracks an integer count of steps.
+"""
+
+EachDTRule = RecurrenceRule[DateTime[ZoneInfo], list[DateTime[ZoneInfo]]]
+"""
+A type alias to describe a recurrence rule function that operates on aware
+datetimes and tracks a list of desired elapsed occurrences as steps.
 """
 
 TZType = TypeVar("TZType", bound=tzinfo)
@@ -46,6 +52,33 @@ class EveryDelta:
             count += 1
             nextDesired += self.delta
         return count, nextDesired
+
+
+@dataclass(frozen=True)
+class EachYear:
+    """
+    An L{EachYear} is a L{RecurrenceRule} based on a number of years between
+    two dates.
+
+    @ivar years: The number of years between recurrences
+    """
+
+    years: int
+
+    def __call__(
+        self,
+        reference: DateTime[ZoneInfo],
+        current: DateTime[ZoneInfo],
+    ) -> tuple[list[DateTime[ZoneInfo]], DateTime[ZoneInfo]]:
+        referenceDate = reference.date()
+        nextDesired = reference
+        years = []
+        while nextDesired <= current:
+            years.append(nextDesired)
+            nextDesired = nextDesired.replace(
+                year=referenceDate.year + (len(years) * self.years)
+            )
+        return years, nextDesired
 
 
 @dataclass
@@ -93,6 +126,11 @@ class EachWeekOn:
             weekOffset += 7
 
 
+yearly: EachDTRule = EachYear(1)
+"""
+Yearly datetime-based delta.
+"""
+
 weekly: DTRule = EveryDelta(timedelta(weeks=1))
 """
 Weekly datetime-based delta.
@@ -108,7 +146,16 @@ hourly: DTRule = EveryDelta(timedelta(hours=1))
 Hourly datetime-based rule.
 """
 
+
 if TYPE_CHECKING:
-    _isRule: RecurrenceRule[DateTime[ZoneInfo], list[DateTime[ZoneInfo]]] = (
-        EachWeekOn({Day.MONDAY}, 1, 1, 1)
-    )
+    _isRule: EachDTRule = EachWeekOn({Day.MONDAY}, 1, 1, 1)
+
+
+__all__ = [
+    "EveryDelta",
+    "EachWeekOn",
+    "weekly",
+    "daily",
+    "hourly",
+    "yearly",
+]

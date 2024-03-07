@@ -4,7 +4,7 @@ from asyncio.events import new_event_loop
 from asyncio.exceptions import CancelledError, InvalidStateError
 from contextvars import Context
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 from unittest import TestCase
 
 from twisted.internet.task import Clock
@@ -184,5 +184,5 @@ class TimeDriverTests(TestCase):
         self.assertEqual(stuff, ["hello"])
 
     def test_schedulerDefaults(self) -> None:
-        sched = scheduler()
+        sched: Any = scheduler()
         self.assertIsInstance(sched.driver, AsyncioTimeDriver)

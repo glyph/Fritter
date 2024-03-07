@@ -2,7 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from datetype import aware
-from fritter.drivers.datetime import DateTimeDriver, guessLocalZone
+from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.persistent.json import JSONableScheduler, JSONRegistry
 
@@ -17,7 +17,9 @@ def call1() -> None:
 
 
 memoryDriver = MemoryDriver()
-scheduler = JSONableScheduler[ctxtype](DateTimeDriver(memoryDriver))
+scheduler: JSONableScheduler[ctxtype]
+scheduler, saver = registry.new(DateTimeDriver(memoryDriver))
+
 dt = aware(
     datetime(
         2023,
@@ -31,7 +33,7 @@ dt = aware(
     ZoneInfo,
 )
 handle = scheduler.callAt(dt, call1)
-dump = registry.save(scheduler)
+dump = saver()
 print(dump)
 mem2 = MemoryDriver()
 loaded = registry.load(mem2, dump, {})

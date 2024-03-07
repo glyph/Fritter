@@ -1,14 +1,15 @@
-from fritter.boundaries import Cancellable
+from asyncio import run
+
+from fritter.boundaries import Cancellable, PhysicalScheduler
+from fritter.drivers.asyncio import AsyncioAsyncDriver, AsyncioTimeDriver
 from fritter.repeat import Async
 from fritter.repeat.rules.seconds import EverySecond
-from fritter.drivers.asyncio import AsyncioTimeDriver, AsyncioAsyncDriver
-from fritter.scheduler import SimpleScheduler
-from asyncio import run
+from fritter.scheduler import newScheduler
 
 
 # example coroutine
 async def example() -> None:
-    scheduler = SimpleScheduler(AsyncioTimeDriver())
+    scheduler: PhysicalScheduler = newScheduler(AsyncioTimeDriver())
     repeatedly = Async(AsyncioAsyncDriver()).repeatedly
     times = 0
 

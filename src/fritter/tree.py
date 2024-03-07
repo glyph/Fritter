@@ -17,10 +17,13 @@ from typing import (
     TypeVar,
     overload,
 )
-from typing_extensions import Self
-from .boundaries import PriorityComparable
 
-from .scheduler import FutureCall, Scheduler
+from typing_extensions import Self
+
+from fritter.boundaries import Cancellable
+
+from .boundaries import PriorityComparable, Scheduler
+from .scheduler import newScheduler
 
 _BranchTime = TypeVar("_BranchTime", bound=PriorityComparable)
 _TrunkTime = TypeVar("_TrunkTime", bound=PriorityComparable)
@@ -181,27 +184,27 @@ class BranchManager(Protocol[WhenT, _TrunkDelta]):
 
 @overload
 def branch(
-    trunk: Scheduler[WhenT, Callable[[], None]],
+    trunk: Scheduler[WhenT, Callable[[], None], object],
     scale: Scale[WhenT, WhenT, _TrunkDelta],
 ) -> tuple[
     BranchManager[WhenT, _TrunkDelta],
-    Scheduler[WhenT, Callable[[], None]],
+    Scheduler[WhenT, Callable[[], None], int],
 ]: ...
 
 
 @overload
-def branch(trunk: Scheduler[WhenT, Callable[[], None]]) -> tuple[
+def branch(trunk: Scheduler[WhenT, Callable[[], None], object]) -> tuple[
     BranchManager[WhenT, WhenT],
-    Scheduler[WhenT, Callable[[], None]],
+    Scheduler[WhenT, Callable[[], None], int],
 ]: ...
 
 
 def branch(
-    trunk: Scheduler[WhenT, Callable[[], None]],
+    trunk: Scheduler[WhenT, Callable[[], None], object],
     scale: Scale[WhenT, WhenT, _TrunkDelta] | None = None,
 ) -> tuple[
     BranchManager[WhenT, _TrunkDelta],
-    Scheduler[WhenT, Callable[[], None]],
+    Scheduler[WhenT, Callable[[], None], int],
 ]:
     """
     Derive a branch (child) scheduler from a C{trunk} (parent) scheduler.
@@ -214,7 +217,9 @@ def branch(
         trunk, scale, scale.shift(None, trunk.now())
     )
     driver.changeScale(scale)
-    branchScheduler: Scheduler[WhenT, Callable[[], None]] = Scheduler(driver)
+    branchScheduler: Scheduler[WhenT, Callable[[], None], int] = newScheduler(
+        driver
+    )
     driver.unpause()
     return driver, branchScheduler
 
@@ -233,7 +238,7 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
     another L{Scheduler}.
     """
 
-    trunk: Scheduler[_TrunkTime, Callable[[], None]]
+    trunk: Scheduler[_TrunkTime, Callable[[], None], object]
     """
     The scheduler that this driver is a branch of.
     """
@@ -259,7 +264,7 @@ class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
         None
     )
 
-    _call: Optional[FutureCall[_TrunkTime, Callable[[], None]]] = None
+    _call: Optional[Cancellable] = None
     _running: bool = False
 
     def reschedule(
