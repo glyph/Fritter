@@ -156,7 +156,11 @@ class Stoppable:
             name: str,
         ) -> Handle | None:
             it = json[name]
-            return it if it is None else load.loadScheduledCall(it)
+            if it is None:
+                return it
+            loaded = load.loadScheduledCall(it)
+            assert loaded.state is ScheduledState.pending
+            return loaded
 
         self = cls(
             runcall=get("runcall"),
