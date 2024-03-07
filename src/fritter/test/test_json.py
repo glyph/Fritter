@@ -468,7 +468,7 @@ class PersistentSchedulerTests(TestCase):
         mem2.advance(dt.timestamp())
         registry.load(mem2, loads(dumps(saver())), newInfo)
         mem2.advance(timedelta(days=365 * 4).total_seconds())
-        LA="zoneinfo.ZoneInfo(key='America/Los_Angeles')"
+        LA = "zoneinfo.ZoneInfo(key='America/Los_Angeles')"
         expectedCalls = [
             "InstanceWithMethods.fromJSON: test_repeatEachYear",
             f"repeatMethod [datetime.datetime(2023, 7, 21, 1, 1, 1, tzinfo={LA}), "
