@@ -4,8 +4,9 @@ from typing import Any, Callable
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
-from datetype import DateTime
+from datetype import DateTime, aware
 from fritter.boundaries import Scheduler
+from fritter.repeat.rules.datetimes import EachDTRule
 from fritter.scheduler import newScheduler
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
@@ -14,8 +15,11 @@ from ..drivers.datetimes import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
 from ..repeat import Async, repeatedly
-from ..repeat.rules.datetimes import EachWeekOn
+from ..repeat.rules.datetimes import EachWeekOn, EachYear
 from ..repeat.rules.seconds import EverySecond
+
+
+TZ = ZoneInfo("America/Los_Angeles")
 
 
 class RepeatTestCase(TestCase):
@@ -180,7 +184,6 @@ class RepeatTestCase(TestCase):
         mem = MemoryDriver()
         mem.advance(1706826915.372823)
 
-        TZ = ZoneInfo("America/Los_Angeles")
         dtd = DateTimeDriver(mem, TZ)
         sch: Scheduler[DateTime[ZoneInfo], Callable[[], None], int] = (
             newScheduler(dtd)
@@ -236,3 +239,25 @@ class RepeatTestCase(TestCase):
         ]
         actual = list(chain(*[tries for (_, tries, _) in rest]))
         self.assertEqual(bigSkip, actual)
+
+    def test_eachYear(self) -> None:
+        """
+        L{EachYear} is a recurrence rule that repeats each year and records the
+        intervening steps as a list of DateType[ZoneInfo].
+        """
+        rule: EachDTRule = EachYear(3)
+        [steps, newReference] = rule(
+            aware(datetime(2020, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
+            aware(datetime(2026, 3, 10, 9, 0, tzinfo=TZ), ZoneInfo),
+        )
+        self.assertEquals(
+            newReference,
+            aware(datetime(2026, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
+        )
+        self.assertEquals(
+            steps,
+            [
+                aware(datetime(2020, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
+                aware(datetime(2023, 12, 11, 9, 0, tzinfo=TZ), ZoneInfo),
+            ],
+        )
