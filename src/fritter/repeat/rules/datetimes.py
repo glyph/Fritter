@@ -57,7 +57,7 @@ class EveryDelta:
 @dataclass(frozen=True)
 class EachYear:
     """
-    An L{EveryYear} is a L{RecurrenceRule} based on a number of years between
+    An L{EachYear} is a L{RecurrenceRule} based on a number of years between
     two dates.
 
     @ivar years: The number of years between recurrences
