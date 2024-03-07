@@ -303,6 +303,8 @@ class PersistentSchedulerTests(TestCase):
         memory2 = MemoryDriver()
         ri = RegInfo([])
         registry.load(memory2, saved, ri)
+        [run1, stop1, run2, stop2] = ri.lookupLater
+        self.assertEqual(run1.handle.state, ScheduledState.pending)
         [(name, loadedStoppable)] = ri.identityMap.items()
         assert isinstance(loadedStoppable, Stoppable)
         self.assertEqual(loadedStoppable.ran, False)
@@ -321,7 +323,6 @@ class PersistentSchedulerTests(TestCase):
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIs(loadedStoppable.runcall, None)
         self.assertEqual(rc.state, ScheduledState.cancelled)
-        [run1, stop1, run2, stop2] = ri.lookupLater
 
         # These are loaded reentrantly and cannot be identical, but they map
         # their IDs and are the same
@@ -330,6 +331,7 @@ class PersistentSchedulerTests(TestCase):
 
         # all references not loaded reentrantly are exactly identical
         self.assertIs(run1.handle, run2.handle)
+        self.assertEqual(run1.handle.state, ScheduledState.cancelled)
         self.assertIs(stop1.handle, stop2.handle)
 
     def test_schedulerAtPath(self) -> None:
