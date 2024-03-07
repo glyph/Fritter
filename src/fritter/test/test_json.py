@@ -265,6 +265,7 @@ class PersistentSchedulerTests(TestCase):
             datetime(2023, 7, 21, 8, 1, 4, tzinfo=ZoneInfo(key="Etc/UTC")),
         )
         self.assertIsNot(rc.what, None)
+        self.assertEqual(rc.id, 0)
         memory2.advance(dt.timestamp() + 4.0)
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIs(loadedStoppable.runcall, None)
