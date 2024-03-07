@@ -44,15 +44,21 @@ class SchedulerTests(TestCase):
             nonlocal called
             called += 1
 
-        scheduler.callAt(1.0, callme)
-        scheduler.callAt(0.5, callme)
+        first = scheduler.callAt(1.0, callme)
+        second = scheduler.callAt(0.5, callme)
+        self.assertEqual(first.state, ScheduledState.pending)
+        self.assertEqual(second.state, ScheduledState.pending)
         self.assertEqual(0, called)
         driver.advance(0.3)
         self.assertEqual(0, called)
         driver.advance(0.3)
+        self.assertEqual(first.state, ScheduledState.pending)
+        self.assertEqual(second.state, ScheduledState.called)
         self.assertEqual(1, called)
         driver.advance(0.6)
         self.assertEqual(2, called)
+        self.assertEqual(first.state, ScheduledState.called)
+        self.assertEqual(second.state, ScheduledState.called)
 
     def test_canceling(self) -> None:
         """
@@ -79,6 +85,7 @@ class SchedulerTests(TestCase):
         def bCancel() -> None:
             didCancel.append(True)
             bHandle.cancel()
+            self.assertEqual(bHandle.state, ScheduledState.cancelled)
 
         scheduler.callAt(1.5, bCancel)
         self.assertEqual(callTimes, [])

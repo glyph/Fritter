@@ -97,6 +97,7 @@ class ConcreteScheduledCall(Generic[WhenT, WhatT, IDT]):
         """
         if self._canceller is None:
             return
+        self._cancelled = True
         try:
             self._canceller(self)
         finally:
