@@ -234,6 +234,5 @@ class RepeatTestCase(TestCase):
             ],
             *[datetime(2024, 3, n, 15, 10, tzinfo=TZ) for n in [1, 4]],
         ]
-        self.maxDiff = 99999
         actual = list(chain(*[tries for (_, tries, _) in rest]))
         self.assertEqual(bigSkip, actual)
