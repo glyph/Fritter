@@ -32,6 +32,7 @@ from ..repeat.rules.datetimes import daily
 class RegInfo:
     madeCalls: list[str]
     identityMap: dict[str, Any] = field(default_factory=dict)
+    lookupLater: list[LaterStopper] = field(default_factory=list)
 
 
 registry = JSONRegistry[RegInfo]()
@@ -112,6 +113,32 @@ Handle = ScheduledCall[DateTime[ZoneInfo], JSONableCallable[RegInfo], int]
 
 
 @dataclass
+class LaterStopper:
+    handle: Handle
+
+    @registry.method
+    def stop(self) -> None:
+        self.handle.cancel()
+
+    @classmethod
+    def typeCodeForJSON(self) -> str:
+        return "later-stopper"
+
+    def toJSON(self, registry: JSONRegistry[RegInfo]) -> dict[str, object]:
+        return {
+            "value": registry.saveScheduledCall(self.handle),
+        }
+
+    @classmethod
+    def fromJSON(
+        cls, load: LoadProcess[RegInfo], json: JSONObject
+    ) -> LaterStopper:
+        new = cls(load.loadScheduledCall(json["value"]))
+        load.bootstrap.lookupLater.append(new)
+        return new
+
+
+@dataclass
 class Stoppable:
     runcall: Handle | None = None
     stopcall: Handle | None = None
@@ -160,7 +187,6 @@ class Stoppable:
                 return it
             loaded = load.loadScheduledCall(it)
             assert loaded.state is ScheduledState.pending
-            assert loaded is load.loadScheduledCall(it)
             return loaded
 
         self = cls(
@@ -254,6 +280,24 @@ class PersistentSchedulerTests(TestCase):
 
         s = Stoppable()
         s.scheduleme(scheduler)
+        assert s.runcall is not None
+        assert s.stopcall is not None
+        s2 = LaterStopper(s.runcall)
+        s3 = LaterStopper(s.stopcall)
+        s4 = LaterStopper(s.runcall)
+        s5 = LaterStopper(s.stopcall)
+        scheduler.callAt(
+            aware(datetime(2029, 1, 1, tzinfo=PT), ZoneInfo), s2.stop
+        )
+        scheduler.callAt(
+            aware(datetime(2029, 1, 2, tzinfo=PT), ZoneInfo), s3.stop
+        )
+        scheduler.callAt(
+            aware(datetime(2029, 1, 3, tzinfo=PT), ZoneInfo), s4.stop
+        )
+        scheduler.callAt(
+            aware(datetime(2029, 1, 4, tzinfo=PT), ZoneInfo), s5.stop
+        )
         jsonobj = dumps(saver())
         saved = loads(jsonobj)
         memory2 = MemoryDriver()
@@ -263,7 +307,9 @@ class PersistentSchedulerTests(TestCase):
         assert isinstance(loadedStoppable, Stoppable)
         self.assertEqual(loadedStoppable.ran, False)
         rc = loadedStoppable.runcall
+        sc = loadedStoppable.stopcall
         assert rc is not None
+        assert sc is not None
         self.assertEqual(rc.state, ScheduledState.pending)
         self.assertEqual(
             rc.when,
@@ -275,6 +321,16 @@ class PersistentSchedulerTests(TestCase):
         self.assertEqual(loadedStoppable.ran, False)
         self.assertIs(loadedStoppable.runcall, None)
         self.assertEqual(rc.state, ScheduledState.cancelled)
+        [run1, stop1, run2, stop2] = ri.lookupLater
+
+        # These are loaded reentrantly and cannot be identical, but they map
+        # their IDs and are the same
+        self.assertEqual(rc.id, run1.handle.id)
+        self.assertEqual(sc.id, stop1.handle.id)
+
+        # all references not loaded reentrantly are exactly identical
+        self.assertIs(run1.handle, run2.handle)
+        self.assertIs(stop1.handle, stop2.handle)
 
     def test_schedulerAtPath(self) -> None:
         ri0 = RegInfo([])
