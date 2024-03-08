@@ -19,7 +19,7 @@ from ..boundaries import (
     TimeDriver,
 )
 from ..heap import Heap
-from ..scheduler import ConcreteScheduledCall, newScheduler
+from ..scheduler import ConcreteScheduledCall, schedulerFromDriver
 
 log = Logger()
 
@@ -108,7 +108,7 @@ def scheduler(
         from twisted.internet import reactor  # type:ignore[assignment]
 
         assert reactor is not None
-    return newScheduler(
+    return schedulerFromDriver(
         TwistedTimeDriver(reactor),
         queue=queue if queue is not None else Heap(),
     )

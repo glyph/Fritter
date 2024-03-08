@@ -7,12 +7,12 @@ from fritter.boundaries import (
 from fritter.drivers.asyncio import AsyncioAsyncDriver, AsyncioTimeDriver
 from fritter.repeat import Async
 from fritter.repeat.rules.seconds import EverySecond
-from fritter.scheduler import newScheduler
+from fritter.scheduler import schedulerFromDriver
 
 
 # example coroutine
 async def example() -> None:
-    scheduler: PhysicalScheduler = newScheduler(AsyncioTimeDriver())
+    scheduler: PhysicalScheduler = schedulerFromDriver(AsyncioTimeDriver())
     repeatedly = Async(AsyncioAsyncDriver()).repeatedly
     times = 0
 

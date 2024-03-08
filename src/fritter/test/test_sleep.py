@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from ..boundaries import PhysicalScheduler
 from ..drivers.sleep import SleepDriver
-from ..scheduler import newScheduler
+from ..scheduler import schedulerFromDriver
 
 
 class TestSleeping(TestCase):
@@ -19,7 +19,7 @@ class TestSleeping(TestCase):
             return current
 
         driver = SleepDriver(sleep=sleep, time=time)
-        scheduler: PhysicalScheduler = newScheduler(driver)
+        scheduler: PhysicalScheduler = schedulerFromDriver(driver)
 
         threeCalledAt = None
         sevenCalledAt = None
@@ -53,7 +53,7 @@ class TestSleeping(TestCase):
             return current
 
         driver = SleepDriver(sleep=sleep, time=time)
-        scheduler: PhysicalScheduler = newScheduler(driver)
+        scheduler: PhysicalScheduler = schedulerFromDriver(driver)
 
         times = 0
 

@@ -11,15 +11,19 @@ To use this module:
 
     - implement L{JSONable.typeCodeForJSON}, L{JSONable.toJSON},
       L{JSONableInstance.fromJSON} as appropriate, until C{mypy} passes on your
-      code
+      code.  (Pick a type for their "C{bootstrap}" argument so they can look up
+      any necessary information during loading.)
 
-    - instantiate a L{JSONableScheduler} with an appropriate driver
+    - create a scheduler and a JSON saver with C{scheduler, saver =
+      }L{JSONRegistry.createScheduler}C{()}
 
-    - schedule your functions and methods using it
+    - schedule your functions and methods using the resulting C{scheduler}
 
-    - save it with L{JSONRegistry.save}
+    - save its state by calling C{data = saver()}
 
-    - load it later with L{JSONRegistry.load}
+    - load it later with C{scheduler, saver
+      =}L{JSONRegistry.loadScheduler}C{(driver, data, bootstrap)}, where
+      C{bootstrap} matches that type you decided on earlier.
 """
 
 from __future__ import annotations
@@ -57,11 +61,10 @@ from ..boundaries import (
     StepsTInv,
     TimeDriver,
 )
-from ..drivers.datetimes import DateTimeDriver
 from ..heap import Heap
 from ..repeat import Repeater
 from ..repeat.rules.datetimes import EachYear, EveryDelta
-from ..scheduler import ConcreteScheduledCall, newScheduler
+from ..scheduler import ConcreteScheduledCall, schedulerFromDriver
 
 BootstrapT = TypeVar("BootstrapT", contravariant=True)
 BootstrapTCo = TypeVar("BootstrapTCo", covariant=True)
@@ -218,7 +221,7 @@ _typeCheck: type[ScheduledCall[DTZI, JSONableCallable[object], int]] = (
 class LoadProcess(Generic[BootstrapTInv]):
     """
     A L{LoadProcess} collects the parameters to one top-level call to
-    L{JSONRegistry.load}.
+    L{JSONRegistry.loadScheduler}.
     """
 
     registry: JSONRegistry[BootstrapTInv]
@@ -820,16 +823,18 @@ class JSONRegistry(Generic[BootstrapT]):
         """
         self._instances.add(cls)
 
-    def load(
+    def loadScheduler(
         self,
-        runtimeDriver: TimeDriver[float],
+        runtimeDriver: TimeDriver[DTZI],
         serializedJSON: JSONObject,
         bootstrap: BootstrapT,
     ) -> tuple[JSONableScheduler[BootstrapT], Callable[[], JSONObject]]:
         """
-        Load a JSON object in the format serialized from L{JSONRegistry.save}
-        and a runtime L{TimeDriver}C{[float]}, returning a
-        L{JSONableScheduler}.
+        Load a JSON object in the format serialized by the saver returned by
+        L{JSONRegistry.createScheduler} (or this method) and a runtime
+        L{TimeDriver}C{[DateTime[ZoneInfo]]}, returning a 2-tuple of
+        L{JSONableScheduler} and a 0-argument callable which will serialize the
+        current contents of that scheduler.
         """
         h: _JSONableHeap[BootstrapT] = Heap()
         setID: int | None = None
@@ -845,10 +850,8 @@ class JSONRegistry(Generic[BootstrapT]):
             counter += 1
             return counter
 
-        new: JSONableScheduler[BootstrapT] = newScheduler(
-            DateTimeDriver(runtimeDriver),
-            carefulCounter,
-            queue=h,
+        new: JSONableScheduler[BootstrapT] = schedulerFromDriver(
+            runtimeDriver, carefulCounter, queue=h
         )
 
         @contextmanager
@@ -878,7 +881,7 @@ class JSONRegistry(Generic[BootstrapT]):
 
         return new, self._saverFor(h, new)
 
-    def new(
+    def createScheduler(
         self, driver: TimeDriver[DTZI]
     ) -> tuple[JSONableScheduler[BootstrapT], Callable[[], JSONObject]]:
         """
@@ -886,7 +889,7 @@ class JSONRegistry(Generic[BootstrapT]):
         loaded by this L{JSONRegistry}.
         """
         h: _JSONableHeap[BootstrapT] = Heap()
-        s: JSONableScheduler[BootstrapT] = newScheduler(driver, queue=h)
+        s: JSONableScheduler[BootstrapT] = schedulerFromDriver(driver, queue=h)
         return s, self._saverFor(h, s)
 
     def saveScheduledCall(
@@ -976,11 +979,13 @@ def dateTypeFromJSON(dtjs: dict[str, str]) -> DTZI:
 class _JSONableRepeaterWrapper(Generic[BootstrapT, StepsT]):
     """
     Since a L{Scheduler} can only contain C{work} of a given type, which must
-    have a 0-argument, C{None}-returning signature, and L{JSONRegistry.save}
-    serializes its scheduler by enumerating its future calls, this is a wrapper
-    with a special method registered with I{all} L{JSONRegistry}s
-    automatically, to provide a JSON-serialization format for a repeated call
-    with the repeat-call signature (i.e., C{(steps, stopper)}).
+    have a 0-argument, C{None}-returning signature, and L{JSONRegistry}
+    serializes the schedulers it creates or loads by enumerating the
+    L{ScheduledCall}s stored in their priority queues, this is a wrapper with a
+    special method registered with I{all} L{JSONRegistry}s automatically, to
+    provide a JSON-serialization format for a repeated call with the
+    repeat-call signature (i.e., C{(steps, stopper) -> None}, rather than C{()
+    -> None}).
 
     @see: L{fritter.repeat}
 
@@ -1053,15 +1058,17 @@ class _JSONableRepeaterWrapper(Generic[BootstrapT, StepsT]):
 @contextmanager
 def schedulerAtPath(
     registry: JSONRegistry[BootstrapT],
-    driver: TimeDriver[float],
+    driver: TimeDriver[DTZI],
     path: Path,
     bootstrap: BootstrapT,
 ) -> Iterator[JSONableScheduler[BootstrapT]]:
     if path.exists():
         with path.open() as rf:
-            scheduler, saver = registry.load(driver, load_json(rf), bootstrap)
+            scheduler, saver = registry.loadScheduler(
+                driver, load_json(rf), bootstrap
+            )
     else:
-        scheduler, saver = registry.new(DateTimeDriver(driver))
+        scheduler, saver = registry.createScheduler(driver)
     yield scheduler
     with path.open("w") as wf:
         save_json(saver(), wf)

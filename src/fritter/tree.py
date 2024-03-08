@@ -21,7 +21,7 @@ from typing import (
 from typing_extensions import Self
 
 from .boundaries import Cancellable, PriorityComparable, Scheduler
-from .scheduler import newScheduler
+from .scheduler import schedulerFromDriver
 
 _BranchTime = TypeVar("_BranchTime", bound=PriorityComparable)
 _TrunkTime = TypeVar("_TrunkTime", bound=PriorityComparable)
@@ -215,8 +215,8 @@ def branch(
         trunk, scale, scale.shift(None, trunk.now())
     )
     driver.changeScale(scale)
-    branchScheduler: Scheduler[WhenT, Callable[[], None], int] = newScheduler(
-        driver
+    branchScheduler: Scheduler[WhenT, Callable[[], None], int] = (
+        schedulerFromDriver(driver)
     )
     driver.unpause()
     return driver, branchScheduler

@@ -233,7 +233,7 @@ stp: Type[JSONableInstance[RegInfo]] = Stoppable
 def jsonScheduler(
     driver: TimeDriver[float],
 ) -> tuple[JSONableScheduler[RegInfo], Callable[[], JSONObject]]:
-    return registry.new(DateTimeDriver(driver))
+    return registry.createScheduler(DateTimeDriver(driver))
 
 
 class PersistentSchedulerTests(TestCase):
@@ -266,7 +266,7 @@ class PersistentSchedulerTests(TestCase):
         saved = saver()
         memory2 = MemoryDriver()
         ri = RegInfo([])
-        registry.load(memory2, saved, ri)
+        registry.loadScheduler(DateTimeDriver(memory2), saved, ri)
         memory2.advance(dt2.timestamp() + 1)
         self.assertEqual(globalCalls, ["goodbye"])
         self.assertEqual(
@@ -322,7 +322,7 @@ class PersistentSchedulerTests(TestCase):
         saved = loads(jsonobj)
         memory2 = MemoryDriver()
         ri = RegInfo([])
-        registry.load(memory2, saved, ri)
+        registry.loadScheduler(DateTimeDriver(memory2), saved, ri)
         [run1, stop1, run2, stop2, loadedLast] = ri.lookupLater
         self.assertEqual(run1.handle.state, ScheduledState.pending)
         [(name, loadedStoppable)] = ri.identityMap.items()
@@ -365,11 +365,11 @@ class PersistentSchedulerTests(TestCase):
         ts = datetime(2024, 2, 1, tzinfo=ZoneInfo("Etc/UTC")).timestamp()
         mem.advance(ts)
         aw = aware(datetime(2024, 2, 2, tzinfo=ZoneInfo("Etc/UTC")), ZoneInfo)
-        with schedulerAtPath(registry, mem, p, ri0) as sched1:
+        with schedulerAtPath(registry, DateTimeDriver(mem), p, ri0) as sched1:
             sched1.callAt(aw, iwm.method1)
         ri1 = RegInfo([])
         mem2 = MemoryDriver()
-        with schedulerAtPath(registry, mem2, p, ri1):
+        with schedulerAtPath(registry, DateTimeDriver(mem2), p, ri1):
             mem2.advance()
         self.assertEqual(
             ri1.madeCalls, ["InstanceWithMethods.fromJSON: A", "A/method1"]
@@ -378,8 +378,8 @@ class PersistentSchedulerTests(TestCase):
     def test_noSuchCallID(self) -> None:
         mem = MemoryDriver()
         with self.assertRaises(MissingPersistentCall) as raised:
-            registry.load(
-                mem,
+            registry.loadScheduler(
+                DateTimeDriver(mem),
                 {
                     "scheduledCalls": [
                         {
@@ -419,7 +419,9 @@ class PersistentSchedulerTests(TestCase):
 
     def test_emptyScheduler(self) -> None:
         memory = MemoryDriver()
-        registry.load(memory, {"scheduledCalls": []}, RegInfo([]))
+        registry.loadScheduler(
+            DateTimeDriver(memory), {"scheduledCalls": []}, RegInfo([])
+        )
         self.assertEqual(memory.isScheduled(), False)
 
     def test_repeatable(self) -> None:
@@ -446,7 +448,9 @@ class PersistentSchedulerTests(TestCase):
         mem2.advance(dt.timestamp())
         mem2.advance(days(7))
         self.assertEqual(mem2.isScheduled(), False)
-        registry.load(mem2, loads(dumps(saver())), newInfo)
+        registry.loadScheduler(
+            DateTimeDriver(mem2), loads(dumps(saver())), newInfo
+        )
         self.assertEqual(mem2.isScheduled(), True)
         amount = mem2.advance()
         assert amount is not None
@@ -473,7 +477,9 @@ class PersistentSchedulerTests(TestCase):
         newInfo = RegInfo([])
         mem2 = MemoryDriver()
         mem2.advance(dt.timestamp())
-        registry.load(mem2, loads(dumps(saver())), newInfo)
+        registry.loadScheduler(
+            DateTimeDriver(mem2), loads(dumps(saver())), newInfo
+        )
         mem2.advance(timedelta(days=365 * 4).total_seconds())
         LA = "zoneinfo.ZoneInfo(key='America/Los_Angeles')"
         expectedCalls = [
@@ -518,8 +524,8 @@ class PersistentSchedulerTests(TestCase):
             "id": 1,
         }
         with self.assertRaises(KeyError) as ke:
-            registry.load(
-                memoryDriver,
+            registry.loadScheduler(
+                DateTimeDriver(memoryDriver),
                 {
                     "scheduledCalls": [oneCall],
                     "counter": "1",
@@ -582,16 +588,20 @@ class PersistentSchedulerTests(TestCase):
 
         self.assertEqual(mem2.isScheduled(), False)
         persistent = dumps(saver())
-        loadedScheduler, saver2 = registry.load(
-            mem2, loads(persistent), newInfo
+        loadedScheduler, saver2 = registry.loadScheduler(
+            DateTimeDriver(mem2), loads(persistent), newInfo
         )
         repersistent = dumps(saver2())
-        registry.load(mem3, loads(repersistent), newNewInfo)
+        registry.loadScheduler(
+            DateTimeDriver(mem3), loads(repersistent), newNewInfo
+        )
         loaded = loads(persistent)
         with self.assertRaises(KeyError):
             # TODO: allow for better error handling that doesn't just blow up
             # on the type code lookup failure
-            emptyRegistry.load(MemoryDriver(), loaded, newInfo)
+            emptyRegistry.loadScheduler(
+                DateTimeDriver(MemoryDriver()), loaded, newInfo
+            )
         self.assertEqual(mem2.isScheduled(), True)
         mem2.advance()
         expectedCalls = [

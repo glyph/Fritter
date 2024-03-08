@@ -1,9 +1,9 @@
 from typing import Callable
 from unittest import TestCase
 
-from ..boundaries import ScheduledState, Scheduler
+from ..boundaries import ScheduledState, Scheduler, PhysicalScheduler
 from ..drivers.memory import MemoryDriver
-from ..scheduler import newScheduler
+from ..scheduler import schedulerFromDriver
 
 
 class SchedulerTests(TestCase):
@@ -16,9 +16,7 @@ class SchedulerTests(TestCase):
         Scheduling a call
         """
         driver = MemoryDriver()
-        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
-            driver
-        )
+        scheduler: PhysicalScheduler = schedulerFromDriver(driver)
         called = 0
 
         def callme() -> None:
@@ -35,8 +33,8 @@ class SchedulerTests(TestCase):
 
     def test_moveSooner(self) -> None:
         driver = MemoryDriver()
-        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
-            driver
+        scheduler: Scheduler[float, Callable[[], None], int] = (
+            schedulerFromDriver(driver)
         )
         called = 0
 
@@ -64,8 +62,8 @@ class SchedulerTests(TestCase):
         """
         CallHandle.cancel() cancels an outstanding call.
         """
-        scheduler: Scheduler[float, Callable[[], None], int] = newScheduler(
-            driver := MemoryDriver()
+        scheduler: Scheduler[float, Callable[[], None], int] = (
+            schedulerFromDriver(driver := MemoryDriver())
         )
         callTimes = []
 

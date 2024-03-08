@@ -6,8 +6,7 @@ Implementation of L{TimeDriver} and L{AsyncDriver} for L{asyncio}.
 
 from __future__ import annotations
 
-from asyncio import Future, get_event_loop
-from asyncio.events import AbstractEventLoop
+from asyncio import Future, get_event_loop, AbstractEventLoop
 from contextvars import Context
 from dataclasses import dataclass, field
 from typing import Any, Callable, Coroutine, Protocol
@@ -20,15 +19,13 @@ from ..boundaries import (
     TimeDriver,
 )
 from ..heap import Heap
-from ..scheduler import ConcreteScheduledCall, newScheduler
+from ..scheduler import ConcreteScheduledCall, schedulerFromDriver
 
 
 class LoopTimeInterface(Protocol):
     """
-    Describe the portions of C{AbstractEventLoop} used by L{AsyncioTimeDriver}.
+    Describe the portions of L{AbstractEventLoop} used by L{AsyncioTimeDriver}.
     """
-
-    # TODO: fix code link
 
     def call_at(
         self,
@@ -36,9 +33,15 @@ class LoopTimeInterface(Protocol):
         callback: Callable[[], None],
         *args: object,
         context: Context | None = None,
-    ) -> Cancellable: ...
+    ) -> Cancellable:
+        """
+        @see: L{AbstractEventLoop.call_at <asyncio.loop.call_at>}
+        """
 
-    def time(self) -> float: ...
+    def time(self) -> float:
+        """
+        @see: L{AbstractEventLoop.time <asyncio.loop.time>}
+        """
 
 
 @dataclass
@@ -127,7 +130,7 @@ def scheduler(
     """
     Create a scheduler that uses Asyncio.
     """
-    return newScheduler(
+    return schedulerFromDriver(
         AsyncioTimeDriver(loop if loop is not None else get_event_loop()),
         queue=queue if queue is not None else Heap(),
     )

@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from fritter.boundaries import TimeDriver, CivilScheduler
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.datetimes import DateTimeDriver
-from fritter.scheduler import newScheduler
+from fritter.scheduler import schedulerFromDriver
 # set up memory driver
 advancer = MemoryDriver()
 base: TimeDriver[float] = advancer
@@ -15,7 +15,7 @@ base: TimeDriver[float] = advancer
 TZ = ZoneInfo("US/Pacific")
 dtdriver: TimeDriver[DateTime[ZoneInfo]] = DateTimeDriver(base, TZ)
 # set up scheduler
-scheduler: CivilScheduler = newScheduler(dtdriver)
+scheduler: CivilScheduler = schedulerFromDriver(dtdriver)
 # create datetime
 dt = datetime(2023, 5, 5, tzinfo=TZ)
 # advance to the timestamp

@@ -20,7 +20,7 @@ from ..drivers.twisted import TwistedAsyncDriver
 from ..repeat import Async, repeatedly
 from ..repeat.rules.datetimes import EachDTRule, EachWeekOn, EachYear
 from ..repeat.rules.seconds import EverySecond
-from ..scheduler import newScheduler
+from ..scheduler import schedulerFromDriver
 
 TZ = ZoneInfo("America/Los_Angeles")
 
@@ -36,7 +36,7 @@ class RepeatTestCase(TestCase):
                 scheduled.cancel()
             calls.append((steps, now))
 
-        repeatedly(newScheduler(mem), work, EverySecond(5))
+        repeatedly(schedulerFromDriver(mem), work, EverySecond(5))
 
         self.assertTrue(mem.isScheduled())
         self.assertEqual(calls, [(1, 0.0)])
@@ -65,7 +65,7 @@ class RepeatTestCase(TestCase):
             count += 1
 
         Async(tad).repeatedly(
-            newScheduler(mem),
+            schedulerFromDriver(mem),
             EverySecond(15),
             lambda times, stopper: tick(times),
         )
@@ -105,7 +105,7 @@ class RepeatTestCase(TestCase):
         async def task() -> None:
             nonlocal done
             await Async(tad).repeatedly(
-                newScheduler(mem), EverySecond(1), step
+                schedulerFromDriver(mem), EverySecond(1), step
             )
             done = True
 
@@ -146,7 +146,7 @@ class RepeatTestCase(TestCase):
         def go(how: Callable[[], Any]) -> None:
             nonlocal repeatCall
             repeatCall = Async(tad).repeatedly(
-                newScheduler(mem),
+                schedulerFromDriver(mem),
                 EverySecond(1),
                 lambda times, stopper: how(),
             )
@@ -189,7 +189,7 @@ class RepeatTestCase(TestCase):
 
         dtd = DateTimeDriver(mem, TZ)
         sch: Scheduler[DateTime[ZoneInfo], Callable[[], None], int] = (
-            newScheduler(dtd)
+            schedulerFromDriver(dtd)
         )
         x = []
 

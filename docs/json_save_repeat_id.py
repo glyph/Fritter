@@ -9,7 +9,7 @@ from fritter.repeat.rules.datetimes import EveryDelta
 from json_identity import MyClass, registry
 
 memoryDriver = MemoryDriver()
-scheduler, saver = registry.new(DateTimeDriver(memoryDriver))
+scheduler, saver = registry.createScheduler(DateTimeDriver(memoryDriver))
 dt = DateTime.now(guessLocalZone())
 memoryDriver.advance(dt.timestamp())
 myInstance = MyClass(3)

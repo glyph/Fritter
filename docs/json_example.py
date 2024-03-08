@@ -18,7 +18,7 @@ def call1() -> None:
 
 memoryDriver = MemoryDriver()
 scheduler: JSONableScheduler[ctxtype]
-scheduler, saver = registry.new(DateTimeDriver(memoryDriver))
+scheduler, saver = registry.createScheduler(DateTimeDriver(memoryDriver))
 
 dt = aware(
     datetime(
@@ -35,6 +35,5 @@ dt = aware(
 handle = scheduler.callAt(dt, call1)
 dump = saver()
 print(dump)
-mem2 = MemoryDriver()
-loaded = registry.load(mem2, dump, {})
+loaded = registry.loadScheduler(DateTimeDriver(mem2 := MemoryDriver()), dump, {})
 mem2.advance(dt.timestamp())

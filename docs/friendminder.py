@@ -55,7 +55,9 @@ class FriendList:
         cls, driver: TimeDriver[float], json: dict[str, Any]
     ) -> FriendList:
         self = cls(loadingFriends=json["friends"])
-        scheduler, saver = registry.load(driver, json["scheduler"], self)
+        scheduler, saver = registry.loadScheduler(
+            DateTimeDriver(driver), json["scheduler"], self
+        )
         self.saver = saver
         self.scheduler = scheduler
         assert not self.loadingFriends
@@ -102,7 +104,7 @@ class FriendList:
     @classmethod
     def new(cls, driver: TimeDriver[float]) -> FriendList:
         self = cls()
-        self.scheduler, self.saver = registry.new(DateTimeDriver(driver))
+        self.scheduler, self.saver = registry.createScheduler(DateTimeDriver(driver))
         registry.repeatedly(self.scheduler, weekly, self.weeklyReminder)
         return self
 

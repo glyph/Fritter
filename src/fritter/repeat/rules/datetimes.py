@@ -1,3 +1,8 @@
+"""
+Recurrence rules for use with L{fritter.repeat.repeatedly} which work with
+C{datetype.DateTime} objects.
+"""
+
 from dataclasses import dataclass
 from datetime import timedelta, tzinfo
 from typing import TYPE_CHECKING, TypeVar

@@ -19,11 +19,10 @@ from ..boundaries import (
     Scheduler,
     SomeScheduledCall,
     StepsT,
+    StepsTInv,
     WhatT,
     WhenT,
 )
-
-StepsTInv = TypeVar("StepsTInv")
 
 
 RepeatingWhatT = TypeVar("RepeatingWhatT", bound=RepeatingWork[object])

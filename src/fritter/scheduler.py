@@ -183,7 +183,7 @@ _TypeCheck: type[Scheduler[float, Callable[[], None], int]] = (
 
 
 @overload
-def newScheduler(
+def schedulerFromDriver(
     driver: TimeDriver[WhenT],
     nextID: Callable[[], IDT],
     queue: (
@@ -193,7 +193,7 @@ def newScheduler(
 
 
 @overload
-def newScheduler(
+def schedulerFromDriver(
     driver: TimeDriver[WhenT],
     *,
     queue: (
@@ -202,7 +202,7 @@ def newScheduler(
 ) -> Scheduler[WhenT, WhatT, int]: ...
 
 
-def newScheduler(
+def schedulerFromDriver(
     driver: TimeDriver[WhenT],
     nextID: Callable[[], IDT] | None = None,
     queue: (
@@ -238,5 +238,5 @@ def newScheduler(
 
 __all__ = [
     "ConcreteScheduledCall",
-    "newScheduler",
+    "schedulerFromDriver",
 ]

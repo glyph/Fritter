@@ -158,8 +158,13 @@ class TimeDriver(Protocol[Prioritized]):
 
 
 StepsT = TypeVar("StepsT", covariant=True)
+"""
+A type representing the record of steps that have passed in a recurrence rule.
+"""
 StepsTCon = TypeVar("StepsTCon", contravariant=True)
+""" L{StepsT} (Contravariant) """
 StepsTInv = TypeVar("StepsTInv")
+""" L{StepsT} (Invariant) """
 
 WhenT = TypeVar("WhenT", bound=PriorityComparable)
 """
@@ -167,21 +172,21 @@ TypeVar for representing a time at which something can occur; a temporal
 coordinate in a timekeeping system.
 """
 WhenTCo = TypeVar("WhenTCo", bound=PriorityComparable, covariant=True)
+"L{WhenT} (Covariant)"
 WhatT = TypeVar("WhatT", bound=Callable[[], None])
-WhatTCo = TypeVar("WhatTCo", bound=Callable[[], None], covariant=True)
 """
 TypeVar for representing a unit of work that can take place within the context
 of a L{Scheduler}.
 """
-WhatTContra = TypeVar(
-    "WhatTContra", bound=Callable[[], None], contravariant=True
-)
+WhatTCo = TypeVar("WhatTCo", bound=Callable[[], None], covariant=True)
+"L{WhatT} (Covariant)"
 
 IDT = TypeVar("IDT")
 """
 TypeVar for representing the opaque identifier of ScheduledCall objects.
 """
 IDTCo = TypeVar("IDTCo", covariant=True)
+"L{IDT} (Covariant)"
 
 CallTCo = TypeVar("CallTCo", bound=Cancellable, covariant=True)
 """
@@ -196,13 +201,13 @@ class RepeatingWork(Protocol[StepsTCon]):
 
     def __call__(self, steps: StepsTCon, scheduled: SomeScheduledCall) -> None:
         """
-        Do the work.
+        Do the work that needs to be repeated.
 
-        @param steps: The number of steps which have passed since the previous
+        @param steps: The steps which have passed since the previous
             invocation.
 
-        @param stopper: An object that you can call cancel() on to stop the
-            repetition.
+        @param scheduled: The in-progress L{ScheduledCall} that you can call
+            cancel() on to stop the repetition.
         """
 
 

@@ -2,7 +2,7 @@ from fritter.boundaries import SomeScheduledCall
 from fritter.drivers.sleep import SleepDriver
 from fritter.repeat import repeatedly
 from fritter.repeat.rules.seconds import EverySecond
-from fritter.scheduler import newScheduler
+from fritter.scheduler import schedulerFromDriver
 
 # driver setup
 driver = SleepDriver()
@@ -18,6 +18,6 @@ def work(steps: int, scheduled: SomeScheduledCall) -> None:
 
 
 # kick off scheduler
-repeatedly(newScheduler(driver), work, EverySecond(0.05))
+repeatedly(schedulerFromDriver(driver), work, EverySecond(0.05))
 steps = driver.block()
 print(f"took {steps } steps, then stopped")

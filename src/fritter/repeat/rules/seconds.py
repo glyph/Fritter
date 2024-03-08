@@ -1,3 +1,9 @@
+"""
+Recurrence rules for use with L{fritter.repeat.repeatedly} which work with
+L{float}s representing a number of seconds as both a reference point and a
+delta between times.
+"""
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 

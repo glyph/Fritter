@@ -3,11 +3,11 @@ from typing import Callable
 
 from fritter.boundaries import PhysicalScheduler
 from fritter.drivers.memory import MemoryDriver
-from fritter.scheduler import newScheduler
+from fritter.scheduler import schedulerFromDriver
 from fritter.tree import branch
 
 driver = MemoryDriver()
-trunk: PhysicalScheduler = newScheduler(driver)
+trunk: PhysicalScheduler = schedulerFromDriver(driver)
 manager, branched = branch(trunk)
 # end setup
 

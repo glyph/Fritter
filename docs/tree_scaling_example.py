@@ -1,11 +1,11 @@
 # setup
 from fritter.drivers.memory import MemoryDriver
-from fritter.scheduler import newScheduler
+from fritter.scheduler import schedulerFromDriver
 from fritter.tree import branch, timesFaster
 from fritter.boundaries import PhysicalScheduler
 
 driver = MemoryDriver()
-trunk: PhysicalScheduler = newScheduler(driver)
+trunk: PhysicalScheduler = schedulerFromDriver(driver)
 rate = 3.0
 manager, branched = branch(trunk, timesFaster(rate))
 # end setup

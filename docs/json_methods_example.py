@@ -39,7 +39,7 @@ class MyClass:
 
 
 memoryDriver = MemoryDriver()
-scheduler, saver = registry.new(DateTimeDriver(memoryDriver))
+scheduler, saver = registry.createScheduler(DateTimeDriver(memoryDriver))
 dt = aware(
     datetime(
         2023,
@@ -59,6 +59,8 @@ from json import dumps, loads
 
 dump = dumps(saver())
 print(dump)
-mem2 = MemoryDriver()
-loaded = registry.load(mem2, loads(dump), {})
+
+loaded = registry.loadScheduler(
+    DateTimeDriver(mem2 := MemoryDriver()), loads(dump), {}
+)
 mem2.advance(dt.timestamp())

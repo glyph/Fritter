@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from datetype import DateTime
-from fritter.drivers.datetimes import guessLocalZone
+from fritter.drivers.datetimes import guessLocalZone, DateTimeDriver
 from fritter.drivers.sleep import SleepDriver
 from fritter.persistent.jsonable import (
     JSONableInstance,
@@ -73,7 +73,7 @@ def runScheduler(newReminder: tuple[int, str] | None) -> None:
     bootstrap: dict[Any, Any] = {}
     with schedulerAtPath(
         registry,
-        driver := SleepDriver(),
+        DateTimeDriver(driver := SleepDriver()),
         Path("saved-schedule.json"),
         bootstrap,
     ) as sched:
