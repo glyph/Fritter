@@ -107,7 +107,8 @@ calls removed and any new calls added.
 
 Fritter provides a function,
 :py:func:`fritter.persistent.jsonable.schedulerAtPath`, which does most of this
-work for you, returning a contextmanager that either loads or creates a :py:class:`Scheduler <fritter.scheduler.Scheduler>`.
+work for you, returning a contextmanager that either loads or creates a
+:py:class:`Scheduler <fritter.scheduler.Scheduler>`.
 
 .. literalinclude:: json_basic_reminder.py
    :pyobject: runScheduler
