@@ -6,6 +6,7 @@ from fritter.boundaries import TimeDriver, CivilScheduler
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.datetimes import DateTimeDriver
 from fritter.scheduler import schedulerFromDriver
+
 # set up memory driver
 advancer = MemoryDriver()
 base: TimeDriver[float] = advancer

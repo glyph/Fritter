@@ -121,13 +121,14 @@ Schedulers within Fritter are generic types on both *when* (what represents
 time) and *what* (what represents a callable).
 
 By allowing a given scheduler to constrain what types of work may be scheduled
-on them, you can tell mypy that ``x`` is a ``Scheduler[datetime,
-MyPersistentWork]``, and any attempt to schedule a generic, non-persistent
-callable on it will give you a (somewhat) readable type-checking error.  This
-means that you can specify your work in terms of ``datetime``, in terms of
-``float``, or indeed in terms of whatever custom time-keeping mechanism you
-have invented, if you want to work in terms of, for example, an ``int`` of
-microseconds rather than a ``float`` of seconds.
+on them, you can tell mypy that ``x`` is a :py:class:`Scheduler[datetime,
+MyPersistentWork, int] <fritter.boundaries.Scheduler>`, and any attempt to
+schedule a generic, non-persistent callable on it will give you a (somewhat)
+readable type-checking error.  This means that you can specify your desired
+times in terms of ``datetime``, in terms of ``float``, or indeed in terms of
+whatever custom time-keeping mechanism you have invented, if you want to work
+in terms of, for example, an ``int`` of microseconds rather than a ``float`` of
+seconds.
 
 Grouping Related Work Together
 ------------------------------

@@ -16,21 +16,26 @@ The simplest driver you can use is the memory driver, in
    from fritter.drivers.memory import MemoryDriver
    driver = MemoryDriver()
 
-Once you have a driver, you can schedule work on it with a ``Scheduler``, which
-you can find in ``fritter.scheduler``.
+Once you have a driver, you can schedule work on it with a :py:class:`Scheduler
+<fritter.scheduler.Scheduler>`, which you can create with
+:py:func:`fritter.scheduler.schedulerFromDriver`.
 
-Let's begin with a ``SimpleScheduler``, which is a scheduler that uses a
+Let's begin with a :py:class:`PhysicalScheduler
+<fritter.boundaries.PhysicalScheduler>`, which is a scheduler that uses a
 ``float`` timestamp to track time and can invoke any 0-argument callable.
 
 .. code-block:: python
 
-   from fritter.scheduler import SimpleScheduler
-   scheduler = SimpleScheduler(driver)
+   from fritter.boundaries import PhysicalScheduler
+   from fritter.scheduler import schedulerFromDriver
+   scheduler = schedulerFromDriver(driver)
 
-Now, let's define some work to do.  Again, our ``SimpleScheduler`` considers
-any callable object which takes no arguments and returns nothing to be a valid
-piece of work, so we can define a regular function for this.  We'll make it
-print out the current time according to the scheduler via its ``now`` method.
+Now, let's define some work to do.  Again, our scheduler considers any callable
+object which takes no arguments and returns nothing to be a thing it can
+schedule for future execution, so we can define a regular function for this.
+
+We'll make it print out the current time according to the scheduler via its
+``now`` method.
 
 .. code-block:: python
 
@@ -54,14 +59,16 @@ its ``advance`` method.
 
 From this, you can see ``1.0``.
 
-``MemoryDriver.advance``, when given no arguments, will always advance the
-internal timestamp of the ``MemoryDriver`` to whatever the time of its next
-scheduled work is, call any callables on the way there, then stop.  This does
-not necessarily mean it only does one bit of work; if two bits of work are
-scheduled at precisely the same time, it'll run them both.
+:py:meth:`MemoryDriver.advance <fritter.drivers.memory.MemoryDriver.advance>`,
+when given no arguments, will always advance the internal timestamp of the
+``MemoryDriver`` to whatever the time of its next scheduled work is, call any
+callables on the way there, then stop.  This does not necessarily mean it only
+does one bit of work; if two bits of work are scheduled at precisely the same
+time, it'll run them both.
 
-Since its main purpose is for testing, you can also ask the memory driver if it
-has any more work to do:
+Since its main purpose is for testing, you can also ask the
+:py:meth:`MemoryDriver <fritter.drivers.memory.MemoryDriver>` if it has any
+more work to do:
 
 .. code-block:: python
 
