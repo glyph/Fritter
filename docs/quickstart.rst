@@ -86,7 +86,7 @@ speed, completing all scheduled work immediately, and stopping when it's done:
 This should show us ``hello 2.0``, and ``hello 3.0``, as each callable runs,
 then time advances to the scheduled time of the next one.  You can ask the
 driver the time directly with ``driver.now()``, and indeed, that should show
-you ``3.0``.  Even if no work is schedeuled though, you can set the clock by
+you ``3.0``.  Even if no work is scheduled though, you can set the clock by
 advancing by a specific interval:
 
 .. code-block:: python
