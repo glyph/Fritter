@@ -53,7 +53,7 @@ future, Fritter has something for you.  Here are just some of the use-cases:
   Schedule your timer in terms of
   [`datetime`-ish](https://pypi.org/project/datetype/) objects, then serialize
   it with
-  [`fritter.persistent.json`](https://fritter.readthedocs.io/en/latest/persistence.html)
+  [`fritter.persistent.jsonable`](https://fritter.readthedocs.io/en/latest/persistence.html)
   to load it again when your process restarts.  `fritter.persistent` is careful
   to supply an interface using IANA identifiers to maintain correctness in the
   face of future DST changes, and other things that can start to complicate the

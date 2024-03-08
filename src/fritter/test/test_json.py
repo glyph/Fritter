@@ -21,7 +21,7 @@ from ..boundaries import (
 )
 from ..drivers.datetimes import DateTimeDriver
 from ..drivers.memory import MemoryDriver
-from ..persistent.json import (
+from ..persistent.jsonable import (
     JSONableCallable,
     JSONableInstance,
     JSONableScheduler,

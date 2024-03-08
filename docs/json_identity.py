@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from fritter.boundaries import SomeScheduledCall
-from fritter.persistent.json import JSONObject, JSONRegistry, LoadProcess
+from fritter.persistent.jsonable import JSONObject, JSONRegistry, LoadProcess
 
 registry: JSONRegistry[dict[int, MyClass]] = JSONRegistry()
 

@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from datetype import aware
 from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
-from fritter.persistent.json import (
+from fritter.persistent.jsonable import (
     JSONObject,
     JSONRegistry,
     LoadProcess,

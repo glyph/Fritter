@@ -12,7 +12,7 @@ from fritter.boundaries import SomeScheduledCall, TimeDriver
 from fritter.drivers.datetimes import DateTimeDriver, guessLocalZone
 from fritter.drivers.memory import MemoryDriver
 from fritter.drivers.sleep import SleepDriver
-from fritter.persistent.json import (
+from fritter.persistent.jsonable import (
     JSONableScheduler,
     JSONObject,
     JSONRegistry,

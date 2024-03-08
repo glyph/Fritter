@@ -15,7 +15,7 @@ that.
 Whever building anything persistent it is important to establish what objects
 are safe to serialize and how to serialize them in this context.  To register
 our serializable objects, we will use a :py:class:`JSONRegistry
-<fritter.persistent.JSONRegistry>`, so let's instantiate one.
+<fritter.persistent.jsonable.JOSNRegistry>`, so let's instantiate one.
 
 .. literalinclude:: json_basic_reminder.py
    :start-after: start-registry
@@ -53,7 +53,7 @@ Here are those implementations:
 To complete this object, we need the actual method which we will be scheduling
 to run in the future.  In order to mark a method as serializable by the
 scheduler, we define a 0-argument, ``None``-returning method and decorate it
-with :py:meth:`registry.method <fritter.persistent.json.JSONRegistry.method>`
+with :py:meth:`registry.method <fritter.persistent.jsonable.JSONRegistry.method>`
 from the ``JSONRegistry`` that we instantiated before.
 
 .. literalinclude:: json_basic_reminder.py
@@ -106,7 +106,7 @@ scheduler, maybe adding some stuff to it, then save it again with any completed
 calls removed and any new calls added.
 
 Fritter provides a function,
-:py:func:`fritter.persistent.json.schedulerAtPath`, which does most of this
+:py:func:`fritter.persistent.jsonable.schedulerAtPath`, which does most of this
 work for you, returning a contextmanager that either loads or creates a :py:class:`Scheduler <fritter.scheduler.Scheduler>`.
 
 .. literalinclude:: json_basic_reminder.py

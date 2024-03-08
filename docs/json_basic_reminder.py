@@ -9,7 +9,7 @@ from typing import Any
 from datetype import DateTime
 from fritter.drivers.datetimes import guessLocalZone
 from fritter.drivers.sleep import SleepDriver
-from fritter.persistent.json import (
+from fritter.persistent.jsonable import (
     JSONableInstance,
     JSONableScheduler,
     JSONObject,
