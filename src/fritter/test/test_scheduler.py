@@ -2,8 +2,8 @@ from typing import Callable
 from unittest import TestCase
 
 from ..boundaries import ScheduledState, Scheduler
-from ..scheduler import newScheduler
 from ..drivers.memory import MemoryDriver
+from ..scheduler import newScheduler
 
 
 class SchedulerTests(TestCase):

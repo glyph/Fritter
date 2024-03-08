@@ -8,8 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, Optional
 
-from ..scheduler import newScheduler
-
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IDelayedCall, IReactorTime
 from twisted.logger import Logger
@@ -21,7 +19,7 @@ from ..boundaries import (
     TimeDriver,
 )
 from ..heap import Heap
-from ..scheduler import ConcreteScheduledCall
+from ..scheduler import ConcreteScheduledCall, newScheduler
 
 log = Logger()
 

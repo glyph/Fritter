@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import timedelta, tzinfo
+from typing import TYPE_CHECKING, TypeVar
 from zoneinfo import ZoneInfo
 
-from datetime import tzinfo
 from datetype import DateTime
-from typing import TYPE_CHECKING, TypeVar
 
-from ...boundaries import RecurrenceRule, Day
+from ...boundaries import Day, RecurrenceRule
 
 DTRule = RecurrenceRule[DateTime[ZoneInfo], int]
 """

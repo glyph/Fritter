@@ -51,11 +51,11 @@ from ..boundaries import (
     ScheduledCall,
     ScheduledState,
     Scheduler,
+    SomeScheduledCall,
     StepsT,
     StepsTCon,
     StepsTInv,
     TimeDriver,
-    SomeScheduledCall,
 )
 from ..drivers.datetimes import DateTimeDriver
 from ..heap import Heap

@@ -12,16 +12,15 @@ from contextvars import Context
 from dataclasses import dataclass, field
 from typing import Any, Callable, Coroutine, Protocol
 
-from ..scheduler import newScheduler, ConcreteScheduledCall
-
 from ..boundaries import (
     AsyncDriver,
     Cancellable,
     PriorityQueue,
-    TimeDriver,
     Scheduler,
+    TimeDriver,
 )
 from ..heap import Heap
+from ..scheduler import ConcreteScheduledCall, newScheduler
 
 
 class LoopTimeInterface(Protocol):

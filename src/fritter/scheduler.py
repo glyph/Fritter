@@ -14,12 +14,12 @@ from typing import Callable, Generic, overload
 from .boundaries import (
     IDT,
     PriorityQueue,
+    ScheduledCall,
+    ScheduledState,
     Scheduler,
     TimeDriver,
     WhatT,
     WhenT,
-    ScheduledCall,
-    ScheduledState,
 )
 from .heap import Heap
 

@@ -17,10 +17,10 @@ from ..boundaries import (
     RecurrenceRule,
     RepeatingWork,
     Scheduler,
+    SomeScheduledCall,
     StepsT,
     WhatT,
     WhenT,
-    SomeScheduledCall,
 )
 
 StepsTInv = TypeVar("StepsTInv")
