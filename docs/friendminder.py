@@ -174,7 +174,7 @@ class Friend:
         self, steps: list[DateTime[ZoneInfo]], scheduled: SomeScheduledCall
     ) -> None:
         if not steps:
-            print("just setting up")
+            print(f"setting up reminder for {self.name}'s birthday")
             return
         now = self.scheduler.now()
         delta = now - steps[-1]
