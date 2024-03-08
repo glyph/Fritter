@@ -20,9 +20,7 @@ from typing import (
 
 from typing_extensions import Self
 
-from fritter.boundaries import Cancellable
-
-from .boundaries import PriorityComparable, Scheduler
+from .boundaries import Cancellable, PriorityComparable, Scheduler
 from .scheduler import newScheduler
 
 _BranchTime = TypeVar("_BranchTime", bound=PriorityComparable)

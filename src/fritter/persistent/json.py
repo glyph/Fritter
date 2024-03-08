@@ -44,7 +44,6 @@ from typing import (
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, fromisoformat
-from fritter.boundaries import SomeScheduledCall
 
 from ..boundaries import (
     RecurrenceRule,
@@ -56,6 +55,7 @@ from ..boundaries import (
     StepsTCon,
     StepsTInv,
     TimeDriver,
+    SomeScheduledCall,
 )
 from ..drivers.datetimes import DateTimeDriver
 from ..heap import Heap

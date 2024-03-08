@@ -10,8 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, Generic, TypeVar
 
-from fritter.boundaries import SomeScheduledCall
-
 from ..boundaries import (
     AsyncDriver,
     AsyncType,
@@ -22,6 +20,7 @@ from ..boundaries import (
     StepsT,
     WhatT,
     WhenT,
+    SomeScheduledCall,
 )
 
 StepsTInv = TypeVar("StepsTInv")

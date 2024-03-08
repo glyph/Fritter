@@ -10,15 +10,15 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
-from fritter.boundaries import (
+
+from ..boundaries import (
+    Cancellable,
+    TimeDriver,
     RecurrenceRule,
     ScheduledCall,
     ScheduledState,
     SomeScheduledCall,
 )
-from fritter.persistent.json import JSONableRepeatable, schedulerAtPath
-
-from ..boundaries import Cancellable, TimeDriver
 from ..drivers.datetimes import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..persistent.json import (
@@ -29,6 +29,8 @@ from ..persistent.json import (
     JSONRegistry,
     LoadProcess,
     MissingPersistentCall,
+    JSONableRepeatable,
+    schedulerAtPath,
 )
 from ..repeat.rules.datetimes import EachYear, daily
 

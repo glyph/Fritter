@@ -5,18 +5,22 @@ from unittest import TestCase
 from zoneinfo import ZoneInfo
 
 from datetype import DateTime, aware
-from fritter.boundaries import Scheduler, SomeScheduledCall
-from fritter.repeat.rules.datetimes import EachDTRule
-from fritter.scheduler import newScheduler
 from twisted.internet.defer import CancelledError, Deferred, succeed
 
-from ..boundaries import Cancellable, Day, RecurrenceRule
+from ..boundaries import (
+    Cancellable,
+    Day,
+    RecurrenceRule,
+    Scheduler,
+    SomeScheduledCall,
+)
 from ..drivers.datetimes import DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..drivers.twisted import TwistedAsyncDriver
 from ..repeat import Async, repeatedly
-from ..repeat.rules.datetimes import EachWeekOn, EachYear
+from ..repeat.rules.datetimes import EachDTRule, EachWeekOn, EachYear
 from ..repeat.rules.seconds import EverySecond
+from ..scheduler import newScheduler
 
 TZ = ZoneInfo("America/Los_Angeles")
 

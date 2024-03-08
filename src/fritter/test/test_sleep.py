@@ -1,7 +1,6 @@
 from unittest import TestCase
 
-from fritter.boundaries import PhysicalScheduler
-
+from ..boundaries import PhysicalScheduler
 from ..drivers.sleep import SleepDriver
 from ..scheduler import newScheduler
 
