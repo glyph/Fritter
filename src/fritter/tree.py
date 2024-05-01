@@ -95,11 +95,12 @@ _TrunkFloat = TypeVar("_TrunkFloat", bound=float)
 @dataclass
 class _FloatScale(Generic[_BranchFloat, _TrunkFloat]):
     """
+    A L{Scale} established by a floating-point scaling factor.
+
     @see: L{timesFaster}
     """
 
     _factor: float
-
     """
     Amount to subtract from trunk's timestamp to get to this driver's base
     relative timestamp - in trunk's (unscaled, not branch) time-scale.  When a
