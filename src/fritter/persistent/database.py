@@ -5,12 +5,22 @@ For the purposes of this module, a “database” is a remote (meaning,
 asynchronous) data store that could potentially store a large volume of work.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Generic, Protocol
 
-from fritter.boundaries import CancellableAwaitable, ScheduledCall, TimeDriver
-
-from ..boundaries import IDT, AsyncDriver, Scheduler, WhatT, WhenT
+from ..boundaries import (
+    IDT,
+    AsyncDriver,
+    Scheduler,
+    WhatT,
+    WhenT,
+    CancellableAwaitable,
+    ScheduledCall,
+    ScheduledState,
+    TimeDriver,
+)
 
 
 class CallableStorage(Protocol[WhenT, WhatT, IDT]):
@@ -55,9 +65,54 @@ class CallableStorageTxn(Protocol[WhenT, WhatT, IDT]):
 
 
 @dataclass
+class _DBScheduledCall(Generic[WhenT, WhatT, IDT]):
+    dbs: DatabaseScheduler[WhenT, WhatT, IDT]
+    id: IDT
+    when: WhenT
+    what: WhatT
+    _saved: bool = False
+    _cancelled: bool = False
+    _persistTask: CancellableAwaitable[object,object,object] |None=None
+
+    @property
+    def state(self) -> ScheduledState:
+        if self._cancelled:
+            return ScheduledState.cancelled
+        return ScheduledState.pending
+
+    @classmethod
+    def create(
+        cls,
+        dbs: DatabaseScheduler[WhenT, WhatT, IDT],
+        when: WhenT,
+        what: WhatT,
+    ) -> _DBScheduledCall[WhenT, WhatT, IDT]:
+        self = cls(dbs, dbs._idgen(), when, what)
+        self._persistTask = dbs._asyncDriver.runAsync(self._persist())
+        return self
+
+    async def _persist(self) -> None:
+        async with await self.dbs._database() as cs:
+            await cs.storeCallable(self.when, self.what)
+        self._saved = True
+
+    def cancel(self) -> None:
+        if self._persistTask is not None:
+            self._persistTask.cancel()
+            self._persistTask = None
+        async def doCancel() -> None:
+            async with await self.dbs._database() as cs:
+                await cs.cancelCallable(self.id)
+            self._cancelled = True
+        self.dbs._asyncDriver.runAsync(doCancel())
+
+
+@dataclass
 class DatabaseScheduler(Generic[WhenT, WhatT, IDT]):
     _database: Callable[[], Awaitable[CallableStorageTxn[WhenT, WhatT, IDT]]]
     _timeDriver: TimeDriver[WhenT]
+    _asyncDriver: AsyncDriver[CancellableAwaitable[object, object, object]]
+    _idgen: Callable[[], IDT]
 
     def now(self) -> WhenT:
         return self._timeDriver.now()
@@ -65,15 +120,15 @@ class DatabaseScheduler(Generic[WhenT, WhatT, IDT]):
     def callAt(
         self, when: WhenT, what: WhatT
     ) -> ScheduledCall[WhenT, WhatT, IDT]:
-        async with await self._database() as cs:
-            # nested transaction problem in here, don't like that
-            await cs.storeCallable()
+        savingCall = _DBScheduledCall(self, self._idgen(), when, what)
+        return savingCall
 
 
 async def run(
     database: Callable[[], Awaitable[CallableStorageTxn[WhenT, WhatT, IDT]]],
     timeDriver: TimeDriver[WhenT],
     asyncDriver: AsyncDriver[CancellableAwaitable[Any, Any, Any]],
+    idGenerator: Callable[[], IDT]
 ) -> Scheduler[WhenT, WhatT, IDT]:
     """
     Begin periodically querying the database connected to by C{database} for
@@ -96,7 +151,7 @@ async def run(
             timeDriver.reschedule(t, doRunAsync)
 
     asyncDriver.runAsync(work())
-    return DatabaseScheduler(database, timeDriver)
+    return DatabaseScheduler(database, timeDriver, asyncDriver, idGenerator)
 
 
 # dbxs instantiation of this is going to require some kind of schema
