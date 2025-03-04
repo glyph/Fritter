@@ -65,7 +65,7 @@ jobs:
         verbose: true
 
   static-checks:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       TOX_PARALLEL_NO_SPINNER: 1
 
