@@ -17,6 +17,7 @@ requires-python = ">=3.9"
 dependencies = [
   "datetype",
   "tzdata",
+  "typing_extensions; python_version < '3.11'"
 ]
 
 [project.urls]
