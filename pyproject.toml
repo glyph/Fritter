@@ -17,10 +17,11 @@ requires-python = ">=3.9"
 dependencies = [
   "datetype",
   "tzdata",
+  "typing_extensions; python_version < '3.11'"
 ]
 
 [project.urls]
-Home = "https://github.com/glyph/fritter"
+Home = "https://github.com/glyph/Fritter"
 
 [tool.black]
 line-length = 79
