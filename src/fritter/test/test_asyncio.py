@@ -15,6 +15,7 @@ from ..drivers.asyncio import (
     AsyncioTimeDriver,
     scheduler,
     _Ts,
+    Unpack,
 )
 
 
@@ -29,8 +30,9 @@ class AsyncioClock:
     def call_at(
         self,
         when: float,
-        callback: Callable[[*_Ts], object],
-        *args: *_Ts,
+        callback: Callable[[
+Unpack[_Ts]], object],
+        *args: Unpack[_Ts],
         context: Context | None = None,
     ) -> Cancellable:
         assert context is None, "context not yet supported"

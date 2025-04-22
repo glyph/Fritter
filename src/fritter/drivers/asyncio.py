@@ -20,6 +20,12 @@ from ..boundaries import (
 )
 from ..heap import Heap
 from ..scheduler import ConcreteScheduledCall, schedulerFromDriver
+from sys import version_info
+
+if version_info >= (3, 11):
+    from typing import Unpack
+else:
+    from typing_extensions import Unpack
 
 _Ts = TypeVarTuple("_Ts")
 
@@ -32,8 +38,8 @@ class LoopTimeInterface(Protocol):
     def call_at(
         self,
         when: float,
-        callback: Callable[[*_Ts], object],
-        *args: *_Ts,
+        callback: Callable[[Unpack[_Ts]], object],
+        *args: Unpack[_Ts],
         context: Context | None = None,
     ) -> Cancellable:
         """
