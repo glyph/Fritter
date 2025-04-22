@@ -10,7 +10,7 @@ attrs==25.3.0
     # via
     #   pydoctor
     #   twisted
-automat==24.8.1
+automat==25.4.16
     # via twisted
 babel==2.17.0
     # via sphinx
@@ -50,7 +50,7 @@ markupsafe==3.0.2
     # via jinja2
 msgpack==1.1.0
     # via cachecontrol
-packaging==24.2
+packaging==25.0
     # via sphinx
 platformdirs==4.3.7
     # via pydoctor
@@ -83,9 +83,9 @@ sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
 twisted==24.11.0
     # via pydoctor
-typing-extensions==4.13.1
+typing-extensions==4.13.2
     # via twisted
-urllib3==2.3.0
+urllib3==2.4.0
     # via
     #   pydoctor
     #   requests
