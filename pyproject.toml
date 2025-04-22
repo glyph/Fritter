@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.urls]
-Home = "https://github.com/glyph/fritter"
+Home = "https://github.com/glyph/Fritter"
 
 [tool.black]
 line-length = 79
