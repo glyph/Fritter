@@ -10,7 +10,12 @@ from unittest import TestCase
 from twisted.internet.task import Clock
 
 from ..boundaries import Cancellable
-from ..drivers.asyncio import AsyncioAsyncDriver, AsyncioTimeDriver, scheduler
+from ..drivers.asyncio import (
+    AsyncioAsyncDriver,
+    AsyncioTimeDriver,
+    scheduler,
+    _Ts,
+)
 
 
 @dataclass
@@ -24,8 +29,8 @@ class AsyncioClock:
     def call_at(
         self,
         when: float,
-        callback: Callable[[], None],
-        *args: object,
+        callback: Callable[[*_Ts], object],
+        *args: *_Ts,
         context: Context | None = None,
     ) -> Cancellable:
         assert context is None, "context not yet supported"
