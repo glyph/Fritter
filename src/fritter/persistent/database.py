@@ -72,7 +72,7 @@ class _DBScheduledCall(Generic[WhenT, WhatT, IDT]):
     what: WhatT
     _saved: bool = False
     _cancelled: bool = False
-    _persistTask: CancellableAwaitable[object,object,object] |None=None
+    _persistTask: CancellableAwaitable[object, object, object] | None = None
 
     @property
     def state(self) -> ScheduledState:
@@ -100,10 +100,12 @@ class _DBScheduledCall(Generic[WhenT, WhatT, IDT]):
         if self._persistTask is not None:
             self._persistTask.cancel()
             self._persistTask = None
+
         async def doCancel() -> None:
             async with await self.dbs._database() as cs:
                 await cs.cancelCallable(self.id)
             self._cancelled = True
+
         self.dbs._asyncDriver.runAsync(doCancel())
 
 
@@ -128,7 +130,7 @@ async def run(
     database: Callable[[], Awaitable[CallableStorageTxn[WhenT, WhatT, IDT]]],
     timeDriver: TimeDriver[WhenT],
     asyncDriver: AsyncDriver[CancellableAwaitable[Any, Any, Any]],
-    idGenerator: Callable[[], IDT]
+    idGenerator: Callable[[], IDT],
 ) -> Scheduler[WhenT, WhatT, IDT]:
     """
     Begin periodically querying the database connected to by C{database} for

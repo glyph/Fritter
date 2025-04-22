@@ -9,17 +9,17 @@ class SchedulerDriver(Generic[WhenT]):
     _scheduler: Scheduler[WhenT, Callable[[], None], object]
     _active: ScheduledCall[WhenT, Callable[[], None], object] | None
 
-    def reschedule(
-        self, newTime: WhenT, work: Callable[[], None]
-    ) -> None:
+    def reschedule(self, newTime: WhenT, work: Callable[[], None]) -> None:
         """
         Schedule C{work} to occur at C{newTime}, removing any previous C{work}
         scheduled by prior calls to C{reschedule}.
         """
         self.unschedule()
+
         def wrappedWork() -> None:
             self._active = None
             work()
+
         self._scheduler.callAt(newTime, wrappedWork)
 
     def unschedule(self) -> None:
