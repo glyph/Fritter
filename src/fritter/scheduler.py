@@ -153,7 +153,7 @@ class _PriorityQueueBackedSchedulerImpl(Generic[WhenT, WhatT, IDT]):
                 self.driver.reschedule(upNext._when, advanceToNow)
 
         def _cancelCall(
-            toRemove: ConcreteScheduledCall[WhenT, WhatT, IDT]
+            toRemove: ConcreteScheduledCall[WhenT, WhatT, IDT],
         ) -> None:
             old = self._q.peek()
             self._q.remove(toRemove)
