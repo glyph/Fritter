@@ -6,5 +6,5 @@
 #
 datetype==2025.2.13
     # via fritter (pyproject.toml)
-tzdata==2025.1
+tzdata==2025.2
     # via fritter (pyproject.toml)
