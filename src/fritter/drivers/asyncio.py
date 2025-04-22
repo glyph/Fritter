@@ -6,10 +6,10 @@ Implementation of L{TimeDriver} and L{AsyncDriver} for L{asyncio}.
 
 from __future__ import annotations
 
-from asyncio import Future, get_event_loop, AbstractEventLoop
+from asyncio import AbstractEventLoop, Future, get_event_loop
 from contextvars import Context
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine, Protocol
+from typing import Any, Callable, Coroutine, Protocol, TypeVarTuple
 
 from ..boundaries import (
     AsyncDriver,
@@ -21,6 +21,8 @@ from ..boundaries import (
 from ..heap import Heap
 from ..scheduler import ConcreteScheduledCall, schedulerFromDriver
 
+_Ts = TypeVarTuple("_Ts")
+
 
 class LoopTimeInterface(Protocol):
     """
@@ -30,8 +32,8 @@ class LoopTimeInterface(Protocol):
     def call_at(
         self,
         when: float,
-        callback: Callable[[], None],
-        *args: object,
+        callback: Callable[[*_Ts], object],
+        *args: *_Ts,
         context: Context | None = None,
     ) -> Cancellable:
         """
