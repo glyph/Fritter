@@ -4,13 +4,13 @@
 #
 #    pip-compile --no-emit-index-url --strip-extras dev-requirements.in
 #
-alabaster==0.7.16
+alabaster==1.0.0
     # via sphinx
 attrs==25.3.0
     # via
     #   pydoctor
     #   twisted
-automat==24.8.1
+automat==25.4.16
     # via twisted
 babel==2.17.0
     # via sphinx
@@ -30,13 +30,13 @@ configargparse==1.7
     # via pydoctor
 constantly==23.10.4
     # via twisted
-docutils==0.19
+docutils==0.21.2
     # via
     #   pydoctor
     #   sphinx
 filelock==3.18.0
     # via cachecontrol
-flake8==7.1.2
+flake8==7.2.0
     # via -r dev-requirements.in
 hyperlink==21.0.0
     # via twisted
@@ -66,21 +66,21 @@ mypy-extensions==1.0.0
     #   mypy
 mypy-zope==1.0.11
     # via -r dev-requirements.in
-packaging==24.2
+packaging==25.0
     # via
     #   black
     #   sphinx
 pathspec==0.12.1
     # via black
-platformdirs==4.3.6
+platformdirs==4.3.7
     # via
     #   black
     #   pydoctor
-pycodestyle==2.12.1
+pycodestyle==2.13.0
     # via flake8
 pydoctor==24.11.2
     # via -r /Users/glyph/Projects/Fritter/docs/requirements.in
-pyflakes==3.2.0
+pyflakes==3.3.2
     # via flake8
 pygments==2.19.1
     # via sphinx
@@ -89,9 +89,11 @@ requests==2.32.3
     #   cachecontrol
     #   pydoctor
     #   sphinx
+roman-numerals-py==3.1.0
+    # via sphinx
 snowballstemmer==2.2.0
     # via sphinx
-sphinx==6.2.1
+sphinx==8.2.3
     # via -r /Users/glyph/Projects/Fritter/docs/requirements.in
 sphinxcontrib-applehelp==2.0.0
     # via sphinx
@@ -109,11 +111,11 @@ twisted==24.11.0
     # via
     #   -r dev-requirements.in
     #   pydoctor
-typing-extensions==4.12.2
+typing-extensions==4.13.2
     # via
     #   mypy
     #   twisted
-urllib3==2.3.0
+urllib3==2.4.0
     # via
     #   pydoctor
     #   requests
