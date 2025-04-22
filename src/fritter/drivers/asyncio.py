@@ -9,7 +9,7 @@ from __future__ import annotations
 from asyncio import AbstractEventLoop, Future, get_event_loop
 from contextvars import Context
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine, Protocol, TypeVarTuple
+from typing import Any, Callable, Coroutine, Protocol
 
 from ..boundaries import (
     AsyncDriver,
@@ -23,9 +23,9 @@ from ..scheduler import ConcreteScheduledCall, schedulerFromDriver
 from sys import version_info
 
 if version_info >= (3, 11):
-    from typing import Unpack
+    from typing import Unpack, TypeVarTuple
 else:
-    from typing_extensions import Unpack
+    from typing_extensions import Unpack, TypeVarTuple
 
 _Ts = TypeVarTuple("_Ts")
 

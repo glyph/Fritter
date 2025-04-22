@@ -4,19 +4,21 @@ from asyncio.events import new_event_loop
 from asyncio.exceptions import CancelledError, InvalidStateError
 from contextvars import Context
 from dataclasses import dataclass
+from sys import version_info
 from typing import Any, Callable
 from unittest import TestCase
 
 from twisted.internet.task import Clock
 
 from ..boundaries import Cancellable
-from ..drivers.asyncio import (
-    AsyncioAsyncDriver,
-    AsyncioTimeDriver,
-    scheduler,
-    _Ts,
-    Unpack,
-)
+from ..drivers.asyncio import AsyncioAsyncDriver, AsyncioTimeDriver, scheduler
+
+if version_info >= (3, 11):
+    from typing import Unpack, TypeVarTuple
+else:
+    from typing_extensions import Unpack, TypeVarTuple
+
+_Ts = TypeVarTuple("_Ts")
 
 
 @dataclass
@@ -30,8 +32,7 @@ class AsyncioClock:
     def call_at(
         self,
         when: float,
-        callback: Callable[[
-Unpack[_Ts]], object],
+        callback: Callable[[Unpack[_Ts]], object],
         *args: Unpack[_Ts],
         context: Context | None = None,
     ) -> Cancellable:
