@@ -1,5 +1,5 @@
-mypy_zope
-twisted
-black
-flake8
 -r docs/requirements.in
+-r black-requirements.in
+-r coverage-requirements.in
+-r flake8-requirements.in
+-r mypy-requirements.in

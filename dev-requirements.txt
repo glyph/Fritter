@@ -4,6 +4,8 @@
 #
 #    pip-compile --no-emit-index-url --strip-extras dev-requirements.in
 #
+-e file:///Users/glyph/Projects/Fritter
+    # via -r /Users/glyph/Projects/Fritter/mypy-requirements.in
 alabaster==1.0.0
     # via sphinx
 attrs==25.3.0
@@ -15,7 +17,7 @@ automat==25.4.16
 babel==2.17.0
     # via sphinx
 black==25.1.0
-    # via -r dev-requirements.in
+    # via -r /Users/glyph/Projects/Fritter/black-requirements.in
 cachecontrol==0.14.2
     # via
     #   cachecontrol
@@ -30,6 +32,10 @@ configargparse==1.7
     # via pydoctor
 constantly==23.10.4
     # via twisted
+coverage==7.8.0
+    # via -r /Users/glyph/Projects/Fritter/coverage-requirements.in
+datetype==2025.2.13
+    # via fritter
 docutils==0.21.2
     # via
     #   pydoctor
@@ -37,7 +43,7 @@ docutils==0.21.2
 filelock==3.18.0
     # via cachecontrol
 flake8==7.2.0
-    # via -r dev-requirements.in
+    # via -r /Users/glyph/Projects/Fritter/flake8-requirements.in
 hyperlink==21.0.0
     # via twisted
 idna==3.10
@@ -59,13 +65,15 @@ mccabe==0.7.0
 msgpack==1.1.0
     # via cachecontrol
 mypy==1.15.0
-    # via mypy-zope
+    # via
+    #   -r /Users/glyph/Projects/Fritter/mypy-requirements.in
+    #   mypy-zope
 mypy-extensions==1.0.0
     # via
     #   black
     #   mypy
 mypy-zope==1.0.11
-    # via -r dev-requirements.in
+    # via -r /Users/glyph/Projects/Fritter/mypy-requirements.in
 packaging==25.0
     # via
     #   black
@@ -109,12 +117,14 @@ sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
 twisted==24.11.0
     # via
-    #   -r dev-requirements.in
+    #   -r /Users/glyph/Projects/Fritter/mypy-requirements.in
     #   pydoctor
 typing-extensions==4.13.2
     # via
     #   mypy
     #   twisted
+tzdata==2025.2
+    # via fritter
 urllib3==2.4.0
     # via
     #   pydoctor
