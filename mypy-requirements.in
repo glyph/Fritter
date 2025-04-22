@@ -1,5 +1,3 @@
 mypy
 mypy_zope
 twisted
--e .
-
