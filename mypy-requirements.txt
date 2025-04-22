@@ -4,16 +4,12 @@
 #
 #    pip-compile --no-emit-index-url --strip-extras mypy-requirements.in
 #
--e file:///Users/glyph/Projects/Fritter
-    # via -r mypy-requirements.in
 attrs==25.3.0
     # via twisted
 automat==25.4.16
     # via twisted
 constantly==23.10.4
     # via twisted
-datetype==2025.2.13
-    # via fritter
 hyperlink==21.0.0
     # via twisted
 idna==3.10
@@ -34,8 +30,6 @@ typing-extensions==4.13.2
     # via
     #   mypy
     #   twisted
-tzdata==2025.2
-    # via fritter
 zope-event==5.0
     # via zope-schema
 zope-interface==7.2
