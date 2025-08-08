@@ -8,47 +8,64 @@ asynchronous) data store that could potentially store a large volume of work.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Generic, Protocol
+from typing import Any, Awaitable, Callable, Generic, Protocol, TypeVar
 
 from ..boundaries import (
     IDT,
     AsyncDriver,
-    Scheduler,
-    WhatT,
-    WhenT,
     CancellableAwaitable,
     ScheduledCall,
     ScheduledState,
+    Scheduler,
     TimeDriver,
+    WhenT,
 )
 
+WhatT = TypeVar("WhatT", bound=Callable[[], Awaitable[object]])
 
-class CallableStorage(Protocol[WhenT, WhatT, IDT]):
-    async def nextCallableTime(self) -> WhenT | None:
+
+class TimedCallStorage(Protocol[WhenT, WhatT, IDT]):
+    """
+    A L{TimedCallStorage} is a storage backend that can store a particular type
+    of callable, representative of a single transaction context where timed
+    work will be executed, and implements all the queries necessary for L{run}
+    to schedule work against the given database.
+    """
+
+    async def nextTimedCallTime(self) -> WhenT | None:
         """
         Query the database for when the soonest callable is scheduled, so we
         will know when to wake up.
         """
 
-    async def loadNextCallable(self) -> tuple[WhenT, WhatT]:
+    async def loadNextTimedCall(self) -> tuple[WhenT, WhatT, IDT]:
         """
         Query the database to find the soonest callable; called when we now
         believe it is time to call.
         """
 
-    async def storeCallable(self, when: WhenT, what: WhatT) -> IDT:
+    async def storeTimedCall(self, when: WhenT, what: WhatT) -> IDT:
         """
         Here's some work to do, store it in the database for later.
         """
 
-    async def cancelCallable(self, id: IDT) -> None:
+    async def cancelTimedCall(self, id: IDT) -> None:
         """
-        Cancel this work previously scheduled by storeCallable.
+        Cancel this work previously scheduled by storeTimedCall.
         """
 
 
-class CallableStorageTxn(Protocol[WhenT, WhatT, IDT]):
-    async def __aenter__(self) -> CallableStorage[WhenT, WhatT, IDT]:
+class TimedCallStorageTxn(Protocol[WhenT, WhatT, IDT]):
+    """
+    A L{TimedCallStorageTxn} is an L{AsyncContextManager} that has a context of
+    a L{TimedCallStorage}.
+
+    This represents a database transaction which ought to commit its work in
+    the event of a successful return, or sends its callable to a dead-letter
+    queue or rolls back the transaction in the event of an exception.
+    """
+
+    async def __aenter__(self) -> TimedCallStorage[WhenT, WhatT, IDT]:
         """
         Start a transaction with the callable storage.
         """
@@ -66,6 +83,10 @@ class CallableStorageTxn(Protocol[WhenT, WhatT, IDT]):
 
 @dataclass
 class _DBScheduledCall(Generic[WhenT, WhatT, IDT]):
+    """
+    A scheduled call persitent within a L{DatabaseScheduler}.
+    """
+
     dbs: DatabaseScheduler[WhenT, WhatT, IDT]
     id: IDT
     when: WhenT
@@ -93,7 +114,7 @@ class _DBScheduledCall(Generic[WhenT, WhatT, IDT]):
 
     async def _persist(self) -> None:
         async with await self.dbs._database() as cs:
-            await cs.storeCallable(self.when, self.what)
+            await cs.storeTimedCall(self.when, self.what)
         self._saved = True
 
     def cancel(self) -> None:
@@ -103,7 +124,7 @@ class _DBScheduledCall(Generic[WhenT, WhatT, IDT]):
 
         async def doCancel() -> None:
             async with await self.dbs._database() as cs:
-                await cs.cancelCallable(self.id)
+                await cs.cancelTimedCall(self.id)
             self._cancelled = True
 
         self.dbs._asyncDriver.runAsync(doCancel())
@@ -111,7 +132,13 @@ class _DBScheduledCall(Generic[WhenT, WhatT, IDT]):
 
 @dataclass
 class DatabaseScheduler(Generic[WhenT, WhatT, IDT]):
-    _database: Callable[[], Awaitable[CallableStorageTxn[WhenT, WhatT, IDT]]]
+    """
+    A L{DatabaseScheduler} implements an abstract L{Scheduler} in terms of a
+    database, where a database is defined as an async callable that can produce
+    a L{TimedCallStorageTxn} on demand.
+    """
+
+    _database: Callable[[], Awaitable[TimedCallStorageTxn[WhenT, WhatT, IDT]]]
     _timeDriver: TimeDriver[WhenT]
     _asyncDriver: AsyncDriver[CancellableAwaitable[object, object, object]]
     _idgen: Callable[[], IDT]
@@ -127,7 +154,7 @@ class DatabaseScheduler(Generic[WhenT, WhatT, IDT]):
 
 
 async def run(
-    database: Callable[[], Awaitable[CallableStorageTxn[WhenT, WhatT, IDT]]],
+    database: Callable[[], Awaitable[TimedCallStorageTxn[WhenT, WhatT, IDT]]],
     timeDriver: TimeDriver[WhenT],
     asyncDriver: AsyncDriver[CancellableAwaitable[Any, Any, Any]],
     idGenerator: Callable[[], IDT],
@@ -139,13 +166,32 @@ async def run(
 
     async def work() -> None:
         async with await database() as cs:
-            t = await cs.nextCallableTime()
+            t = await cs.nextTimedCallTime()
             if t is None:
                 return
+            # TODO: batching; we should bail out every so often so we don't
+            # build gigantic transactions?
             while t < timeDriver.now():
-                t, what = await cs.loadNextCallable()
+                t, what, callableID = await cs.loadNextTimedCall()
                 # TODO: failure handling & reporting
-                what()
+
+                # there's a problem here: we are trying ot represent an
+                # abstract scheduler here.  Schedulers, intentionally, put a
+                # bound on WhatT, making sure that it is a Callable[[],
+                # None]. By ensuring that it takes no arguments, we ensure that
+                # we can call it. But enforcing the None return type is just as
+                # important: in this case, we *need* the work to be awaitable,
+                # in case it requires being awaited in the context of its
+                # database, to ensure it's complete before we commit its
+                # transaction out from under it or interleave some other timed
+                # call's work.  However, in many other cases, where the
+                # scheduler will *not* be awaiting the callable, if the
+                # callable *were* to return an Awaitable, or more to the point
+                # a Coroutine that needs to be awaited to even start, that
+                # scheduler would totally fail to make that work occur.  So
+                # Scheduler and AsyncScheduler are going to be necessarily
+                # different interfaces.
+                await what()
 
             def doRunAsync() -> None:
                 asyncDriver.runAsync(work())
@@ -156,6 +202,9 @@ async def run(
     return DatabaseScheduler(database, timeDriver, asyncDriver, idGenerator)
 
 
+__all__ = [
+    "run",
+]
 # dbxs instantiation of this is going to require some kind of schema
 # registration to use. similar to JSON version, where there's a registry and
 # then it knows what tables to go off and look at, either because each has
