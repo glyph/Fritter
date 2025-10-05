@@ -60,6 +60,7 @@ pydoctor_args = [
     "--intersphinx=https://docs.twisted.org/en/twisted-22.1.0/api/objects.inv",
     "--intersphinx=https://docs.python.org/3/objects.inv",
     "--intersphinx=https://zopeinterface.readthedocs.io/en/latest/objects.inv",
+    "--intersphinx=https://datetype.readthedocs.io/en/latest/objects.inv",
     # TODO: not sure why I have to specify these all twice.
     f"--config={_project_root}/.pydoctor.cfg",
     f"--html-viewsource-base=https://github.com/glyph/fritter/tree/{_git_reference}/src",
