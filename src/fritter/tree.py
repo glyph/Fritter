@@ -155,14 +155,16 @@ def timesFaster(factor: float) -> Scale[float, float, float]:
     return _FloatScale(factor)
 
 
-class BranchManager(Protocol[WhenT, _TrunkDelta]):
+class BranchManager(Protocol[_BranchTime, _TrunkTime, _TrunkDelta]):
     """
     A L{BranchManager} controls a group of timers in a branch scheduler created
     with L{branch}; pausing the passage of time in the branch, unpausing it, or
     making its relative rate of progress faster or slower.
     """
 
-    def changeScale(self, scale: Scale[WhenT, WhenT, _TrunkDelta]) -> None:
+    def changeScale(
+        self, scale: Scale[_BranchTime, _TrunkTime, _TrunkDelta]
+    ) -> None:
         """
         Change the relative scale of the time coordinate system for this branch
         and for its trunk to the new, given C{scale}.  i.e.: with a scale of
@@ -187,40 +189,41 @@ class BranchManager(Protocol[WhenT, _TrunkDelta]):
 
 @overload
 def branch(
-    trunk: Scheduler[WhenT, Callable[[], None], object],
-    scale: Scale[WhenT, WhenT, _TrunkDelta],
+    trunk: Scheduler[_TrunkTime, Callable[[], None], object],
+    scale: Scale[_BranchTime, _TrunkTime, _TrunkDelta],
 ) -> tuple[
-    BranchManager[WhenT, _TrunkDelta],
-    Scheduler[WhenT, Callable[[], None], int],
+    BranchManager[_BranchTime, _TrunkTime, _TrunkDelta],
+    Scheduler[_BranchTime, Callable[[], None], int],
 ]: ...
 
 
 @overload
-def branch(trunk: Scheduler[WhenT, Callable[[], None], object]) -> tuple[
-    BranchManager[WhenT, WhenT],
-    Scheduler[WhenT, Callable[[], None], int],
+def branch(
+    trunk: Scheduler[_BranchTime, Callable[[], None], object],
+) -> tuple[
+    BranchManager[_BranchTime, _BranchTime, _TrunkDelta],
+    Scheduler[_BranchTime, Callable[[], None], int],
 ]: ...
 
 
 def branch(
-    trunk: Scheduler[WhenT, Callable[[], None], object],
-    scale: Scale[WhenT, WhenT, _TrunkDelta] | None = None,
+    trunk: Scheduler[_TrunkTime, Callable[[], None], object],
+    scale: Scale[_BranchTime, _TrunkTime, _TrunkDelta] | None = None,
 ) -> tuple[
-    BranchManager[WhenT, _TrunkDelta],
-    Scheduler[WhenT, Callable[[], None], int],
+    BranchManager[_BranchTime, _TrunkTime, _TrunkDelta],
+    Scheduler[_BranchTime, Callable[[], None], int],
 ]:
     """
     Derive a branch (child) scheduler from a C{trunk} (parent) scheduler.
     """
     if scale is None:
-        scale = NoScale[_TrunkDelta]()
-        # scale = timesFaster(1)  # type:ignore
+        scale = NoScale[_TrunkDelta]()  # type:ignore
     assert scale is not None
-    driver: _BranchDriver[WhenT, WhenT, _TrunkDelta] = _BranchDriver(
-        trunk, scale, scale.shift(None, trunk.now())
+    driver: _BranchDriver[_BranchTime, _TrunkTime, _TrunkDelta] = (
+        _BranchDriver(trunk, scale, scale.shift(None, trunk.now()))
     )
     driver.changeScale(scale)
-    branchScheduler: Scheduler[WhenT, Callable[[], None], int] = (
+    branchScheduler: Scheduler[_BranchTime, Callable[[], None], int] = (
         schedulerFromDriver(driver)
     )
     driver.unpause()
@@ -235,7 +238,7 @@ def _subtract(someFloat: _F, other: _F) -> _F:
 
 
 @dataclass
-class _BranchDriver(Generic[_TrunkTime, _BranchTime, _TrunkDelta]):
+class _BranchDriver(Generic[_BranchTime, _TrunkTime, _TrunkDelta]):
     """
     Implementation of L{TimeDriver} for L{Scheduler} that is stacked on top of
     another L{Scheduler}.
