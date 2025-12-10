@@ -370,6 +370,35 @@ class Scheduler(Protocol[WhenT, WhatT, IDTCo]):
 PhysicalScheduler = Scheduler[float, Callable[[], None], object]
 CivilScheduler = Scheduler[DateTime[ZoneInfo], Callable[[], None], object]
 
+_BranchTime = TypeVar("_BranchTime", bound=PriorityComparable)
+_TrunkTime = TypeVar("_TrunkTime", bound=PriorityComparable)
+_TrunkDelta = TypeVar("_TrunkDelta")
+
+
+class Scale(Protocol[_BranchTime, _TrunkTime, _TrunkDelta]):
+    """
+    A L{Scale} defines a translation between a branch (i.e., "child") time
+    scale, and a trunk (i.e., "parent") time scale.
+    """
+
+    def up(self, offset: _TrunkDelta, time: _BranchTime) -> _TrunkTime:
+        """
+        Translate C{time} from the branch time scale into the trunk time scale.
+        """
+
+    def down(self, offset: _TrunkDelta, time: _TrunkTime) -> _BranchTime:
+        """
+        Translate C{time} from the trunk time scale into the branch time scale.
+        """
+
+    def shift(
+        self, pauseTime: _BranchTime | None, currentTime: _TrunkTime
+    ) -> _TrunkDelta:
+        """
+        Shift the current scale forward to incorporate
+        """
+
+
 __all__ = [
     "AsyncDriver",
     "Cancellable",

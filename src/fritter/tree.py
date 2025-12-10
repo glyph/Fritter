@@ -25,36 +25,16 @@ if version_info >= (3, 11):
 else:
     from typing_extensions import Self
 
-from .boundaries import Cancellable, PriorityComparable, Scheduler
+from .boundaries import (
+    Cancellable,
+    PriorityComparable,
+    Scheduler,
+    Scale,
+    _BranchTime,
+    _TrunkTime,
+    _TrunkDelta,
+)
 from .scheduler import schedulerFromDriver
-
-_BranchTime = TypeVar("_BranchTime", bound=PriorityComparable)
-_TrunkTime = TypeVar("_TrunkTime", bound=PriorityComparable)
-_TrunkDelta = TypeVar("_TrunkDelta")
-
-
-class Scale(Protocol[_BranchTime, _TrunkTime, _TrunkDelta]):
-    """
-    A L{Scale} defines a translation between a branch (i.e., "child") time
-    scale, and a trunk (i.e., "parent") time scale.
-    """
-
-    def up(self, offset: _TrunkDelta, time: _BranchTime) -> _TrunkTime:
-        """
-        Translate C{time} from the branch time scale into the trunk time scale.
-        """
-
-    def down(self, offset: _TrunkDelta, time: _TrunkTime) -> _BranchTime:
-        """
-        Translate C{time} from the trunk time scale into the branch time scale.
-        """
-
-    def shift(
-        self, pauseTime: _BranchTime | None, currentTime: _TrunkTime
-    ) -> _TrunkDelta:
-        """
-        Shift the current scale forward to incorporate
-        """
 
 
 DT = TypeVar("DT")
@@ -201,7 +181,7 @@ def branch(
 def branch(
     trunk: Scheduler[_BranchTime, Callable[[], None], object],
 ) -> tuple[
-    BranchManager[_BranchTime, _BranchTime, _TrunkDelta],
+    BranchManager[_BranchTime, _BranchTime, _Deltable[_BranchTime]],
     Scheduler[_BranchTime, Callable[[], None], int],
 ]: ...
 
