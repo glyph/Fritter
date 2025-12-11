@@ -84,7 +84,7 @@ class DateScale:
         """
         Translate C{time} from the trunk time scale into the branch time scale.
         """
-        return DateTime.fromtimestamp(time + offset, self._zone)
+        return DateTime.fromtimestamp(time - offset, self._zone)
 
     def shift(
         self, pauseTime: DateTime[ZoneInfo] | None, currentTime: float
@@ -92,10 +92,11 @@ class DateScale:
         """
         Shift the current scale forward to incorporate pause breaks.
         """
-        if pauseTime is None:
-            return currentTime
-        else:
-            return currentTime - pauseTime.timestamp()
+        return (
+            currentTime
+            if pauseTime is None
+            else currentTime - pauseTime.timestamp()
+        )
 
 
 _DateScaleTypeCheck: type[Scale[DateTime[ZoneInfo], float, float]] = DateScale

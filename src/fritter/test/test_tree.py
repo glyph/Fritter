@@ -3,10 +3,10 @@ from typing import Callable, List, Tuple
 from unittest import TestCase
 from zoneinfo import ZoneInfo
 
-from datetype import DateTime
+from datetype import DateTime, aware
 
-from ..boundaries import CivilScheduler, PhysicalScheduler
-from ..drivers.datetimes import DateTimeDriver
+from ..boundaries import CivilScheduler, PhysicalScheduler, Scheduler
+from ..drivers.datetimes import DateScale, DateTimeDriver
 from ..drivers.memory import MemoryDriver
 from ..scheduler import schedulerFromDriver
 from ..tree import _BranchDriver, branch, timesFaster
@@ -200,6 +200,39 @@ class RecursiveTest(TestCase):
         self.assertTrue(driver.isScheduled())
         onlyCall.cancel()
         self.assertFalse(driver.isScheduled())
+
+    def test_dateScaling(self) -> None:
+        """
+        L{DateScale} will scale a physical root-scheduler into a
+        timestamp/datetime-based civil time scheduler.
+        """
+        scheduler1: PhysicalScheduler = schedulerFromDriver(
+            driver := MemoryDriver(),
+        )
+        tz = ZoneInfo("US/Pacific")
+        dateScheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
+        mgr, dateScheduler = branch(scheduler1, DateScale(tz))
+        self.assertFalse(driver.isScheduled())
+        driver.advance(1765333209)
+        startPoint = aware(
+            datetime(2025, 12, 9, 18, 20, 9, tzinfo=tz), ZoneInfo
+        )
+        self.assertEqual(startPoint, dateScheduler.now())
+        mgr.pause()
+        driver.advance(250.0)
+        mgr.unpause()
+        self.assertEqual(startPoint, dateScheduler.now())
+        called = []
+        dateScheduler.callAt(
+            startPoint + timedelta(seconds=10), lambda: called.append(1)
+        )
+        driver.advance(9.0)
+        self.assertEqual(called, [])
+        driver.advance(2.0)
+        self.assertEqual(called, [1])
+        self.assertEqual(
+            startPoint + timedelta(seconds=11.0), dateScheduler.now()
+        )
 
 
 def timestampRecorder(
