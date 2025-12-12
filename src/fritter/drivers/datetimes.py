@@ -73,6 +73,7 @@ class DateScale:
     """
 
     _zone: ZoneInfo
+    _onlyPauseShift: bool = True
 
     def up(self, offset: float, time: DateTime[ZoneInfo]) -> float:
         """
@@ -92,6 +93,8 @@ class DateScale:
         """
         Shift the current scale forward to incorporate pause breaks.
         """
+        if self._onlyPauseShift and pauseTime is None:
+            return 0.0
         return (
             currentTime
             if pauseTime is None

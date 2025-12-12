@@ -234,6 +234,30 @@ class RecursiveTest(TestCase):
             startPoint + timedelta(seconds=11.0), dateScheduler.now()
         )
 
+    def test_dateScalingInitialScale(self) -> None:
+        """
+        L{DateScale} defaults to ignoring the initial offset of its float trunk
+        scheduler.
+        """
+        scheduler1: PhysicalScheduler = schedulerFromDriver(
+            driver := MemoryDriver(),
+        )
+        driver.advance(1765333209)
+        tz = ZoneInfo("US/Pacific")
+        dateScheduler: Scheduler[DateTime[ZoneInfo], Callable[[], None], int]
+        mgr, dateScheduler = branch(scheduler1, DateScale(tz))
+        self.assertFalse(driver.isScheduled())
+        startPoint = aware(
+            datetime(2025, 12, 9, 18, 20, 9, tzinfo=tz), ZoneInfo
+        )
+        self.assertEqual(startPoint, dateScheduler.now())
+        mgr.pause()
+        driver.advance(250.0)
+        mgr.unpause()
+        self.assertEqual(startPoint, dateScheduler.now())
+
+
+
 
 def timestampRecorder(
     calls: list[tuple[float, float]],
