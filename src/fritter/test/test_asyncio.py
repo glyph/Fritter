@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from asyncio.events import new_event_loop
+from asyncio import run, get_running_loop
 from asyncio.exceptions import CancelledError, InvalidStateError
 from contextvars import Context
 from dataclasses import dataclass
@@ -192,5 +193,10 @@ class TimeDriverTests(TestCase):
         self.assertEqual(stuff, ["hello"])
 
     def test_schedulerDefaults(self) -> None:
-        sched: Any = scheduler()
-        self.assertIsInstance(sched.driver, AsyncioTimeDriver)
+        async def f() -> None:
+            sched: Any = scheduler()
+            self.assertIsInstance(sched.driver, AsyncioTimeDriver)
+            driver: AsyncioTimeDriver = sched.driver
+            self.assertEqual(driver._loop, get_running_loop())
+
+        run(f())
