@@ -15,7 +15,7 @@ from . import (
     repeat,
 )
 
-__version__ = "0.0.9"
+__version__ = "0.1.0"
 "The current version of the Fritter library."
 
 __all__ = [
