@@ -257,8 +257,6 @@ class RecursiveTest(TestCase):
         self.assertEqual(startPoint, dateScheduler.now())
 
 
-
-
 def timestampRecorder(
     calls: list[tuple[float, float]],
     scheduler1: PhysicalScheduler,
