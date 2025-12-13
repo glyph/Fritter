@@ -18,16 +18,9 @@ from typing import (
     overload,
 )
 
-from sys import version_info
-
-if version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
 from .boundaries import (
     Cancellable,
-    PriorityComparable,
+    PriorityDiffable,
     Scheduler,
     Scale,
     _BranchTime,
@@ -40,22 +33,12 @@ from .scheduler import schedulerFromDriver
 DT = TypeVar("DT")
 
 
-class _Deltable(PriorityComparable, Protocol[DT]):
-    def __add__(self, addend: DT) -> Self: ...
-
-    @overload
-    def __sub__(self, subtrahend: DT) -> Self: ...
-
-    @overload
-    def __sub__(self, subtrahend: Self) -> DT: ...
-
-
-WhenT = TypeVar("WhenT", bound=_Deltable[Any])
+WhenT = TypeVar("WhenT", bound=PriorityDiffable[Any])
 
 
 @dataclass
 class NoScale(Generic[DT]):
-    T = TypeVar("T", bound=_Deltable[DT])
+    T = TypeVar("T", bound=PriorityDiffable[DT])
 
     def up(self, offset: DT, time: T) -> T:
         if offset is None:
@@ -84,7 +67,6 @@ class _FloatScale(Generic[_BranchFloat, _TrunkFloat]):
     """
 
     _factor: float
-
     """
     Amount to subtract from trunk's timestamp to get to this driver's base
     relative timestamp - in trunk's (unscaled, not branch) time-scale.  When a
@@ -181,7 +163,7 @@ def branch(
 def branch(
     trunk: Scheduler[_BranchTime, Callable[[], None], object],
 ) -> tuple[
-    BranchManager[_BranchTime, _BranchTime, _Deltable[_BranchTime]],
+    BranchManager[_BranchTime, _BranchTime, PriorityDiffable[_BranchTime]],
     Scheduler[_BranchTime, Callable[[], None], int],
 ]: ...
 
