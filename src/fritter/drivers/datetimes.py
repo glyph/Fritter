@@ -1,6 +1,6 @@
 """
-Implementation of L{TimeDriver} to convert floating-point POSIX timestamps into
-timezone-aware datetimes.
+Implementation of a L{TimeDriver} and a L{Scale} to convert floating-point
+POSIX timestamps into timezone-aware datetimes.
 
 @note: Although at runtime this module uses L{datetime.datetime} objects, its
     type hints use the U{datetype <https://pypi.org/project/datetype/>} library
@@ -18,7 +18,17 @@ from zoneinfo import ZoneInfo
 
 from datetype import DateTime
 
-from ..boundaries import TimeDriver
+from ..boundaries import (
+    TimeDriver,
+    Scale,
+)
+
+
+__all__ = [
+    "guessLocalZone",
+    "DateScale",
+    "DateTimeDriver",
+]
 
 _PS_TZ_CMD = """\
 powershell \
@@ -52,6 +62,47 @@ def guessLocalZone() -> ZoneInfo:
         ianaID = "/".join(path[path.index("zoneinfo") + 1 :])
     _guessedZone = ZoneInfo(ianaID)
     return _guessedZone
+
+
+@dataclass
+class DateScale:
+    """
+    A L{fritter.boundaries.Scale} that can scale between a trunk scheduler that
+    uses physical time (floats) and a branch scheduler that uses civil time
+    (dates and wall-clock times).
+    """
+
+    _zone: ZoneInfo
+    _onlyPauseShift: bool = True
+
+    def up(self, offset: float, time: DateTime[ZoneInfo]) -> float:
+        """
+        Translate C{time} from the branch time scale into the trunk time scale.
+        """
+        return time.timestamp() + offset
+
+    def down(self, offset: float, time: float) -> DateTime[ZoneInfo]:
+        """
+        Translate C{time} from the trunk time scale into the branch time scale.
+        """
+        return DateTime.fromtimestamp(time - offset, self._zone)
+
+    def shift(
+        self, pauseTime: DateTime[ZoneInfo] | None, currentTime: float
+    ) -> float:
+        """
+        Shift the current scale forward to incorporate pause breaks.
+        """
+        if self._onlyPauseShift and pauseTime is None:
+            return 0.0
+        return (
+            currentTime
+            if pauseTime is None
+            else currentTime - pauseTime.timestamp()
+        )
+
+
+_DateScaleTypeCheck: type[Scale[DateTime[ZoneInfo], float, float]] = DateScale
 
 
 @dataclass(frozen=True)
