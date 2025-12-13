@@ -17,6 +17,7 @@ from typing import (
     Optional,
     Protocol,
     TypeVar,
+    overload,
 )
 from zoneinfo import ZoneInfo
 
@@ -37,10 +38,17 @@ else:
         SUNDAY = 6
 
 
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
+
 class PriorityComparable(Protocol):
     """
-    Protocol describing an object that can be compared for the purposes of a
-    L{PriorityQueue}.
+    A L{PriorityComparable} is an object that can be compared with another
+    object and evaluated as less than or less-equal to another object for the
+    purposes of a L{PriorityQueue}.
     """
 
     def __lt__(self, other: Any) -> bool:
@@ -51,6 +59,37 @@ class PriorityComparable(Protocol):
     def __le__(self, other: Any) -> bool:
         """
         Is C{self} lower I{or} the same priority as C{other}?
+        """
+
+
+DeltaType = TypeVar("DeltaType")
+
+
+class PriorityDiffable(PriorityComparable, Protocol[DeltaType]):
+    """
+    A L{PriorityDiffable} is a L{PriorityComparable} object that can also be
+    added (and subtracted) with a delta type, or with itself to produce the
+    delta type.
+    """
+
+    def __add__(self, addend: DeltaType) -> Self:
+        """
+        Add a delta to this L{PriorityDiffable}, producing another instance of
+        the same L{PriorityDiffable} type.
+        """
+
+    @overload
+    def __sub__(self, subtrahend: DeltaType) -> Self:
+        """
+        Subtract a L{DeltaType} from this diffable, producing another instance
+        of the same L{PriorityDiffable} type.
+        """
+
+    @overload
+    def __sub__(self, subtrahend: Self) -> DeltaType:
+        """
+        Subtract another instance of the same L{PriorityDiffable} type,
+        creating a L{DeltaType}.
         """
 
 
@@ -407,9 +446,11 @@ __all__ = [
     "Day",
     "PhysicalScheduler",
     "PriorityComparable",
+    "PriorityDiffable",
     "PriorityQueue",
     "RecurrenceRule",
     "RepeatingWork",
+    "Scale",
     "ScheduledCall",
     "ScheduledState",
     "Scheduler",

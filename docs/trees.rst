@@ -119,3 +119,47 @@ As you run it, it looks like this:
    time: trunk=1.3832702020202021 branch=8.000000000000002
    branch
    time: trunk=1.4666035353535354 branch=8.999999999999998
+
+
+Civil Time Branches
+-------------------
+
+We can also create a civil time (DateTime) branch from a physical time (float)
+timer, similar to the one described in :ref:`Civil Time` .
+
+To do so, rather than scaling to a different speed, we will scale to a
+different *type*.  To do this, rather than using
+:py:func:`fritter.tree.timesFaster` as our scale, we will use
+:py:class:`fritter.drivers.datetimes.DateScale` with an appropriate time zone,
+like so:
+
+.. literalinclude:: tree_civil_example.py
+
+This one is similar, and will produce the following output, showing that the
+branch timer is now operating in terms of ``DateTime``:
+
+.. code-block::
+
+   trunk
+   branch
+   trunk
+   time: trunk=1765609211.257014 branch=2025-12-12 23:00:11.257014-08:00
+   trunk
+   time: trunk=1765609212.257014 branch=2025-12-12 23:00:12.257014-08:00
+   trunk
+   time: trunk=1765609213.257014 branch=2025-12-12 23:00:13.257014-08:00
+   trunk
+   time: trunk=1765609214.257014 branch=2025-12-12 23:00:14.257014-08:00
+   trunk
+   time: trunk=1765609215.257014 branch=2025-12-12 23:00:15.257014-08:00
+   trunk
+   time: trunk=1765609216.257014 branch=2025-12-12 23:00:16.257014-08:00
+   trunk
+   time: trunk=1765609217.257014 branch=2025-12-12 23:00:17.257014-08:00
+   trunk
+   time: trunk=1765609218.257014 branch=2025-12-12 23:00:18.257014-08:00
+   trunk
+   time: trunk=1765609219.257014 branch=2025-12-12 23:00:19.257014-08:00
+   trunk
+   time: trunk=1765609220.257014 branch=2025-12-12 23:00:20.257014-08:00
+
