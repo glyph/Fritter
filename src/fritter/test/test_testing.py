@@ -98,3 +98,19 @@ class MemoryDriverTests(TestCase):
         self.assertEqual(steps, 1)
         self.assertEqual(count, 1)
         self.assertEqual(driver.now(), 10.0)
+
+    def test_step_early(self) -> None:
+        driver = MemoryDriver()
+        count = 0
+
+        def early() -> None:
+            nonlocal count
+            count += 1
+            driver.reschedule(0.0, early)
+
+        driver.reschedule(10.0, early)
+        steps = driver.step()
+        self.assertEqual(steps, 100)
+        self.assertEqual(count, 100)
+        self.assertGreater(driver.now(), 10.0)
+        self.assertLess(10 - driver.now(), epsilon)
