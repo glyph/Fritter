@@ -5,7 +5,7 @@ In-memory implementation of L{TimeDriver} for use in tests and batch scripts.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import inf, nextafter
 from typing import Callable, Optional, Tuple
 
@@ -103,3 +103,19 @@ class MemoryDriver:
 
 
 _DriverTypeCheck: type[TimeDriver[float]] = MemoryDriver
+
+
+@dataclass
+class DiscreteDriver:
+    _driver: TimeDriver[float]
+    _discrete: MemoryDriver = field(default_factory=MemoryDriver)
+
+    def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
+        def step() -> None:
+            self._discrete.step(until=self._driver.now())
+
+        self._driver.reschedule(desiredTime, step)
+        self._discrete.reschedule(desiredTime, work)
+
+    def now(self) -> float:
+        return self._discrete.now()

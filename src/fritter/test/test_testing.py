@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from ..drivers.memory import MemoryDriver
+from ..drivers.memory import MemoryDriver, DiscreteDriver
 
 
 epsilon = 1e-100
@@ -114,3 +114,32 @@ class MemoryDriverTests(TestCase):
         self.assertEqual(count, 100)
         self.assertGreater(driver.now(), 10.0)
         self.assertLess(10 - driver.now(), epsilon)
+
+    def test_discrete_driver(self) -> None:
+        pretendReal = MemoryDriver()
+        discrete = DiscreteDriver(pretendReal)
+        count = 0
+        when = []
+        def repeat() -> None:
+            nonlocal count
+            count += 1
+            when.append(now:=discrete.now())
+            discrete.reschedule(now + 3.0, repeat)
+        discrete.reschedule(3.0, repeat)
+        pretendReal.advance(9.1)
+        self.assertEqual(when, [3.0, 6.0, 9.0])
+        self.assertEqual(count, 3)
+
+    def test_continuous_driver(self) -> None:
+        continuous = MemoryDriver()
+        count = 0
+        when = []
+        def repeat() -> None:
+            nonlocal count
+            count += 1
+            when.append(now:=continuous.now())
+            continuous.reschedule(now + 3.0, repeat)
+        continuous.reschedule(3.0, repeat)
+        continuous.advance(9.1)
+        self.assertEqual(when, [9.1])
+        self.assertEqual(count, 1)
