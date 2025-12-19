@@ -81,9 +81,10 @@ class MemoryDriver:
         than C{.now()}, it will be run without adjusting time.
         """
         calls = 0
+        lim = (inf if until is None else until)
         while (
             self._scheduledWork is not None
-            and self._currentTime < (inf if until is None else until)
+            and self._scheduledWork[0] < lim
             and calls < maxCalls
         ):
             calls += 1
