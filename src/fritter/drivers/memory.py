@@ -1,3 +1,4 @@
+# -*- test-case-name: fritter.test.test_testing -*-
 """
 In-memory implementation of L{TimeDriver} for use in tests and batch scripts.
 """
@@ -72,6 +73,27 @@ class MemoryDriver:
             self._scheduledWork = None
             what()
         return delta
+
+    def step(self, until: float | None = None, maxCalls: int = 100) -> int:
+        """
+        If any work is scheduled, move the clock forward (but only forward) to
+        exactly the time that the work is due.  If work is scheduled earlier
+        than C{.now()}, it will be run without adjusting time.
+        """
+        calls = 0
+        while (
+            self._scheduledWork is not None
+            and self._currentTime < (inf if until is None else until)
+            and calls < maxCalls
+        ):
+            calls += 1
+            desiredTime, work = self._scheduledWork
+            self._currentTime = max(desiredTime, self._currentTime)
+            self._scheduledWork = None
+            work()
+        if until is not None:
+            self._currentTime = until
+        return calls
 
     def isScheduled(self) -> bool:
         """
