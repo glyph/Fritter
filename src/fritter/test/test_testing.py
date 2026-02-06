@@ -10,6 +10,7 @@ class MemoryDriverTests(TestCase):
     """
     Tests for L{MemoryDriver}.
     """
+
     def test_advance(self) -> None:
         """
         L{MemoryDriver.advance} advances its internal clock adn runs its
