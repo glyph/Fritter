@@ -107,15 +107,38 @@ _DriverTypeCheck: type[TimeDriver[float]] = MemoryDriver
 
 @dataclass
 class DiscreteDriver:
+    """
+    A L{DiscreteDriver} advances time in a series of I{discrete steps}, meaning
+    that while your scheduled callable is running, the C{now} value will
+    reflect the time at which your callable was scheduled.
+    """
+
     _driver: TimeDriver[float]
     _discrete: MemoryDriver = field(default_factory=MemoryDriver)
 
     def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
+        """
+        Implement L{TimeDriver.reschedule}.
+        """
+
         def step() -> None:
             self._discrete.step(until=self._driver.now())
 
         self._driver.reschedule(desiredTime, step)
         self._discrete.reschedule(desiredTime, work)
 
+    def unschedule(self) -> None:
+        """
+        Implement L{TimeDriver.unschedule}.
+        """
+        self._driver.unschedule()
+        self._discrete.unschedule()
+
     def now(self) -> float:
+        """
+        Implement L{TimeDriver.now}.
+        """
         return self._discrete.now()
+
+
+_DriverTypeCheck2: type[TimeDriver[float]] = DiscreteDriver
