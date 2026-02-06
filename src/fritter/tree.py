@@ -63,6 +63,8 @@ _TrunkFloat = TypeVar("_TrunkFloat", bound=float)
 @dataclass
 class _FloatScale(Generic[_BranchFloat, _TrunkFloat]):
     """
+    A L{_FloatScale} is a L{Scale} of a floating-point factor.
+
     @see: L{timesFaster}
     """
 
