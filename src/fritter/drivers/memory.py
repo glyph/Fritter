@@ -5,24 +5,45 @@ In-memory implementation of L{TimeDriver} for use in tests and batch scripts.
 
 from __future__ import annotations
 
+from types import NotImplementedType
 from dataclasses import dataclass, field
 from math import inf, nextafter
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Protocol, Tuple, Self, TYPE_CHECKING
+
+from fritter.boundaries import PriorityComparable
 
 from ..boundaries import TimeDriver
 
 
+class Numberish(PriorityComparable, Protocol):
+    """
+    Minimal abstract type to describe L{GeneralMemoryDriver}'s requirements of
+    its value.
+    """
+    def __sub__(self, other: Self) -> Self: ...
+    def __lt__(self, other: Self) -> bool | NotImplementedType: ...
+    def __add__(self, other: Self) -> Self: ...
+
+
+if TYPE_CHECKING:
+    from decimal import Decimal
+    from fractions import Fraction
+    _numberishDescribesFloat: Numberish = 0.0
+    _numberishDescribesInt: Numberish = 0
+    _numberishDescribesDecimal: Numberish = Decimal()
+    _numberishDescribesFraction: Numberish = Fraction()
+
+
 @dataclass
-class MemoryDriver:
-    """
-    In-memory L{TimeDriver} that only moves when L{advance
-    <MemoryDriver.advance>} is called.
-    """
+class GeneralMemoryDriver[WhenT: Numberish]:
 
-    _currentTime: float = 0.0
-    _scheduledWork: Optional[Tuple[float, Callable[[], None]]] = None
+    _currentTime: WhenT
+    _scheduledWork: Optional[Tuple[WhenT, Callable[[], None]]]
+    _nextgreater: Callable[[WhenT], WhenT]
+    _zero: WhenT
+    _inf: WhenT
 
-    def reschedule(self, desiredTime: float, work: Callable[[], None]) -> None:
+    def reschedule(self, desiredTime: WhenT, work: Callable[[], None]) -> None:
         """
         Schedule the given work to happen at the given time.
 
@@ -36,21 +57,21 @@ class MemoryDriver:
 
         @see: L{TimeDriver.reschedule}
         """
-        minInterval = nextafter(self._currentTime, inf)
+        minInterval = self._nextgreater(self._currentTime)
         self._scheduledWork = max(minInterval, desiredTime), work
 
     def unschedule(self) -> None:
         "L{TimeDriver.unschedule}"
         self._scheduledWork = None
 
-    def now(self) -> float:
+    def now(self) -> WhenT:
         "L{TimeDriver.now}"
         return self._currentTime
 
     # |   memory driver only  |
     # v                       v
 
-    def advance(self, delta: Optional[float] = None) -> float | None:
+    def advance(self, delta: WhenT | None = None) -> WhenT | None:
         """
         Advance the clock of L{this driver <MemoryDriver>} by C{delta} seconds.
 
@@ -62,7 +83,9 @@ class MemoryDriver:
         """
         if delta is None:
             if self._scheduledWork is not None:
-                delta = max(0, self._scheduledWork[0] - self._currentTime)
+                delta = max(
+                    self._zero, self._scheduledWork[0] - self._currentTime
+                )
             else:
                 return None
         self._currentTime += delta
@@ -74,7 +97,7 @@ class MemoryDriver:
             what()
         return delta
 
-    def step(self, until: float | None = None, maxCalls: int = 100) -> int:
+    def step(self, until: WhenT | None = None, maxCalls: int = 100) -> int:
         """
         If any work is scheduled, move the clock forward (but only forward) to
         exactly the time that the work is due.  If work is scheduled earlier
@@ -83,7 +106,8 @@ class MemoryDriver:
         calls = 0
         while (
             self._scheduledWork is not None
-            and self._scheduledWork[0] < (inf if until is None else until)
+            and self._scheduledWork[0]
+            < (self._inf if until is None else until)
             and calls < maxCalls
         ):
             calls += 1
@@ -100,6 +124,25 @@ class MemoryDriver:
         Does this driver currently have work scheduled with it?
         """
         return self._scheduledWork is not None
+
+
+@dataclass
+class MemoryDriver(GeneralMemoryDriver[float]):
+    """
+    In-memory L{TimeDriver} that only moves when L{advance
+    <MemoryDriver.advance>} is called.
+
+    @note: This is just a L{GeneralMemoryDriver} with all its defaults
+        populated with reasonable values.
+    """
+
+    _currentTime: float = 0.0
+    _scheduledWork: Optional[Tuple[float, Callable[[], None]]] = None
+    _nextgreater: Callable[[float], float] = field(
+        default_factory=lambda: lambda it: nextafter(it, inf)
+    )
+    _zero: float = 0.0
+    _inf: float = inf
 
 
 _DriverTypeCheck: type[TimeDriver[float]] = MemoryDriver
