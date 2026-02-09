@@ -184,6 +184,11 @@ class MemoryDriverTests(TestCase):
         pretendReal.advance(9.1)
         self.assertEqual(when, [3.0, 6.0, 9.0])
         self.assertEqual(count, 3)
+        self.assertEqual(pretendReal.isScheduled(), True)
+        self.assertEqual(discrete._discrete.isScheduled(), True)
+        discrete.unschedule()
+        self.assertEqual(pretendReal.isScheduled(), False)
+        self.assertEqual(discrete._discrete.isScheduled(), False)
 
     def test_continuousDriver(self) -> None:
         """
