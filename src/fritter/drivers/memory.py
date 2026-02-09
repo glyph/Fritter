@@ -8,7 +8,16 @@ from __future__ import annotations
 from types import NotImplementedType
 from dataclasses import dataclass, field
 from math import inf, nextafter
-from typing import Callable, Optional, Protocol, Tuple, Self, TYPE_CHECKING
+from typing import (
+    Callable,
+    Optional,
+    Protocol,
+    Tuple,
+    Self,
+    TYPE_CHECKING,
+    TypeVar,
+    Generic,
+)
 
 from fritter.boundaries import PriorityComparable
 
@@ -20,6 +29,7 @@ class Numberish(PriorityComparable, Protocol):
     Minimal abstract type to describe L{GeneralMemoryDriver}'s requirements of
     its value.
     """
+
     def __sub__(self, other: Self) -> Self: ...
     def __lt__(self, other: Self) -> bool | NotImplementedType: ...
     def __add__(self, other: Self) -> Self: ...
@@ -28,14 +38,17 @@ class Numberish(PriorityComparable, Protocol):
 if TYPE_CHECKING:
     from decimal import Decimal
     from fractions import Fraction
+
     _numberishDescribesFloat: Numberish = 0.0
     _numberishDescribesInt: Numberish = 0
     _numberishDescribesDecimal: Numberish = Decimal()
     _numberishDescribesFraction: Numberish = Fraction()
 
+WhenT = TypeVar("WhenT", bound=Numberish)
+
 
 @dataclass
-class GeneralMemoryDriver[WhenT: Numberish]:
+class GeneralMemoryDriver(Generic[WhenT]):
 
     _currentTime: WhenT
     _scheduledWork: Optional[Tuple[WhenT, Callable[[], None]]]
