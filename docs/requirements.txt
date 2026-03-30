@@ -56,7 +56,7 @@ platformdirs==4.3.7
     # via pydoctor
 pydoctor==24.11.2
     # via -r requirements.in
-pygments==2.19.1
+pygments==2.20.0
     # via sphinx
 requests==2.32.4
     # via
