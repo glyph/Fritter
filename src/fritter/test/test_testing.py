@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-from ..drivers.memory import MemoryDriver, DiscreteDriver
-
+from ..boundaries import TimeDriver
+from ..drivers.memory import DiscreteDriver, MemoryDriver
 
 epsilon = 1e-100
 
@@ -166,11 +166,12 @@ class MemoryDriverTests(TestCase):
         simulates a discrete time simulation by remembering the I{scheduled}
         time of each callable as it runs, as its value for
         L{DiscreteDriver.now}, thus making it possible for code to know what
-        time it was I{supposed} to be run at (i.e. when its discrete invocation
-        time was) rather than what it was actually invoked.
+        time it was I{supposed} to be run at (i.e. when its I{scheduled}
+        invocation time was) rather than when it was actually invoked.
         """
         pretendReal = MemoryDriver()
-        discrete = DiscreteDriver(pretendReal)
+        forDiscrete: TimeDriver[float] = pretendReal
+        discrete = DiscreteDriver(MemoryDriver(), forDiscrete)
         count = 0
         when = []
 
