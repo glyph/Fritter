@@ -54,6 +54,10 @@ WhenT = TypeVar("WhenT", bound=Numberish)
 
 @dataclass
 class GeneralMemoryDriver(Generic[WhenT]):
+    """
+    A L{GeneralMemoryDriver} is an in-memory L{TimeDriver} that only moves when
+    L{advance <GeneralMemoryDriver.advance>} is called.
+    """
 
     _currentTime: WhenT
     _scheduledWork: Optional[Tuple[WhenT, Callable[[], None]]]
@@ -147,11 +151,8 @@ class GeneralMemoryDriver(Generic[WhenT]):
 @dataclass
 class MemoryDriver(GeneralMemoryDriver[float]):
     """
-    In-memory L{TimeDriver} that only moves when L{advance
-    <MemoryDriver.advance>} is called.
-
-    @note: This is just a L{GeneralMemoryDriver} with all its defaults
-        populated with reasonable values.
+    A L{MemoryDriver} is a L{GeneralMemoryDriver} for floating-point
+    timestamps, with a bunch of defaults set to reasonable values.
     """
 
     _currentTime: float = 0.0
