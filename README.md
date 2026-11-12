@@ -67,3 +67,8 @@ future, Fritter has something for you.  Here are just some of the use-cases:
   allow you to nest your groups arbitrarily deeply.
 
 If any of these sound interesting, `pip install fritter` to try it out today!
+
+AI Policy
+---------
+
+Fritter follows the [Twisted AI Policy](https://docs.twisted.org/en/latest/development/ai-policy.html). This means this project does not allow the inclusion of the outputs of generative AI tools.
